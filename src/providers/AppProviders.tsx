@@ -2,7 +2,7 @@
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TransactionProvider } from "@/contexts/TransactionContext";
@@ -19,7 +19,7 @@ const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
         <BrowserRouter>
           <AuthProvider>
             <TransactionProvider>
-              <TooltipProvider>
+              <TooltipProvider delayDuration={0}>
                 {children}
                 <Toaster />
                 <Sonner />
