@@ -43,11 +43,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultLogo = (
     <div className="flex items-center gap-2">
-      <img 
-        src="/lovable-uploads/5e41cbb8-760b-43c2-8adf-34be4aaeaf15.png" 
-        alt="Fraser Pay" 
-        className="h-8 w-auto"
-      />
+      <span className="font-bold text-lg text-primary">Fraser Pay</span>
     </div>
   );
 
@@ -57,22 +53,18 @@ const Layout: React.FC<LayoutProps> = ({
     </div>
   );
 
+  // Simplified loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
         <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              {defaultLogo}
-              <Skeleton className="h-6 w-32" />
-            </div>
+            {defaultLogo}
           </div>
         </header>
         
-        <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full flex flex-col items-center justify-center space-y-4">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-4 w-32" />
-          <p className="text-sm text-muted-foreground">Loading your account...</p>
+        <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full flex flex-col items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </main>
         
         <footer className="px-6 mt-auto">
@@ -130,7 +122,7 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </header>
       
-      <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full animate-fade-in">
+      <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full">
         {children}
       </main>
       

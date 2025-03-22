@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TransactionProvider } from "@/contexts/TransactionContext";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Auth Pages
 import Login from "@/pages/Auth/Login";
@@ -36,16 +35,15 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 minute
     }
   }
 });
 
-// Loading component
+// Simplified Loading component
 const LoadingScreen = () => (
-  <div className="flex items-center justify-center h-screen flex-col space-y-4">
-    <Skeleton className="h-12 w-12 rounded-full" />
-    <Skeleton className="h-4 w-32" />
+  <div className="flex items-center justify-center h-screen">
     <p className="text-sm text-muted-foreground">Loading Fraser Pay...</p>
   </div>
 );

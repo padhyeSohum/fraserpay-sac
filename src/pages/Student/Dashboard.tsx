@@ -17,20 +17,30 @@ const Dashboard = () => {
   
   const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
   const [userBooths, setUserBooths] = useState<ReturnType<typeof getBoothsByUserId>>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      // Refresh data
-      fetchAllBooths().then(() => {
-        // Load user's transactions
-        const transactions = loadUserTransactions(user.id);
-        setUserTransactions(transactions.slice(0, 3)); // Show only 3 most recent
-        
-        // Load user's booths
-        const booths = getBoothsByUserId(user.id);
-        setUserBooths(booths);
-      });
+    async function loadData() {
+      if (user) {
+        try {
+          // Refresh data
+          await fetchAllBooths();
+          // Load user's transactions
+          const transactions = loadUserTransactions(user.id);
+          setUserTransactions(transactions.slice(0, 3)); // Show only 3 most recent
+          
+          // Load user's booths
+          const booths = getBoothsByUserId(user.id);
+          setUserBooths(booths);
+        } catch (error) {
+          console.error('Error loading dashboard data:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
     }
+    
+    loadData();
   }, [user, loadUserTransactions, getBoothsByUserId, fetchAllBooths]);
 
   const handleViewQRCode = () => {
@@ -55,24 +65,6 @@ const Dashboard = () => {
 
   const logo = (
     <div className="flex items-center mb-2">
-      <div className="w-10 h-10 rounded-full bg-brand-100 mr-3">
-        <div className="w-full h-full flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-brand-600"
-          >
-            <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <line x1="12" x2="12.01" y1="17" y2="17" />
-          </svg>
-        </div>
-      </div>
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
         <p className="text-sm text-muted-foreground">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</p>
@@ -86,7 +78,7 @@ const Dashboard = () => {
 
   return (
     <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6">
         {/* Balance Card */}
         <div className="balance-card rounded-xl overflow-hidden">
           <div className="flex flex-col">
@@ -145,7 +137,13 @@ const Dashboard = () => {
           </div>
           
           <div className="grid grid-cols-1 gap-3">
-            {userBooths.length > 0 ? (
+            {isLoading ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p>Loading booths...</p>
+                </CardContent>
+              </Card>
+            ) : userBooths.length > 0 ? (
               userBooths.map(booth => (
                 <BoothCard
                   key={booth.id}
@@ -181,7 +179,13 @@ const Dashboard = () => {
             </Button>
           </div>
           
-          {userTransactions.length > 0 ? (
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p>Loading transactions...</p>
+              </CardContent>
+            </Card>
+          ) : userTransactions.length > 0 ? (
             <div className="space-y-3">
               {userTransactions.map(transaction => (
                 <TransactionItem key={transaction.id} transaction={transaction} />
