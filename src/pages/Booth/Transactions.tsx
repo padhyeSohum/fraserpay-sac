@@ -1,22 +1,20 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useParams } from 'react-router-dom';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
-import { toast } from 'sonner';
+import TransactionReport from '@/components/TransactionReport';
+import { Transaction } from '@/types';
 
 const BoothTransactions = () => {
   const { boothId } = useParams<{ boothId: string }>();
-  const { user } = useAuth();
   const { getBoothById, loadBoothTransactions } = useTransactions();
-  const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
-  const [transactions, setTransactions] = useState<ReturnType<typeof loadBoothTransactions>>([]);
-  const [activeTab, setActiveTab] = useState('transactions');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedType, setSelectedType] = useState<'all' | 'purchase'>('all');
 
   useEffect(() => {
     if (boothId) {
@@ -30,25 +28,9 @@ const BoothTransactions = () => {
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
 
-  useEffect(() => {
-    // Check if user has access to this booth
-    if (user && booth && !booth.managers.includes(user.id)) {
-      toast.error("You don't have access to this booth");
-      navigate('/dashboard');
-    }
-  }, [user, booth, navigate]);
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    
-    if (value === 'dashboard') {
-      navigate(`/booth/${boothId}`);
-    } else if (value === 'sell') {
-      navigate(`/booth/${boothId}/sell`);
-    } else if (value === 'settings') {
-      navigate(`/booth/${boothId}/settings`);
-    }
-  };
+  const filteredTransactions = selectedType === 'all' 
+    ? transactions 
+    : transactions.filter(t => t.type === selectedType);
 
   if (!booth) {
     return (
@@ -62,42 +44,37 @@ const BoothTransactions = () => {
 
   return (
     <Layout 
-      title={booth.name} 
-      subtitle="Booth Management" 
+      title={`${booth.name} Transactions`}
       showBack
     >
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="dashboard" className="tab-button">Dashboard</TabsTrigger>
-          <TabsTrigger value="sell" className="tab-button">Sell</TabsTrigger>
-          <TabsTrigger value="transactions" className="tab-button">History</TabsTrigger>
-          <TabsTrigger value="settings" className="tab-button">Settings</TabsTrigger>
-        </TabsList>
+      <div className="space-y-6">
+        <TransactionReport transactions={transactions} />
         
-        <TabsContent value="transactions" className="animate-fade-in mt-6">
-          <div className="space-y-6">
-            <div className="text-muted-foreground text-sm mb-2">
-              Showing all transactions for this booth
-            </div>
-            
-            {transactions.length > 0 ? (
+        <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as 'all' | 'purchase')}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="all">All Transactions</TabsTrigger>
+            <TabsTrigger value="purchase">Purchases Only</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={selectedType} className="animate-fade-in">
+            {filteredTransactions.length > 0 ? (
               <div className="space-y-3">
-                {transactions.map((transaction) => (
+                {filteredTransactions.map(transaction => (
                   <TransactionItem 
                     key={transaction.id} 
-                    transaction={transaction}
+                    transaction={transaction} 
                     showSupport
                   />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No transactions yet</p>
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No transactions found</p>
               </div>
             )}
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </Layout>
   );
 };

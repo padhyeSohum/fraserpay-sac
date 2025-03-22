@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { resetAuthState } from '@/utils/auth';
 import { toast } from 'sonner';
+import { clearBrowserCache, clearAppData } from '@/utils/cache';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,6 +37,23 @@ const Layout: React.FC<LayoutProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, isLoading, user } = useAuth();
+
+  // Clear cache on initial render
+  useEffect(() => {
+    const lastCleared = localStorage.getItem('cacheCleared');
+    const currentTime = Date.now();
+    const clearInterval = 1000 * 60 * 60; // 1 hour
+    
+    // Only clear cache if it hasn't been cleared in the last hour
+    if (!lastCleared || (currentTime - parseInt(lastCleared)) > clearInterval) {
+      clearBrowserCache().then(cleared => {
+        if (cleared) {
+          clearAppData();
+          console.log('Cache and app data cleared on application start');
+        }
+      });
+    }
+  }, []);
 
   const handleBack = () => {
     if (onBackClick) {

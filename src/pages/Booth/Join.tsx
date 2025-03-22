@@ -12,6 +12,7 @@ import Layout from '@/components/Layout';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { supabase } from '@/integrations/supabase/client';
 
 // Create a schema for booth creation
 const createBoothSchema = z.object({
@@ -28,8 +29,8 @@ const joinBoothSchema = z.object({
 const JoinBooth = () => {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyBoothPin, user } = useAuth();
-  const { createBooth } = useTransactions();
+  const { verifyBoothPin, user, refreshUserData } = useAuth();
+  const { createBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
 
   const joinForm = useForm<z.infer<typeof joinBoothSchema>>({
@@ -57,14 +58,35 @@ const JoinBooth = () => {
       console.log("PIN verification result:", success);
       
       if (success) {
+        // Refresh user data to get updated booth access
+        await refreshUserData();
+        // Refresh booths data
+        await fetchAllBooths();
+        
         toast.success("Successfully joined booth!");
-        // Update to fetch the booth ID and navigate to it directly
-        const boothAccess = user?.booths || [];
+        
+        // Get the latest booth access
+        const { data, error } = await supabase
+          .from('users')
+          .select('booth_access')
+          .eq('id', user?.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching booth access:", error);
+          throw error;
+        }
+        
+        const boothAccess = data?.booth_access || [];
+        
         if (boothAccess.length > 0) {
+          // Navigate to the most recently added booth
           navigate(`/booth/${boothAccess[boothAccess.length - 1]}`);
         } else {
           navigate('/dashboard');
         }
+      } else {
+        toast.error("Invalid booth PIN");
       }
     } catch (error) {
       console.error("Join booth error:", error);
@@ -86,12 +108,18 @@ const JoinBooth = () => {
       const boothId = await createBooth(
         values.name,
         values.description || '',
+        values.pin,
         user.id
       );
       
       console.log("Booth creation result:", boothId);
       
       if (boothId) {
+        // Refresh user data to get updated booth access
+        await refreshUserData();
+        // Refresh booths data
+        await fetchAllBooths();
+        
         toast.success("Booth created successfully!");
         navigate(`/booth/${boothId}`);
       } else {

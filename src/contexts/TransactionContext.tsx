@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,7 @@ interface TransactionContextType {
   processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
   getBoothById: (boothId: string) => Booth | undefined;
   getBoothsByUserId: (userId: string) => Booth[];
-  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
+  createBooth: (name: string, description: string, pin: string, userId: string) => Promise<string | null>;
   addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
@@ -354,12 +353,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return booths.filter(booth => booth.managers.includes(userId));
   };
 
-  const createBooth = async (name: string, description: string, userId: string) => {
+  const createBooth = async (name: string, description: string, pin: string, userId: string) => {
     try {
-      console.log("Creating booth:", { name, description, userId });
-      
-      // Generate a 6-digit PIN
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log("Creating booth:", { name, description, pin, userId });
       
       // Insert the new booth
       const { data, error } = await supabase
