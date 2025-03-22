@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -37,18 +38,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         
         if (currentSession?.user) {
-          // Fetch user data from users table
+          try {
+            // Fetch user data from users table
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', currentSession.user.id)
+              .single();
+            
+            if (userError) {
+              console.error('Error fetching user data:', userError);
+              setUser(null);
+              setIsLoading(false);
+            } else if (userData) {
+              // Transform to match our User type
+              const appUser: User = {
+                id: userData.id,
+                studentNumber: userData.student_number,
+                name: userData.name,
+                email: userData.email,
+                role: userData.role as UserRole,
+                balance: userData.tickets / 100, // Convert from cents to dollars
+                favoriteProducts: [],
+                booths: userData.booth_access || []
+              };
+              
+              setUser(appUser);
+              
+              // Route based on user role only for sign-in events
+              if (event === 'SIGNED_IN') {
+                if (appUser.role === 'sac') {
+                  navigate('/sac/dashboard');
+                } else if (appUser.role === 'booth') {
+                  // If the user is a booth manager, direct them to booth dashboard
+                  if (appUser.booths && appUser.booths.length > 0) {
+                    navigate(`/booth/${appUser.booths[0]}`);
+                  } else {
+                    navigate('/dashboard');
+                  }
+                } else {
+                  // Regular students
+                  navigate('/dashboard');
+                }
+              }
+            }
+            setIsLoading(false);
+          } catch (error) {
+            console.error('Error in auth state change handler:', error);
+            setIsLoading(false);
+          }
+        } else {
+          setUser(null);
+          setIsLoading(false);
+          if (event === 'SIGNED_OUT') {
+            navigate('/login');
+          }
+        }
+      }
+    );
+
+    // Check for existing session
+    const checkSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        
+        if (initialSession?.user) {
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
-            .eq('id', currentSession.user.id)
+            .eq('id', initialSession.user.id)
             .single();
           
           if (userError) {
             console.error('Error fetching user data:', userError);
             setUser(null);
           } else if (userData) {
-            // Transform to match our User type
             const appUser: User = {
               id: userData.id,
               studentNumber: userData.student_number,
@@ -61,65 +126,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             
             setUser(appUser);
-            
-            // Route based on user role only for sign-in events
-            if (event === 'SIGNED_IN') {
-              if (appUser.role === 'sac') {
-                navigate('/sac/dashboard');
-              } else if (appUser.role === 'booth') {
-                // If the user is a booth manager, direct them to booth dashboard
-                if (appUser.booths && appUser.booths.length > 0) {
-                  navigate(`/booth/${appUser.booths[0]}`);
-                } else {
-                  navigate('/dashboard');
-                }
-              } else {
-                // Regular students
-                navigate('/dashboard');
-              }
-            }
-          }
-        } else {
-          setUser(null);
-          if (event === 'SIGNED_OUT') {
-            navigate('/login');
           }
         }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setIsLoading(false);
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      
-      if (initialSession?.user) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', initialSession.user.id)
-          .single();
-        
-        if (userError) {
-          console.error('Error fetching user data:', userError);
-          setUser(null);
-        } else if (userData) {
-          const appUser: User = {
-            id: userData.id,
-            studentNumber: userData.student_number,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role as UserRole,
-            balance: userData.tickets / 100, // Convert from cents to dollars
-            favoriteProducts: [],
-            booths: userData.booth_access || []
-          };
-          
-          setUser(appUser);
-        }
-      }
-      
-      setIsLoading(false);
-    });
+    };
+    
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -157,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Login failed');
       console.error(error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -227,21 +242,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error);
-      toast.error('Logout failed');
-    } else {
-      setUser(null);
-      setSession(null);
-      toast.info('Logged out');
-      navigate('/login');
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error logging out:', error);
+        toast.error('Logout failed');
+      } else {
+        setUser(null);
+        setSession(null);
+        toast.info('Logged out');
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Unexpected error during logout:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const verifySACPin = async (pin: string) => {
     if (pin === SAC_PIN && user) {
       try {
+        setIsLoading(true);
         // Update user role to SAC in database
         const { error } = await supabase
           .from('users')
@@ -262,6 +285,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error updating user role:', error);
         toast.error('Failed to grant SAC access');
         return false;
+      } finally {
+        setIsLoading(false);
       }
     }
     
@@ -273,6 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return false;
     
     try {
+      setIsLoading(true);
       // Find booth with matching PIN
       const { data: boothData, error: boothError } = await supabase
         .from('booths')
@@ -333,6 +359,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error verifying booth PIN:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to verify booth PIN');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 

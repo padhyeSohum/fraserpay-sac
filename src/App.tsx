@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TransactionProvider } from "@/contexts/TransactionContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Auth Pages
 import Login from "@/pages/Auth/Login";
@@ -31,7 +32,23 @@ import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/NotFound";
 import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false
+    }
+  }
+});
+
+// Loading component
+const LoadingScreen = () => (
+  <div className="flex items-center justify-center h-screen flex-col space-y-4">
+    <Skeleton className="h-12 w-12 rounded-full" />
+    <Skeleton className="h-4 w-32" />
+    <p className="text-sm text-muted-foreground">Loading Fraser Pay...</p>
+  </div>
+);
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -39,7 +56,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <LoadingScreen />;
   }
   
   if (!isAuthenticated) {
@@ -61,7 +78,7 @@ const RoleProtectedRoute = ({
   const location = useLocation();
   
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <LoadingScreen />;
   }
   
   if (!user || !allowedRoles.includes(user.role)) {
@@ -163,7 +180,7 @@ const AppRoutes = () => {
       {/* Redirect root to login or dashboard */}
       <Route path="/" element={
         isLoading ? (
-          <div className="flex items-center justify-center h-screen">Loading...</div>
+          <LoadingScreen />
         ) : isAuthenticated ? (
           <Navigate to="/dashboard" replace />
         ) : (

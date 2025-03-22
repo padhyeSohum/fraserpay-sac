@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,7 +31,7 @@ const Layout: React.FC<LayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, isLoading } = useAuth();
 
   const handleBack = () => {
     if (location.pathname === '/dashboard') {
@@ -55,6 +56,31 @@ const Layout: React.FC<LayoutProps> = ({
       Made with ❤️ by the John Fraser SAC
     </div>
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
+        <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {defaultLogo}
+              <Skeleton className="h-6 w-32" />
+            </div>
+          </div>
+        </header>
+        
+        <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full flex flex-col items-center justify-center space-y-4">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+          <p className="text-sm text-muted-foreground">Loading your account...</p>
+        </main>
+        
+        <footer className="px-6 mt-auto">
+          {footer || defaultFooter}
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
