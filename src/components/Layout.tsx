@@ -14,6 +14,7 @@ interface LayoutProps {
   showLogout?: boolean;
   showAddButton?: boolean;
   onAddClick?: () => void;
+  onBackClick?: () => void;  // Add new prop for custom back handler
   logo?: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -26,6 +27,7 @@ const Layout: React.FC<LayoutProps> = ({
   showLogout = false,
   showAddButton = false,
   onAddClick,
+  onBackClick,  // Add new prop
   logo,
   footer
 }) => {
@@ -34,6 +36,12 @@ const Layout: React.FC<LayoutProps> = ({
   const { logout, isLoading } = useAuth();
 
   const handleBack = () => {
+    // Use custom back handler if provided, otherwise use default behavior
+    if (onBackClick) {
+      onBackClick();
+      return;
+    }
+    
     if (location.pathname === '/dashboard') {
       // Don't allow going back from dashboard
       return;

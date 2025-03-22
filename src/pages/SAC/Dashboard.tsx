@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,27 +32,22 @@ const SACDashboard = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Transaction search state
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
   const [transactionType, setTransactionType] = useState('all');
   
-  // Stats
   const [stats, setStats] = useState({
     totalSold: 0,
     totalRedeemed: 0
   });
   
-  // QR Code printing
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
-  // User and booth management
   const [users, setUsers] = useState<User[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [boothSearchQuery, setBoothSearchQuery] = useState('');
   
-  // New user dialog
   const [newUserOpen, setNewUserOpen] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -61,13 +55,15 @@ const SACDashboard = () => {
   const [newUserRole, setNewUserRole] = useState<UserRole>('student');
   const [newUserPassword, setNewUserPassword] = useState('');
   
-  // New booth dialog
   const [newBoothOpen, setNewBoothOpen] = useState(false);
   const [newBoothName, setNewBoothName] = useState('');
   const [newBoothDescription, setNewBoothDescription] = useState('');
   const [newBoothPin, setNewBoothPin] = useState('');
 
-  // Check if user is SAC member
+  const handleBackButtonClick = () => {
+    navigate('/dashboard');
+  };
+
   useEffect(() => {
     if (user && user.role !== 'sac') {
       toast.error('You do not have access to this page');
@@ -75,7 +71,6 @@ const SACDashboard = () => {
     }
   }, [user, navigate]);
   
-  // Calculate stats
   useEffect(() => {
     const totalSold = transactions
       .filter(t => t.type === 'fund')
@@ -91,7 +86,6 @@ const SACDashboard = () => {
     });
   }, [transactions]);
 
-  // Fetch users and booths
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
@@ -101,14 +95,13 @@ const SACDashboard = () => {
       
       if (error) throw error;
       
-      // Transform to match our User type
       const appUsers: User[] = data.map(dbUser => ({
         id: dbUser.id,
         studentNumber: dbUser.student_number,
         name: dbUser.name,
         email: dbUser.email,
         role: dbUser.role as UserRole,
-        balance: dbUser.tickets / 100, // Convert from cents to dollars
+        balance: dbUser.tickets / 100,
         favoriteProducts: [],
         booths: dbUser.booth_access || []
       }));
@@ -131,14 +124,12 @@ const SACDashboard = () => {
       
       if (boothsError) throw boothsError;
       
-      // Get all products
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*');
       
       if (productsError) throw productsError;
       
-      // Transform to match our Booth type
       const appBooths: Booth[] = boothsData.map(dbBooth => {
         const boothProducts = productsData
           .filter(p => p.booth_id === dbBooth.id)
@@ -180,7 +171,6 @@ const SACDashboard = () => {
     }
   }, [activeTab]);
 
-  // Implement the missing functions for user management
   const createUser = async () => {
     if (!newUserName || !newUserEmail || !newUserNumber || !newUserPassword) {
       toast.error('All fields are required');
@@ -190,7 +180,6 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Check if user already exists
       const { data: existingUsers, error: checkError } = await supabase
         .from('users')
         .select('id')
@@ -204,7 +193,6 @@ const SACDashboard = () => {
         throw new Error('Student number or email already registered');
       }
       
-      // Register user with Supabase Auth without email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUserEmail,
         password: newUserPassword,
@@ -221,7 +209,6 @@ const SACDashboard = () => {
         throw authError || new Error('Failed to create account');
       }
       
-      // Create user profile in users table
       const { error: profileError } = await supabase
         .from('users')
         .insert({
@@ -238,7 +225,6 @@ const SACDashboard = () => {
         throw profileError;
       }
       
-      // Close dialog and reset form
       setNewUserOpen(false);
       setNewUserName('');
       setNewUserEmail('');
@@ -248,9 +234,7 @@ const SACDashboard = () => {
       
       toast.success('User created successfully');
       
-      // Refresh users list
       fetchUsers();
-      
     } catch (error) {
       console.error('Error creating user:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to create user');
@@ -272,7 +256,6 @@ const SACDashboard = () => {
       
       toast.success('User role updated successfully');
       
-      // Update user in local state
       setUsers(prevUsers => 
         prevUsers.map(u => 
           u.id === userId ? { ...u, role: newRole } : u
@@ -290,15 +273,12 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Delete user from Supabase Auth
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       
       if (authError) {
-        // If we can't delete from auth, at least try to delete from our users table
         console.error('Error deleting user from auth:', authError);
       }
       
-      // Delete user from users table
       const { error } = await supabase
         .from('users')
         .delete()
@@ -308,7 +288,6 @@ const SACDashboard = () => {
       
       toast.success('User deleted successfully');
       
-      // Remove user from local state
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -318,7 +297,6 @@ const SACDashboard = () => {
     }
   };
   
-  // Implement the missing functions for booth management
   const createBooth = async () => {
     if (!newBoothName || !newBoothPin) {
       toast.error('Booth name and PIN are required');
@@ -328,7 +306,6 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Generate a PIN if not provided
       const finalPin = newBoothPin || Math.floor(100000 + Math.random() * 900000).toString();
       
       const { data, error } = await supabase
@@ -345,7 +322,6 @@ const SACDashboard = () => {
       
       if (error) throw error;
       
-      // Close dialog and reset form
       setNewBoothOpen(false);
       setNewBoothName('');
       setNewBoothDescription('');
@@ -353,7 +329,6 @@ const SACDashboard = () => {
       
       toast.success('Booth created successfully');
       
-      // Add new booth to local state
       const newBooth: Booth = {
         id: data.id,
         name: data.name,
@@ -378,7 +353,6 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      // First delete all products associated with this booth
       const { error: productsError } = await supabase
         .from('products')
         .delete()
@@ -388,7 +362,6 @@ const SACDashboard = () => {
         console.error('Error deleting booth products:', productsError);
       }
       
-      // Then delete the booth
       const { error } = await supabase
         .from('booths')
         .delete()
@@ -398,7 +371,6 @@ const SACDashboard = () => {
       
       toast.success('Booth deleted successfully');
       
-      // Remove booth from local state
       setBooths(prevBooths => prevBooths.filter(b => b.id !== boothId));
     } catch (error) {
       console.error('Error deleting booth:', error);
@@ -417,7 +389,6 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Look up user in Supabase
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -431,21 +402,19 @@ const SACDashboard = () => {
         return;
       }
       
-      // Transform to our User type
       const user: User = {
         id: data.id,
         studentNumber: data.student_number,
         name: data.name,
         email: data.email,
         role: data.role as UserRole,
-        balance: data.tickets / 100, // Convert from cents to dollars
+        balance: data.tickets / 100,
         favoriteProducts: [],
         booths: data.booth_access || []
       };
       
       setFoundUser(user);
       
-      // Generate QR code for printing
       const qrData = `USER:${user.id}`;
       const qrUrl = generateQRCode(qrData);
       setQrCodeUrl(qrUrl);
@@ -482,7 +451,6 @@ const SACDashboard = () => {
       );
       
       if (success) {
-        // Reset form
         setStudentNumber('');
         setFoundUser(null);
         setAmount('');
@@ -504,7 +472,6 @@ const SACDashboard = () => {
       return;
     }
     
-    // Create a printable window with the QR code
     const printWindow = window.open('', '_blank');
     
     if (printWindow) {
@@ -540,18 +507,14 @@ const SACDashboard = () => {
     }
   };
 
-  // Filter transactions based on search criteria
   const filteredTransactions = transactions.filter(t => {
-    // Filter by search query (student name, number, or booth name)
     const matchesSearch = searchQuery === '' || 
       t.buyerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.boothName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.sellerName?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Filter by transaction type
     const matchesType = transactionType === 'all' || t.type === transactionType;
     
-    // Filter by date
     let matchesDate = true;
     const transactionDate = new Date(t.timestamp);
     const today = new Date();
@@ -564,7 +527,6 @@ const SACDashboard = () => {
       yesterday.setDate(yesterday.getDate() - 1);
       matchesDate = transactionDate.toDateString() === yesterday.toDateString();
     } else if (dateFilter === 'thisWeek') {
-      // Get start of week (Monday)
       const startOfWeek = new Date();
       const dayOfWeek = startOfWeek.getDay();
       const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
@@ -598,6 +560,7 @@ const SACDashboard = () => {
       subtitle="Ticket Management" 
       showBack 
       showLogout
+      onBackClick={handleBackButtonClick}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-6 w-full">
