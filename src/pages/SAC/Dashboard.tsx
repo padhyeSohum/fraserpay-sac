@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -957,3 +958,527 @@ const SACDashboard = () => {
                 <CardDescription>Top performing booths</CardDescription>
               </CardHeader>
               <CardContent>
+                {leaderboard.length > 0 ? (
+                  <div className="space-y-3">
+                    {leaderboard.map((booth, index) => (
+                      <div key={booth.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center">
+                          <span className="font-bold text-lg w-8">{index + 1}.</span>
+                          <div>
+                            <h3 className="font-medium">{booth.name}</h3>
+                            <p className="text-sm text-muted-foreground">{booth.products?.length || 0} products</p>
+                          </div>
+                        </div>
+                        <p className="font-semibold">${booth.totalEarnings.toFixed(2)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No booth sales recorded yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="manage-users" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Manage Users</h2>
+              
+              <Dialog open={newUserOpen} onOpenChange={setNewUserOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    New User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Add a new user to the system. Users can be students, booth managers, or SAC members.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newName">Full Name</Label>
+                      <Input
+                        id="newName"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newEmail">Email</Label>
+                      <Input
+                        id="newEmail"
+                        type="email"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        placeholder="john.doe@example.com"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newStudentNumber">Student Number</Label>
+                      <Input
+                        id="newStudentNumber"
+                        value={newUserNumber}
+                        onChange={(e) => setNewUserNumber(e.target.value)}
+                        placeholder="123456"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">Password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newRole">Role</Label>
+                      <Select 
+                        value={newUserRole} 
+                        onValueChange={(value) => setNewUserRole(value as UserRole)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="booth">Booth Manager</SelectItem>
+                          <SelectItem value="sac">SAC Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setNewUserOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={createUser}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Creating..." : "Create User"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>User Directory</CardTitle>
+                <CardDescription>View and manage all users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p>Loading users...</p>
+                  </div>
+                ) : filteredUsers.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredUsers.map((user) => (
+                      <Card key={user.id} className="p-4">
+                        <div className="flex flex-col sm:flex-row justify-between">
+                          <div>
+                            <h3 className="font-medium">{user.name}</h3>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                            <p className="text-sm">Student #: {user.studentNumber}</p>
+                            <div className="flex items-center mt-1">
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                {user.role === 'student' ? 'Student' : 
+                                 user.role === 'booth' ? 'Booth Manager' : 
+                                 user.role === 'sac' ? 'SAC Member' : user.role}
+                              </span>
+                              <span className="ml-2 text-sm">${user.balance.toFixed(2)} balance</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                            <Select 
+                              defaultValue={user.role}
+                              onValueChange={(value) => updateUserRole(user.id, value as UserRole)}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Change role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="student">Student</SelectItem>
+                                <SelectItem value="booth">Booth Manager</SelectItem>
+                                <SelectItem value="sac">SAC Member</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            
+                            <Button 
+                              variant="destructive" 
+                              size="icon"
+                              onClick={() => deleteUser(user.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No users found matching your search</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="manage-booths" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Manage Booths</h2>
+              
+              <Dialog open={newBoothOpen} onOpenChange={setNewBoothOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Building className="h-4 w-4 mr-2" />
+                    New Booth
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Booth</DialogTitle>
+                    <DialogDescription>
+                      Add a new booth to the system. Booths can have multiple products and managers.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothName">Booth Name</Label>
+                      <Input
+                        id="newBoothName"
+                        value={newBoothName}
+                        onChange={(e) => setNewBoothName(e.target.value)}
+                        placeholder="Club Name or Activity"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothDescription">Description (Optional)</Label>
+                      <Textarea
+                        id="newBoothDescription"
+                        value={newBoothDescription}
+                        onChange={(e) => setNewBoothDescription(e.target.value)}
+                        placeholder="Describe what this booth offers"
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothPin">
+                        PIN Code (6 digits) <span className="text-muted-foreground text-xs">Optional, random if empty</span>
+                      </Label>
+                      <Input
+                        id="newBoothPin"
+                        value={newBoothPin}
+                        onChange={(e) => setNewBoothPin(e.target.value)}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setNewBoothOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={createBooth}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Creating..." : "Create Booth"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Booth Directory</CardTitle>
+                <CardDescription>View and manage all booths</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search booths..."
+                      value={boothSearchQuery}
+                      onChange={(e) => setBoothSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p>Loading booths...</p>
+                  </div>
+                ) : filteredBooths.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredBooths.map((booth) => (
+                      <Card key={booth.id} className="p-4">
+                        <div className="flex flex-col sm:flex-row justify-between">
+                          <div>
+                            <h3 className="font-medium">{booth.name}</h3>
+                            {booth.description && (
+                              <p className="text-sm text-muted-foreground">{booth.description}</p>
+                            )}
+                            <div className="flex items-center mt-1 flex-wrap gap-2">
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                PIN: {booth.pin}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                {booth.products.length} Products
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                ${booth.totalEarnings.toFixed(2)} Revenue
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openTransactionDialog(booth)}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              Process Sale
+                            </Button>
+                            
+                            <Button 
+                              variant="destructive" 
+                              size="icon"
+                              onClick={() => deleteBooth(booth.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {booth.products.length > 0 && (
+                          <div className="mt-4 pt-4 border-t">
+                            <h4 className="text-sm font-medium mb-2">Products</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                              {booth.products.map(product => (
+                                <div key={product.id} className="border rounded-md p-2 text-sm">
+                                  <span className="font-medium">{product.name}</span>
+                                  <span className="block text-muted-foreground">${product.price.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No booths found matching your search</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Application Settings</CardTitle>
+                <CardDescription>
+                  Configure system-wide settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  Settings panel is under development
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <Dialog open={transactionOpen} onOpenChange={setTransactionOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Process Sale for {selectedBooth?.name}</DialogTitle>
+            <DialogDescription>
+              Select products and enter student information to process a sale
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:w-1/2 space-y-4">
+                <div>
+                  <Label>Find Student</Label>
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      placeholder="Enter student number"
+                      value={transactionStudentNumber}
+                      onChange={(e) => setTransactionStudentNumber(e.target.value)}
+                    />
+                    <Button 
+                      onClick={handleFindTransactionStudent}
+                      disabled={isSearchingStudent}
+                    >
+                      {isSearchingStudent ? "Searching..." : "Find"}
+                    </Button>
+                  </div>
+                </div>
+                
+                {transactionStudent && (
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-medium">Name:</span>
+                      <span>{transactionStudent.name}</span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="font-medium">Student Number:</span>
+                      <span>{transactionStudent.studentNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Current Balance:</span>
+                      <span className={`font-semibold ${transactionStudent.balance < cartTotal ? 'text-destructive' : ''}`}>
+                        ${transactionStudent.balance.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <h3 className="font-medium text-lg mb-2">Cart</h3>
+                  {cart.length > 0 ? (
+                    <div className="space-y-2">
+                      {cart.map(item => (
+                        <div key={item.productId} className="flex justify-between p-2 border rounded-md">
+                          <div>
+                            <span className="font-medium">{item.product.name}</span>
+                            <span className="block text-sm text-muted-foreground">
+                              ${item.product.price.toFixed(2)} × {item.quantity}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleDecrement(item.productId)}
+                            >
+                              -
+                            </Button>
+                            <span>{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleAddToCart(item.product)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="flex justify-between font-semibold p-2 mt-4">
+                        <span>Total:</span>
+                        <span>${cartTotal.toFixed(2)}</span>
+                      </div>
+                      
+                      <Button 
+                        className="w-full mt-2"
+                        disabled={!transactionStudent || cart.length === 0 || isLoading || transactionStudent.balance < cartTotal}
+                        onClick={handleConfirmPurchase}
+                      >
+                        {isLoading ? "Processing..." : "Complete Purchase"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground border rounded-md">
+                      <p>No items in cart</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="w-full sm:w-1/2">
+                <h3 className="font-medium text-lg mb-2">Available Products</h3>
+                {selectedBooth?.products && selectedBooth.products.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2">
+                    {selectedBooth.products.map(product => (
+                      <div 
+                        key={product.id} 
+                        className="flex justify-between p-3 border rounded-md cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        <div>
+                          <span className="font-medium">{product.name}</span>
+                          <span className="block text-sm text-muted-foreground">${product.price.toFixed(2)}</span>
+                        </div>
+                        <Button size="sm" variant="ghost">Add</Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border rounded-md">
+                    <p>No products available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Layout>
+  );
+};
+
+export default SACDashboard;
