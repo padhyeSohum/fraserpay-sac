@@ -68,6 +68,13 @@ const SACDashboard = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
 
+  // Add new state for product management dialog
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [selectedBoothForProducts, setSelectedBoothForProducts] = useState<Booth | null>(null);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductImage, setNewProductImage] = useState('');
+
   const handleBackButtonClick = () => {
     navigate('/dashboard');
   };
@@ -93,6 +100,123 @@ const SACDashboard = () => {
       totalRedeemed
     });
   }, [transactions]);
+
+  // Add new function to open product management dialog
+  const openProductDialog = (booth: Booth) => {
+    setSelectedBoothForProducts(booth);
+    setProductDialogOpen(true);
+    setNewProductName('');
+    setNewProductPrice('');
+    setNewProductImage('');
+  };
+
+  // Add new function to add a product to a booth
+  const addProduct = async () => {
+    if (!selectedBoothForProducts) {
+      toast.error('No booth selected');
+      return;
+    }
+    
+    if (!newProductName || !newProductPrice) {
+      toast.error('Product name and price are required');
+      return;
+    }
+    
+    // Validate price is a positive number
+    const price = parseFloat(newProductPrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Please enter a valid price greater than 0');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Convert price to cents for the database
+      const priceInCents = Math.round(price * 100);
+      
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: newProductName,
+          price: priceInCents,
+          booth_id: selectedBoothForProducts.id,
+          image: newProductImage || null
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (!data) {
+        throw new Error('Failed to create product - no data returned');
+      }
+      
+      // Create new product object
+      const newProduct: Product = {
+        id: data.id,
+        name: data.name,
+        price: data.price / 100,
+        boothId: data.booth_id,
+        image: data.image || undefined,
+        salesCount: 0
+      };
+      
+      // Update the booths state with the new product
+      setBooths(prevBooths => 
+        prevBooths.map(booth => 
+          booth.id === selectedBoothForProducts.id 
+            ? { ...booth, products: [...booth.products, newProduct] }
+            : booth
+        )
+      );
+      
+      // Clear form and keep dialog open for additional products
+      setNewProductName('');
+      setNewProductPrice('');
+      setNewProductImage('');
+      
+      toast.success('Product added successfully');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add product');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add function to delete a product
+  const deleteProduct = async (boothId: string, productId: string) => {
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId);
+        
+      if (error) throw error;
+      
+      // Update local state to remove the product
+      setBooths(prevBooths => 
+        prevBooths.map(booth => 
+          booth.id === boothId 
+            ? { 
+                ...booth, 
+                products: booth.products.filter(p => p.id !== productId) 
+              }
+            : booth
+        )
+      );
+      
+      toast.success('Product deleted successfully');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -1286,6 +1410,14 @@ const SACDashboard = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => openProductDialog(booth)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Products
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => openTransactionDialog(booth)}
                             >
                               <ShoppingCart className="h-4 w-4 mr-2" />
@@ -1308,9 +1440,19 @@ const SACDashboard = () => {
                             <h4 className="text-sm font-medium mb-2">Products</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                               {booth.products.map(product => (
-                                <div key={product.id} className="border rounded-md p-2 text-sm">
-                                  <span className="font-medium">{product.name}</span>
-                                  <span className="block text-muted-foreground">${product.price.toFixed(2)}</span>
+                                <div key={product.id} className="border rounded-md p-2 text-sm flex justify-between items-center">
+                                  <div>
+                                    <span className="font-medium">{product.name}</span>
+                                    <span className="block text-muted-foreground">${product.price.toFixed(2)}</span>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-destructive"
+                                    onClick={() => deleteProduct(booth.id, product.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -1477,6 +1619,76 @@ const SACDashboard = () => {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Product Management Dialog */}
+      <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Products to {selectedBoothForProducts?.name}</DialogTitle>
+            <DialogDescription>
+              Create new products for this booth
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newProductName">Product Name</Label>
+              <Input
+                id="newProductName"
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
+                placeholder="e.g., Pizza Slice"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="newProductPrice">Price ($)</Label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <span className="text-muted-foreground">$</span>
+                </div>
+                <Input
+                  id="newProductPrice"
+                  type="number"
+                  value={newProductPrice}
+                  onChange={(e) => setNewProductPrice(e.target.value)}
+                  placeholder="2.50"
+                  step="0.01"
+                  min="0.01"
+                  className="pl-7"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="newProductImage">Image URL (Optional)</Label>
+              <Input
+                id="newProductImage"
+                value={newProductImage}
+                onChange={(e) => setNewProductImage(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => setProductDialogOpen(false)}
+            >
+              Close
+            </Button>
+            <Button 
+              type="button"
+              onClick={addProduct}
+              disabled={isLoading || !newProductName || !newProductPrice}
+            >
+              {isLoading ? "Adding..." : "Add Product"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>
