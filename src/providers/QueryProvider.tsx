@@ -11,7 +11,7 @@ const queryClient = new QueryClient({
       refetchOnMount: true,        // Always refetch when component mounts
       refetchOnReconnect: true,    // Always refetch when reconnecting
       staleTime: 0,                // Data is immediately stale
-      cacheTime: 5 * 60 * 1000,    // Only cache for 5 minutes
+      gcTime: 5 * 60 * 1000,       // Only cache for 5 minutes (renamed from cacheTime)
       meta: {
         onError: (error: unknown) => {
           console.error('Query error:', error);
