@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { resetAuthState } from '@/utils/auth';
+import { toast } from 'sonner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +16,7 @@ interface LayoutProps {
   showLogout?: boolean;
   showAddButton?: boolean;
   onAddClick?: () => void;
-  onBackClick?: () => void;  // Add new prop for custom back handler
+  onBackClick?: () => void;
   logo?: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -27,13 +29,13 @@ const Layout: React.FC<LayoutProps> = ({
   showLogout = false,
   showAddButton = false,
   onAddClick,
-  onBackClick,  // Add new prop
+  onBackClick,
   logo,
   footer
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, isLoading } = useAuth();
+  const { logout, isLoading, user } = useAuth();
 
   const handleBack = () => {
     // Use custom back handler if provided, otherwise use default behavior
@@ -48,6 +50,17 @@ const Layout: React.FC<LayoutProps> = ({
     }
     // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Logout failed. Resetting authentication...");
+      await resetAuthState();
+    }
   };
 
   const defaultLogo = (
@@ -122,7 +135,7 @@ const Layout: React.FC<LayoutProps> = ({
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={logout}
+              onClick={handleLogout}
               className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20"
             >
               <LogOut className="h-5 w-5" />

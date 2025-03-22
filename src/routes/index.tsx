@@ -99,30 +99,28 @@ export const routes = [
   { path: "*", element: <NotFound /> }
 ];
 
-// Simplified Loading component
+// Simple Loading component with more detailed message
 export const LoadingScreen = () => (
-  <div className="flex items-center justify-center h-screen">
-    <p className="text-sm text-muted-foreground">Loading Fraser Pay...</p>
+  <div className="flex flex-col items-center justify-center h-screen p-4">
+    <p className="text-sm mb-2">Loading Fraser Pay...</p>
+    <p className="text-xs text-muted-foreground">This should only take a moment</p>
   </div>
 );
 
-// Protected Route component with simplified logic
+// Simplified Protected Route
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
   
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-  
   if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
 };
 
-// Role-based protected route with simplified logic
+// Simplified Role-based protected route
 export const RoleProtectedRoute = ({ 
   children, 
   allowedRoles 
@@ -130,15 +128,17 @@ export const RoleProtectedRoute = ({
   children: React.ReactNode; 
   allowedRoles: string[] 
 }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   
-  if (isLoading) {
-    return <LoadingScreen />;
+  if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace state={{ from: location }} />;
+    console.log("User does not have required role, redirecting to dashboard");
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;

@@ -1,27 +1,19 @@
 
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import React from 'react';
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
 
 const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
-  const [redirectChecked, setRedirectChecked] = useState(false);
-
-  // Simplified effect to handle initial routing only once
-  useEffect(() => {
-    // Only run this effect once after authentication is established
-    if (!isLoading && !redirectChecked) {
-      console.log("Initial route check - Auth status:", isAuthenticated, "Path:", location.pathname);
-      setRedirectChecked(true);
-    }
-  }, [isLoading, isAuthenticated, location.pathname, redirectChecked]);
-
-  // If still loading auth state, show loading screen
+  
+  // Show clear loading message while auth is being determined
   if (isLoading) {
+    console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen />;
   }
+  
+  console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
 
   return (
     <Routes>
@@ -60,17 +52,18 @@ const AppRoutes: React.FC = () => {
       })}
       
       {/* Root route redirects based on auth status */}
-      <Route path="/" element={
-        isLoading ? (
-          <LoadingScreen />
-        ) : isAuthenticated ? (
-          user?.role === 'sac' ? 
-            <Navigate to="/sac/dashboard" replace /> : 
-            <Navigate to="/dashboard" replace />
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      } />
+      <Route 
+        path="/" 
+        element={
+          isAuthenticated ? (
+            user?.role === 'sac' ? 
+              <Navigate to="/sac/dashboard" replace /> : 
+              <Navigate to="/dashboard" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } 
+      />
     </Routes>
   );
 };
