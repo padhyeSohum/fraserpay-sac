@@ -15,7 +15,6 @@ import Register from "@/pages/Auth/Register";
 import Dashboard from "@/pages/Student/Dashboard";
 import QRCode from "@/pages/Student/QRCode";
 import Settings from "@/pages/Student/Settings";
-import AddFunds from "@/pages/Student/AddFunds";
 
 // Booth Pages
 import BoothJoin from "@/pages/Booth/Join";
@@ -73,11 +72,6 @@ const App = () => (
                   <Settings />
                 </ProtectedRoute>
               } />
-              <Route path="/add-funds" element={
-                <ProtectedRoute>
-                  <AddFunds />
-                </ProtectedRoute>
-              } />
               
               {/* Booth Routes */}
               <Route path="/booth/join" element={
@@ -117,6 +111,11 @@ const App = () => (
               <Route path="/leaderboard" element={
                 <ProtectedRoute>
                   <Leaderboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/transactions" element={
+                <ProtectedRoute>
+                  <Navigate to="/dashboard" replace />
                 </ProtectedRoute>
               } />
               

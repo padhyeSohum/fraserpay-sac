@@ -90,14 +90,9 @@ const Dashboard = () => {
             <span className="text-white/80 mb-1">Your Balance</span>
             <span className="text-3xl font-bold">${user.balance.toFixed(2)}</span>
             
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="mt-4 bg-white/20 hover:bg-white/30 text-white"
-              onClick={() => navigate('/add-funds')}
-            >
-              Add Funds
-            </Button>
+            <p className="mt-4 text-sm text-white/80">
+              Visit the SAC booth to add funds to your account
+            </p>
           </div>
         </div>
         
@@ -132,14 +127,23 @@ const Dashboard = () => {
         </div>
         
         {/* User's Booths Section */}
-        {userBooths.length > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-semibold">Your Booths</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-3">
-              {userBooths.map(booth => (
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold">Your Booths</h2>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleJoinBooth}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Join Booth</span>
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {userBooths.length > 0 ? (
+              userBooths.map(booth => (
                 <BoothCard
                   key={booth.id}
                   booth={booth}
@@ -147,10 +151,23 @@ const Dashboard = () => {
                   earnings={booth.totalEarnings}
                   onClick={() => handleBoothCardClick(booth.id)}
                 />
-              ))}
-            </div>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  <p>You don't have access to any booths yet</p>
+                  <Button 
+                    variant="link" 
+                    onClick={handleJoinBooth}
+                    className="mt-2"
+                  >
+                    Join a booth with PIN
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
-        )}
+        </div>
         
         {/* Recent Transactions */}
         <div>

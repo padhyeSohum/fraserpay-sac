@@ -60,3 +60,20 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export interface TransactionStats {
+  dailySales: {
+    [date: string]: number;
+  };
+  topProducts: {
+    productId: string;
+    productName: string;
+    count: number;
+  }[];
+  totalSales: number;
+}
+
+export interface DateRange {
+  startDate?: Date;
+  endDate?: Date;
+}

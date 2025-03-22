@@ -9,15 +9,17 @@ interface BoothCardProps {
   userRole?: 'seller' | 'manager';
   earnings?: number;
   onClick?: () => void;
+  showProductCount?: boolean;
 }
 
 const BoothCard: React.FC<BoothCardProps> = ({ 
   booth, 
   userRole,
   earnings = 0,
-  onClick 
+  onClick,
+  showProductCount = false
 }) => {
-  const { name } = booth;
+  const { name, description, products = [] } = booth;
   
   return (
     <Card 
@@ -40,8 +42,20 @@ const BoothCard: React.FC<BoothCardProps> = ({
           )}
         </div>
         
-        <div className="text-sm text-muted-foreground mt-2">
-          ${earnings.toFixed(2)} earned
+        {description && (
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{description}</p>
+        )}
+        
+        <div className="flex justify-between items-center mt-2">
+          <div className="text-sm text-muted-foreground">
+            {showProductCount ? `${products.length} products` : `$${earnings.toFixed(2)} earned`}
+          </div>
+          
+          {showProductCount && products.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Top: {products.sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))[0].name}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -29,3 +29,22 @@ export const validateQRCode = (qrData: string): { isValid: boolean; userId?: str
 export const encodeUserData = (userId: string): string => {
   return `USER:${userId}`;
 };
+
+// Get user from QR data
+export const getUserFromQRData = (qrData: string): any | null => {
+  try {
+    const validation = validateQRCode(qrData);
+    if (!validation.isValid || !validation.userId) {
+      return null;
+    }
+    
+    const userId = validation.userId;
+    const usersStr = localStorage.getItem('users');
+    const users = usersStr ? JSON.parse(usersStr) : [];
+    
+    return users.find((u: any) => u.id === userId) || null;
+  } catch (error) {
+    console.error('Error getting user from QR data:', error);
+    return null;
+  }
+};
