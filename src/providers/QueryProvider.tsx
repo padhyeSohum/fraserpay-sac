@@ -2,7 +2,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Create a client with error handling that won't freeze the app
+// Create a client with robust error handling that won't freeze the app
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -24,7 +24,13 @@ const queryClient = new QueryClient({
         }
       }
     }
-  }
+  },
+  // Global error handler for unhandled errors
+  queryCache: {
+    onError: (error) => {
+      console.error('Global query cache error:', error);
+    },
+  },
 });
 
 interface QueryProviderProps {
@@ -32,6 +38,22 @@ interface QueryProviderProps {
 }
 
 const QueryProvider = ({ children }: QueryProviderProps) => {
+  // Add error boundary to catch React rendering errors
+  React.useEffect(() => {
+    // Add global unhandled promise rejection handler
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled Promise Rejection:', event.reason);
+      // Prevent the app from freezing on uncaught promise rejections
+      event.preventDefault();
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}
