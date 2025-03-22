@@ -43,97 +43,99 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
           <TransactionProvider>
-            <Routes>
-              {/* Auth Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Student Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/qr-code" element={
-                <ProtectedRoute>
-                  <QRCode />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              
-              {/* Booth Routes */}
-              <Route path="/booth/join" element={
-                <ProtectedRoute>
-                  <BoothJoin />
-                </ProtectedRoute>
-              } />
-              <Route path="/booth/:boothId" element={
-                <ProtectedRoute>
-                  <BoothDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/booth/:boothId/sell" element={
-                <ProtectedRoute>
-                  <BoothSell />
-                </ProtectedRoute>
-              } />
-              <Route path="/booth/:boothId/transactions" element={
-                <ProtectedRoute>
-                  <BoothTransactions />
-                </ProtectedRoute>
-              } />
-              <Route path="/booth/:boothId/settings" element={
-                <ProtectedRoute>
-                  <BoothSettings />
-                </ProtectedRoute>
-              } />
-              
-              {/* SAC Routes */}
-              <Route path="/sac/dashboard" element={
-                <ProtectedRoute>
-                  <SACDashboard />
-                </ProtectedRoute>
-              } />
-              
-              {/* Shared Routes */}
-              <Route path="/leaderboard" element={
-                <ProtectedRoute>
-                  <Leaderboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/transactions" element={
-                <ProtectedRoute>
-                  <Navigate to="/dashboard" replace />
-                </ProtectedRoute>
-              } />
-              
-              {/* Redirect root to login or dashboard */}
-              <Route path="/" element={
-                localStorage.getItem('user') !== null ? 
-                <Navigate to="/dashboard" replace /> : 
-                <Navigate to="/login" replace />
-              } />
-              
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                {/* Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Student Routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/qr-code" element={
+                  <ProtectedRoute>
+                    <QRCode />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Booth Routes */}
+                <Route path="/booth/join" element={
+                  <ProtectedRoute>
+                    <BoothJoin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/booth/:boothId" element={
+                  <ProtectedRoute>
+                    <BoothDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/booth/:boothId/sell" element={
+                  <ProtectedRoute>
+                    <BoothSell />
+                  </ProtectedRoute>
+                } />
+                <Route path="/booth/:boothId/transactions" element={
+                  <ProtectedRoute>
+                    <BoothTransactions />
+                  </ProtectedRoute>
+                } />
+                <Route path="/booth/:boothId/settings" element={
+                  <ProtectedRoute>
+                    <BoothSettings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* SAC Routes */}
+                <Route path="/sac/dashboard" element={
+                  <ProtectedRoute>
+                    <SACDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Shared Routes */}
+                <Route path="/leaderboard" element={
+                  <ProtectedRoute>
+                    <Leaderboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/transactions" element={
+                  <ProtectedRoute>
+                    <Navigate to="/dashboard" replace />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Redirect root to login or dashboard */}
+                <Route path="/" element={
+                  localStorage.getItem('user') !== null ? 
+                  <Navigate to="/dashboard" replace /> : 
+                  <Navigate to="/login" replace />
+                } />
+                
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
           </TransactionProvider>
         </AuthProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
