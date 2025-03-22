@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import ProductItem from '@/components/ProductItem';
 import { CartItem, Product } from '@/types';
-import { Scan, X, Check } from 'lucide-react';
-import { validateQRCode } from '@/utils/qrCode';
+import { Scan, X, Check, User, Search } from 'lucide-react';
+import { validateQRCode, getUserFromQRData } from '@/utils/qrCode';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 const BoothSell = () => {
   const { boothId } = useParams<{ boothId: string }>();
@@ -24,6 +26,9 @@ const BoothSell = () => {
   const [scanning, setScanning] = useState(false);
   const [customer, setCustomer] = useState<{ id: string; name: string; balance: number } | null>(null);
   const [activeTab, setActiveTab] = useState('sell');
+  const [lookupMode, setLookupMode] = useState<'scan' | 'manual'>('scan');
+  const [studentNumber, setStudentNumber] = useState('');
+  const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   
   useEffect(() => {
     if (boothId) {
@@ -119,6 +124,54 @@ const BoothSell = () => {
     }, 1500);
   };
 
+  const handleStudentLookup = async () => {
+    if (!studentNumber) {
+      toast.error('Please enter a student number');
+      return;
+    }
+    
+    setIsLoadingStudent(true);
+    
+    try {
+      // Try to find the user in Supabase
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('student_number', studentNumber)
+        .single();
+      
+      if (error || !data) {
+        // Fallback to local storage
+        const usersStr = localStorage.getItem('users');
+        const users = usersStr ? JSON.parse(usersStr) : [];
+        const foundUser = users.find((u: any) => u.studentNumber === studentNumber);
+        
+        if (foundUser) {
+          setCustomer({
+            id: foundUser.id,
+            name: foundUser.name,
+            balance: foundUser.balance
+          });
+        } else {
+          toast.error('Student not found');
+          setCustomer(null);
+        }
+      } else {
+        // User found in Supabase
+        setCustomer({
+          id: data.id,
+          name: data.name,
+          balance: data.tickets / 100  // Convert cents to dollars
+        });
+      }
+    } catch (error) {
+      console.error('Error looking up student:', error);
+      toast.error('Failed to look up student');
+    } finally {
+      setIsLoadingStudent(false);
+    }
+  };
+
   const handleConfirmPurchase = async () => {
     if (!customer || !booth || !user) {
       toast.error('Missing customer or booth information');
@@ -156,6 +209,7 @@ const BoothSell = () => {
         // Add a delay before clearing customer to allow them to see the success message
         setTimeout(() => {
           setCustomer(null);
+          setStudentNumber('');
         }, 5000);
         
         toast.success(`Purchase of $${total.toFixed(2)} completed successfully`);
@@ -170,6 +224,7 @@ const BoothSell = () => {
     // Clear cart and customer
     setCart([]);
     setCustomer(null);
+    setStudentNumber('');
   };
 
   const handleTabChange = (value: string) => {
@@ -182,6 +237,12 @@ const BoothSell = () => {
     } else if (value === 'settings') {
       navigate(`/booth/${boothId}/settings`);
     }
+  };
+
+  const toggleLookupMode = () => {
+    setLookupMode(prev => prev === 'scan' ? 'manual' : 'scan');
+    setCustomer(null);
+    setStudentNumber('');
   };
 
   // Calculate total
@@ -251,22 +312,81 @@ const BoothSell = () => {
             
             {/* Products List or Scan QR code */}
             {!customer ? (
-              <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-lg bg-muted/20">
-                <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                  <Scan className="h-10 w-10 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-border rounded-lg bg-muted/20">
+                <div className="flex justify-center space-x-4 mb-6">
+                  <Button 
+                    variant={lookupMode === 'scan' ? 'default' : 'outline'} 
+                    onClick={() => setLookupMode('scan')}
+                    className="gap-2"
+                  >
+                    <Scan className="h-4 w-4" />
+                    Scan QR Code
+                  </Button>
+                  <Button 
+                    variant={lookupMode === 'manual' ? 'default' : 'outline'} 
+                    onClick={() => setLookupMode('manual')}
+                    className="gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Student Number
+                  </Button>
                 </div>
                 
-                <p className="text-muted-foreground mb-6">
-                  {scanning ? "Scanning..." : "Scan customer's QR code to begin"}
-                </p>
-                
-                <Button 
-                  onClick={handleScanQR} 
-                  disabled={scanning}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                >
-                  {scanning ? "Scanning..." : "Simulate Scan"}
-                </Button>
+                {lookupMode === 'scan' ? (
+                  <>
+                    <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                      <Scan className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    
+                    <p className="text-muted-foreground mb-6">
+                      {scanning ? "Scanning..." : "Scan customer's QR code to begin"}
+                    </p>
+                    
+                    <Button 
+                      onClick={handleScanQR} 
+                      disabled={scanning}
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      {scanning ? "Scanning..." : "Simulate Scan"}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="w-full max-w-md">
+                    <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4 mx-auto">
+                      <User className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    
+                    <p className="text-muted-foreground mb-6 text-center">
+                      Enter student number to find customer
+                    </p>
+                    
+                    <div className="flex space-x-2 mb-4">
+                      <Input
+                        placeholder="Enter student number"
+                        value={studentNumber}
+                        onChange={(e) => setStudentNumber(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={handleStudentLookup}
+                        disabled={isLoadingStudent || !studentNumber}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        {isLoadingStudent ? (
+                          <div className="flex items-center">
+                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            Looking up...
+                          </div>
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4 mr-2" />
+                            Find
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>

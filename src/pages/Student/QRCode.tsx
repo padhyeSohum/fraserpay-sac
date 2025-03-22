@@ -4,11 +4,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 const QRCode = () => {
   const { user } = useAuth();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [qrData, setQrData] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -24,17 +27,14 @@ const QRCode = () => {
 
   const regenerateQR = () => {
     if (user) {
+      setIsRefreshing(true);
       // In a real app, this would generate a new temporary QR code
       // For demo, we'll use the same QR code but animate a refresh
-      const qrElement = document.getElementById('qr-code');
-      if (qrElement) {
-        qrElement.classList.add('opacity-0');
-        setTimeout(() => {
-          const qrUrl = generateQRCode(qrData);
-          setQrCodeUrl(qrUrl);
-          qrElement.classList.remove('opacity-0');
-        }, 300);
-      }
+      setTimeout(() => {
+        const qrUrl = generateQRCode(qrData);
+        setQrCodeUrl(qrUrl);
+        setIsRefreshing(false);
+      }, 800);
     }
   };
 
@@ -47,8 +47,7 @@ const QRCode = () => {
               <h2 className="text-xl font-semibold mb-4">Show this QR code to make purchases</h2>
               
               <div 
-                id="qr-code"
-                className="w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-opacity duration-300"
+                className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
               >
                 {qrCodeUrl ? (
                   <img 
@@ -63,9 +62,26 @@ const QRCode = () => {
                 )}
               </div>
               
+              <Button
+                variant="outline"
+                onClick={regenerateQR}
+                disabled={isRefreshing}
+                className="mb-4"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh QR Code
+              </Button>
+              
               <p className="text-sm text-muted-foreground text-center">
                 This is your unique payment QR code. Present it to booth vendors to make purchases.
               </p>
+              
+              {user && (
+                <div className="mt-4 text-center">
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">Balance: ${user.balance.toFixed(2)}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
