@@ -14,21 +14,19 @@ interface AppProvidersProps {
 
 const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   return (
-    <React.StrictMode>
-      <QueryProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <TransactionProvider>
-              <TooltipProvider>
-                {children}
-                <Toaster />
-                <Sonner />
-              </TooltipProvider>
-            </TransactionProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryProvider>
-    </React.StrictMode>
+    <QueryProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <TransactionProvider>
+            <TooltipProvider delayDuration={0}>
+              {children}
+              <Toaster />
+              <Sonner />
+            </TooltipProvider>
+          </TransactionProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryProvider>
   );
 };
 

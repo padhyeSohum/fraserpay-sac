@@ -6,14 +6,14 @@ import ReactDOMServer from 'react-dom/server';
 // Generate a real QR code as base64 data URL
 export const generateQRCode = (text: string): string => {
   const qrCode = ReactDOMServer.renderToString(
-    <QRCodeSVG 
-      value={text} 
-      size={250}
-      bgColor={"#ffffff"}
-      fgColor={"#000000"}
-      level={"H"}
-      includeMargin={true}
-    />
+    React.createElement(QRCodeSVG, {
+      value: text,
+      size: 250,
+      bgColor: "#ffffff",
+      fgColor: "#000000",
+      level: "H",
+      includeMargin: true
+    })
   );
   
   // Convert SVG to data URL
