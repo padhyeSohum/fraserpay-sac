@@ -17,7 +17,7 @@ interface QueryProviderProps {
   children: React.ReactNode;
 }
 
-const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
+const QueryProvider = ({ children }: QueryProviderProps) => {
   return (
     <QueryClientProvider client={queryClient}>
       {children}

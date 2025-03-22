@@ -1,7 +1,8 @@
 
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
 
 // Function to check for service worker updates
 const checkForUpdates = () => {
@@ -13,7 +14,14 @@ const checkForUpdates = () => {
 };
 
 // Create React root and render App
-createRoot(document.getElementById("root")!).render(<App />);
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error('Failed to find the root element');
+const root = createRoot(rootElement);
+
+// Render app with proper React context
+root.render(
+  <App />
+);
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
