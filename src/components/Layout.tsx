@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,7 +64,11 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultLogo = (
     <div className="flex items-center gap-2">
-      <span className="font-bold text-lg text-primary">Fraser Pay</span>
+      <img 
+        src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" 
+        alt="Fraser Pay" 
+        className="h-8 w-auto" 
+      />
     </div>
   );
 
