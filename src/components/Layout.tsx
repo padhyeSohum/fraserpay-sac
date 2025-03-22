@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { resetAuthState } from '@/utils/auth';
 import { toast } from 'sonner';
-import { clearBrowserCache, clearAppData } from '@/utils/cache';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,32 +36,18 @@ const Layout: React.FC<LayoutProps> = ({
   const location = useLocation();
   const { logout, isLoading, user } = useAuth();
 
-  // Clear cache on initial render
-  useEffect(() => {
-    const lastCleared = localStorage.getItem('cacheCleared');
-    const currentTime = Date.now();
-    const clearInterval = 1000 * 60 * 60; // 1 hour
-    
-    // Only clear cache if it hasn't been cleared in the last hour
-    if (!lastCleared || (currentTime - parseInt(lastCleared)) > clearInterval) {
-      clearBrowserCache().then(cleared => {
-        if (cleared) {
-          clearAppData();
-          console.log('Cache and app data cleared on application start');
-        }
-      });
-    }
-  }, []);
-
   const handleBack = () => {
+    // Use custom back handler if provided, otherwise use default behavior
     if (onBackClick) {
       onBackClick();
       return;
     }
     
     if (location.pathname === '/dashboard') {
+      // Don't allow going back from dashboard
       return;
     }
+    // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
   };
 
@@ -90,10 +74,11 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultFooter = (
     <div className="text-center text-xs text-muted-foreground py-2">
-      Made with ❤️ by Akshat Chopra for John Fraser SAC
+      Made with ❤️ by the John Fraser SAC
     </div>
   );
 
+  // Simplified loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">

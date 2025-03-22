@@ -1,22 +1,19 @@
 
-import { supabase } from '@/integrations/supabase/client';
+// This is a simple placeholder for QR code generation
+// In a real app, you would use a proper QR code library like qrcode.react
 
-// Generate a QR code using a better approach than just a placeholder
-export const generateQRCode = async (text: string): Promise<string> => {
-  try {
-    // We're using a third-party API to generate QR codes
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
-    return apiUrl;
-  } catch (error) {
-    console.error('Error generating QR code:', error);
-    return '';
-  }
+// Generate a base64 data URL of a simple QR code
+export const generateQRCode = (text: string): string => {
+  // For demo purposes, we'll just return a placeholder image
+  // In a real app, you would use a library to generate a real QR code
+  return `data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="black" stroke="none"><rect x="10" y="10" width="80" height="80" fill="none" stroke="black" stroke-width="2"/><text x="50" y="50" font-family="monospace" font-size="8" text-anchor="middle" dominant-baseline="middle">QR Code for:</text><text x="50" y="60" font-family="monospace" font-size="8" text-anchor="middle" dominant-baseline="middle">${text}</text></svg>`;
 };
 
-// Validate a QR code
+// Validate a QR code (in a real app, this would involve cryptographic verification)
 export const validateQRCode = (qrData: string): { isValid: boolean; userId?: string } => {
+  // For demo purposes, we'll assume the QR data is valid and contains the user ID
   try {
-    // Decode the data
+    // Decode the data (in a real app, this would be more secure)
     if (qrData.startsWith('USER:')) {
       const userId = qrData.replace('USER:', '');
       return { isValid: true, userId };
@@ -34,7 +31,7 @@ export const encodeUserData = (userId: string): string => {
 };
 
 // Get user from QR data
-export const getUserFromQRData = async (qrData: string): Promise<any | null> => {
+export const getUserFromQRData = (qrData: string): any | null => {
   try {
     const validation = validateQRCode(qrData);
     if (!validation.isValid || !validation.userId) {
@@ -42,20 +39,10 @@ export const getUserFromQRData = async (qrData: string): Promise<any | null> => 
     }
     
     const userId = validation.userId;
+    const usersStr = localStorage.getItem('users');
+    const users = usersStr ? JSON.parse(usersStr) : [];
     
-    // Get user data from Supabase
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      console.error('Error getting user from QR data:', error);
-      return null;
-    }
-    
-    return data;
+    return users.find((u: any) => u.id === userId) || null;
   } catch (error) {
     console.error('Error getting user from QR data:', error);
     return null;
