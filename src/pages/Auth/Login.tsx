@@ -14,16 +14,22 @@ const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      console.log("Login page: User is authenticated, redirecting", user.role);
+      // Redirect based on user role
+      if (user.role === 'sac') {
+        navigate('/sac/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,9 +47,9 @@ const Login = () => {
     
     try {
       await login(studentNumber, password);
-      // Navigation is handled in the AuthContext
+      // Navigation is handled in the useEffect above
     } catch (error) {
-      console.error(error);
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "Please check your credentials and try again",

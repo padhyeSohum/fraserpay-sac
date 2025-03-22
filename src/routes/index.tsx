@@ -106,7 +106,7 @@ export const LoadingScreen = () => (
   </div>
 );
 
-// Protected Route component
+// Protected Route component with simplified logic
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
@@ -122,7 +122,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Role-based protected route
+// Role-based protected route with simplified logic
 export const RoleProtectedRoute = ({ 
   children, 
   allowedRoles 

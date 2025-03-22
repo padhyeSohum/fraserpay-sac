@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
@@ -7,25 +7,21 @@ import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './ind
 const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const [initialRedirectComplete, setInitialRedirectComplete] = useState(false);
+  const [redirectChecked, setRedirectChecked] = useState(false);
 
-  // Redirect based on authentication status and user role only once during initial load
+  // Simplified effect to handle initial routing only once
   useEffect(() => {
-    // Only execute this logic on initial page load and when auth loading is complete
-    if (!isLoading && !initialRedirectComplete) {
-      if (isAuthenticated && user) {
-        // Only redirect if we're at login, register, or root
-        if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
-          if (user.role === 'sac') {
-            window.location.href = '/sac/dashboard';
-          } else {
-            window.location.href = '/dashboard';
-          }
-        }
-      }
-      setInitialRedirectComplete(true);
+    // Only run this effect once after authentication is established
+    if (!isLoading && !redirectChecked) {
+      console.log("Initial route check - Auth status:", isAuthenticated, "Path:", location.pathname);
+      setRedirectChecked(true);
     }
-  }, [isAuthenticated, isLoading, user, location.pathname, initialRedirectComplete]);
+  }, [isLoading, isAuthenticated, location.pathname, redirectChecked]);
+
+  // If still loading auth state, show loading screen
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <Routes>
@@ -63,12 +59,14 @@ const AppRoutes: React.FC = () => {
         return <Route key={index} path={route.path} element={route.element} />;
       })}
       
-      {/* Root route special case */}
+      {/* Root route redirects based on auth status */}
       <Route path="/" element={
         isLoading ? (
           <LoadingScreen />
         ) : isAuthenticated ? (
-          <Navigate to="/dashboard" replace />
+          user?.role === 'sac' ? 
+            <Navigate to="/sac/dashboard" replace /> : 
+            <Navigate to="/dashboard" replace />
         ) : (
           <Navigate to="/login" replace />
         )

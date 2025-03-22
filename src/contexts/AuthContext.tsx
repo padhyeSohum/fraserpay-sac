@@ -1,8 +1,7 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 
@@ -29,15 +28,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.id);
-        setSession(currentSession);
         
-        if (currentSession?.user) {
+        if (!mounted) return;
+        
+        if (currentSession) {
+          setSession(currentSession);
+          
           try {
             // Fetch user data from users table
             const { data: userData, error: userError } = await supabase
@@ -48,8 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (userError) {
               console.error('Error fetching user data:', userError);
-              setUser(null);
-              setIsLoading(false);
+              if (mounted) {
+                setUser(null);
+                setIsLoading(false);
+              }
             } else if (userData) {
               // Transform to match our User type
               const appUser: User = {
@@ -63,35 +70,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 booths: userData.booth_access || []
               };
               
-              setUser(appUser);
+              if (mounted) {
+                setUser(appUser);
+                setIsLoading(false);
+              }
               
-              // Route based on user role only for sign-in events
-              if (event === 'SIGNED_IN') {
-                if (appUser.role === 'sac') {
-                  navigate('/sac/dashboard');
-                } else if (appUser.role === 'booth') {
-                  // If the user is a booth manager, direct them to booth dashboard
-                  if (appUser.booths && appUser.booths.length > 0) {
-                    navigate(`/booth/${appUser.booths[0]}`);
-                  } else {
-                    navigate('/dashboard');
-                  }
-                } else {
-                  // Regular students
-                  navigate('/dashboard');
-                }
+              // Only navigate on SIGNED_IN event, not on every auth state change
+              if (event === 'SIGNED_IN' && mounted) {
+                console.log("User signed in, navigating based on role:", appUser.role);
+                // Let AppRoutes handle the navigation based on role
               }
             }
-            setIsLoading(false);
           } catch (error) {
             console.error('Error in auth state change handler:', error);
-            setIsLoading(false);
+            if (mounted) setIsLoading(false);
           }
         } else {
-          setUser(null);
-          setIsLoading(false);
-          if (event === 'SIGNED_OUT') {
-            navigate('/login');
+          if (mounted) {
+            setUser(null);
+            setSession(null);
+            setIsLoading(false);
+          }
+          
+          if (event === 'SIGNED_OUT' && mounted) {
+            console.log("User signed out, redirecting to login");
+            // Only navigate if we're not already on login or register
+            if (location.pathname !== '/login' && location.pathname !== '/register') {
+              navigate('/login');
+            }
           }
         }
       }
@@ -101,9 +107,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
+        
+        if (!mounted) return;
         
         if (initialSession?.user) {
+          setSession(initialSession);
+          
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
@@ -131,16 +140,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error checking session:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
     
     checkSession();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const login = async (studentNumber: string, password: string) => {
     setIsLoading(true);
