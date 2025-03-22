@@ -12,7 +12,7 @@ import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId } = useTransactions();
+  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
@@ -20,15 +20,18 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      // Load user's transactions
-      const transactions = loadUserTransactions(user.id);
-      setUserTransactions(transactions.slice(0, 3)); // Show only 3 most recent
-      
-      // Load user's booths
-      const booths = getBoothsByUserId(user.id);
-      setUserBooths(booths);
+      // Refresh data
+      fetchAllBooths().then(() => {
+        // Load user's transactions
+        const transactions = loadUserTransactions(user.id);
+        setUserTransactions(transactions.slice(0, 3)); // Show only 3 most recent
+        
+        // Load user's booths
+        const booths = getBoothsByUserId(user.id);
+        setUserBooths(booths);
+      });
     }
-  }, [user, loadUserTransactions, getBoothsByUserId]);
+  }, [user, loadUserTransactions, getBoothsByUserId, fetchAllBooths]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');

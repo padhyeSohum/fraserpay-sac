@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,16 @@ const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +41,7 @@ const Login = () => {
     
     try {
       await login(studentNumber, password);
-      // Navigation is handled in the AuthContext after successful login
+      // Navigation is handled in the AuthContext
     } catch (error) {
       console.error(error);
       toast({
@@ -134,7 +141,7 @@ const Login = () => {
               
               <div className="flex items-center justify-center text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                <span>Demo mode: Use any credentials for first login</span>
+                <span>Contact SAC if you need help signing in</span>
               </div>
             </CardFooter>
           </Card>

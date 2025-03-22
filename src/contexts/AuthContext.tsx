@@ -3,6 +3,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -10,10 +12,11 @@ interface AuthContextType {
   isLoading: boolean;
   login: (studentNumber: string, password: string) => Promise<void>;
   register: (studentNumber: string, name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  verifySACPin: (pin: string) => boolean;
+  logout: () => Promise<void>;
+  verifySACPin: (pin: string) => Promise<boolean>;
   verifyBoothPin: (pin: string) => Promise<boolean>;
   joinBooth: (boothId: string) => void;
+  session: Session | null;
 }
 
 // Mock SAC PIN for demo purposes
@@ -23,62 +26,126 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for existing user session in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          // Fetch user data from users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentSession.user.id)
+            .single();
+          
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            setUser(null);
+          } else if (userData) {
+            // Transform to match our User type
+            const appUser: User = {
+              id: userData.id,
+              studentNumber: userData.student_number,
+              name: userData.name,
+              email: userData.email,
+              role: userData.role as UserRole,
+              balance: userData.tickets,
+              favoriteProducts: [],
+              booths: userData.booth_access || []
+            };
+            
+            setUser(appUser);
+            
+            // Route based on user role only for sign-in events
+            if (event === 'SIGNED_IN') {
+              if (appUser.role === 'sac') {
+                navigate('/sac/dashboard');
+              } else {
+                navigate('/dashboard');
+              }
+            }
+          }
+        } else {
+          setUser(null);
+          if (event === 'SIGNED_OUT') {
+            navigate('/login');
+          }
+        }
       }
-    }
-    setIsLoading(false);
-  }, []);
+    );
 
-  // Save user to localStorage whenever it changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    }
-  }, [user]);
+    // Check for existing session
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      
+      if (initialSession?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', initialSession.user.id)
+          .single();
+        
+        if (userError) {
+          console.error('Error fetching user data:', userError);
+          setUser(null);
+        } else if (userData) {
+          const appUser: User = {
+            id: userData.id,
+            studentNumber: userData.student_number,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role as UserRole,
+            balance: userData.tickets,
+            favoriteProducts: [],
+            booths: userData.booth_access || []
+          };
+          
+          setUser(appUser);
+        }
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const login = async (studentNumber: string, password: string) => {
     setIsLoading(true);
     
     try {
-      // For demo purposes, we'll simply check if the student number exists in localStorage
-      const usersStr = localStorage.getItem('users');
-      const users: User[] = usersStr ? JSON.parse(usersStr) : [];
+      // First, find the user by student number
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('student_number', studentNumber)
+        .single();
       
-      const foundUser = users.find(u => u.studentNumber === studentNumber);
-      
-      if (!foundUser) {
+      if (userError || !userData) {
         throw new Error('Student number not found');
       }
       
-      // In a real app, you would verify the password hash here
-      // For demo, we'll just check if password exists (not secure!)
-      const passwordsStr = localStorage.getItem('passwords');
-      const passwords: Record<string, string> = passwordsStr ? JSON.parse(passwordsStr) : {};
+      // Now sign in with email and password
+      const { error } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: password
+      });
       
-      if (passwords[foundUser.id] !== password) {
-        throw new Error('Incorrect password');
+      if (error) {
+        throw error;
       }
       
-      setUser(foundUser);
       toast.success('Login successful');
-
-      // Route based on user role
-      if (foundUser.role === 'sac') {
-        navigate('/sac/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      // Navigation is handled in the auth state change listener
       
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Login failed');
@@ -93,42 +160,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Check if user already exists
-      const usersStr = localStorage.getItem('users');
-      const users: User[] = usersStr ? JSON.parse(usersStr) : [];
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .or(`student_number.eq.${studentNumber},email.eq.${email}`);
       
-      if (users.some(u => u.studentNumber === studentNumber)) {
-        throw new Error('Student number already registered');
+      if (checkError) {
+        throw new Error('Error checking existing users');
       }
       
-      if (users.some(u => u.email === email)) {
-        throw new Error('Email already registered');
+      if (existingUsers && existingUsers.length > 0) {
+        throw new Error('Student number or email already registered');
       }
       
-      // Create new user
-      const newUser: User = {
-        id: Date.now().toString(),
-        studentNumber,
-        name,
+      // Register user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        role: 'student',
-        balance: 0,
-        favoriteProducts: [],
-        booths: []
-      };
+        password,
+        options: {
+          data: {
+            student_number: studentNumber,
+            name
+          }
+        }
+      });
       
-      // Save user
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
+      if (authError || !authData.user) {
+        throw authError || new Error('Failed to create account');
+      }
       
-      // Save password (in a real app, you would hash this!)
-      const passwordsStr = localStorage.getItem('passwords');
-      const passwords: Record<string, string> = passwordsStr ? JSON.parse(passwordsStr) : {};
-      passwords[newUser.id] = password;
-      localStorage.setItem('passwords', JSON.stringify(passwords));
+      // Create user profile in users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          name,
+          email,
+          student_number: studentNumber,
+          role: 'student',
+          tickets: 0,
+          qr_code: `USER:${authData.user.id}`
+        });
       
-      setUser(newUser);
+      if (profileError) {
+        throw profileError;
+      }
+      
       toast.success('Registration successful');
-      navigate('/dashboard');
+      // Navigation is handled in the auth state change listener
       
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed');
@@ -138,31 +217,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    // In a real app, you'd clear the authentication token here
-    toast.info('Logged out');
-    navigate('/login');
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error);
+      toast.error('Logout failed');
+    } else {
+      setUser(null);
+      setSession(null);
+      toast.info('Logged out');
+      navigate('/login');
+    }
   };
 
-  const verifySACPin = (pin: string) => {
-    if (pin === SAC_PIN) {
-      // Update user role to SAC if pin is correct
-      if (user) {
-        const updatedUser = { ...user, role: 'sac' as UserRole };
-        setUser(updatedUser);
+  const verifySACPin = async (pin: string) => {
+    if (pin === SAC_PIN && user) {
+      try {
+        // Update user role to SAC in database
+        const { error } = await supabase
+          .from('users')
+          .update({ role: 'sac' })
+          .eq('id', user.id);
         
-        // Update in localStorage users array
-        const usersStr = localStorage.getItem('users');
-        if (usersStr) {
-          const users: User[] = JSON.parse(usersStr);
-          const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
-          localStorage.setItem('users', JSON.stringify(updatedUsers));
+        if (error) {
+          throw error;
         }
+        
+        // Update local user state
+        setUser(prev => prev ? { ...prev, role: 'sac' } : null);
         
         toast.success('SAC access granted');
         navigate('/sac/dashboard');
         return true;
+      } catch (error) {
+        console.error('Error updating user role:', error);
+        toast.error('Failed to grant SAC access');
+        return false;
       }
     }
     
@@ -171,45 +261,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifyBoothPin = async (pin: string): Promise<boolean> => {
-    // Get booths from localStorage
-    const boothsStr = localStorage.getItem('booths');
-    const booths = boothsStr ? JSON.parse(boothsStr) : [];
+    if (!user) return false;
     
-    const booth = booths.find((b: any) => b.pin === pin);
-    
-    if (booth && user) {
-      // Add this booth to user's booths if not already there
-      if (!user.booths?.includes(booth.id)) {
-        const updatedUser = {
-          ...user,
-          booths: [...(user.booths || []), booth.id]
-        };
-        
-        setUser(updatedUser);
-        
-        // Update user in localStorage
-        const usersStr = localStorage.getItem('users');
-        if (usersStr) {
-          const users: User[] = JSON.parse(usersStr);
-          const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
-          localStorage.setItem('users', JSON.stringify(updatedUsers));
-        }
-        
-        // Add user to booth managers
-        booth.managers = [...(booth.managers || []), user.id];
-        const updatedBooths = booths.map((b: any) => b.id === booth.id ? booth : b);
-        localStorage.setItem('booths', JSON.stringify(updatedBooths));
-        
-        toast.success(`You now have access to ${booth.name}`);
-        return true;
-      } else {
-        toast.info(`You already have access to ${booth.name}`);
+    try {
+      // Find booth with matching PIN
+      const { data: boothData, error: boothError } = await supabase
+        .from('booths')
+        .select('*')
+        .eq('pin', pin)
+        .single();
+      
+      if (boothError || !boothData) {
+        throw new Error('Invalid booth PIN');
+      }
+      
+      // Check if user already has access
+      const hasAccess = user.booths?.includes(boothData.id);
+      
+      if (hasAccess) {
+        toast.info(`You already have access to ${boothData.name}`);
         return true;
       }
+      
+      // Add booth to user's booth access
+      const updatedBoothAccess = [...(user.booths || []), boothData.id];
+      
+      // Update user's booth access in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ booth_access: updatedBoothAccess })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Add user to booth members
+      const updatedMembers = [...(boothData.members || []), user.id];
+      
+      const { error: boothUpdateError } = await supabase
+        .from('booths')
+        .update({ members: updatedMembers })
+        .eq('id', boothData.id);
+      
+      if (boothUpdateError) {
+        console.error('Error updating booth members:', boothUpdateError);
+      }
+      
+      // Update local user state
+      setUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          booths: updatedBoothAccess
+        };
+      });
+      
+      toast.success(`You now have access to ${boothData.name}`);
+      return true;
+      
+    } catch (error) {
+      console.error('Error verifying booth PIN:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to verify booth PIN');
+      return false;
     }
-    
-    toast.error('Invalid booth PIN');
-    return false;
   };
 
   const joinBooth = (boothId: string) => {
@@ -229,7 +344,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         verifySACPin,
         verifyBoothPin,
-        joinBooth
+        joinBooth,
+        session
       }}
     >
       {children}

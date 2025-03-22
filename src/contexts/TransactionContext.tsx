@@ -1,33 +1,24 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { Transaction, User, Booth, Product, CartItem } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Transaction, Booth, Product, CartItem } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TransactionContextType {
   transactions: Transaction[];
-  booths: Booth[];
+  recentTransactions: Transaction[];
   loadUserTransactions: (userId: string) => Transaction[];
   loadBoothTransactions: (boothId: string) => Transaction[];
-  addFunds: (amount: number, userId: string, paymentMethod: 'cash' | 'card', sacMemberId: string, sacMemberName: string) => Promise<boolean>;
-  processPayment: (
-    buyerId: string,
-    buyerName: string,
-    boothId: string,
-    boothName: string,
-    sellerId: string, 
-    sellerName: string,
-    cartItems: CartItem[]
-  ) => Promise<boolean>;
-  getLeaderboard: () => { boothId: string, boothName: string, earnings: number }[];
-  getUserFavoriteProducts: (userId: string) => { productId: string, productName: string, count: number }[];
-  createBooth: (name: string, description: string, pin: string, creatorId: string) => Promise<string>;
+  addFunds: (amount: number, studentId: string, paymentMethod: 'cash' | 'card', sacMemberId: string, sacMemberName: string) => Promise<boolean>;
+  processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
   getBoothById: (boothId: string) => Booth | undefined;
   getBoothsByUserId: (userId: string) => Booth[];
-  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
-  updateProductInBooth: (boothId: string, productId: string, productUpdates: Partial<Product>) => Promise<boolean>;
-  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
-  recentTransactions: Transaction[];
+  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
+  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId'>) => Promise<boolean>;
+  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
+  fetchAllTransactions: () => Promise<void>;
+  fetchAllBooths: () => Promise<void>;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -35,173 +26,310 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  // Load initial data from localStorage
+  // Load transactions and booths on mount
   useEffect(() => {
-    const storedTransactions = localStorage.getItem('transactions');
-    if (storedTransactions) {
-      try {
-        setTransactions(JSON.parse(storedTransactions));
-      } catch (error) {
-        console.error('Failed to parse stored transactions:', error);
-      }
-    } else {
-      // Create empty transactions array if none exists
-      localStorage.setItem('transactions', JSON.stringify([]));
+    if (user) {
+      Promise.all([
+        fetchAllTransactions(),
+        fetchAllBooths()
+      ]).finally(() => setIsLoading(false));
     }
+  }, [user]);
 
-    const storedBooths = localStorage.getItem('booths');
-    if (storedBooths) {
-      try {
-        setBooths(JSON.parse(storedBooths));
-      } catch (error) {
-        console.error('Failed to parse stored booths:', error);
+  const fetchAllTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          transaction_products(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
       }
-    } else {
-      // Initialize with some demo booths
-      const initialBooths: Booth[] = [
-        {
-          id: '1',
-          name: 'Computer Club',
-          description: 'Tech support and gadgets',
-          pin: '111111',
-          products: [
-            { id: '101', name: 'Pizza Slice', price: 3.50, boothId: '1', salesCount: 0 },
-            { id: '102', name: 'Hot Dog', price: 4.00, boothId: '1', salesCount: 0 },
-            { id: '103', name: 'Soda', price: 2.00, boothId: '1', salesCount: 0 },
-            { id: '104', name: 'Chips', price: 1.50, boothId: '1', salesCount: 0 }
-          ],
-          managers: [],
-          totalEarnings: 0,
-          transactions: []
-        },
-        {
-          id: '2',
-          name: 'Grade 12 Council',
-          description: 'Senior year fundraising',
-          pin: '222222',
-          products: [
-            { id: '201', name: 'Cookies', price: 3.00, boothId: '2', salesCount: 0 },
-            { id: '202', name: 'Brownies', price: 3.00, boothId: '2', salesCount: 0 },
-            { id: '203', name: 'Iced Coffee', price: 4.00, boothId: '2', salesCount: 0 },
-            { id: '204', name: 'Bubble Tea', price: 5.00, boothId: '2', salesCount: 0 },
-            { id: '205', name: 'Samosa', price: 2.00, boothId: '2', salesCount: 0 },
-            { id: '206', name: 'Pizza Slice', price: 4.00, boothId: '2', salesCount: 0 }
-          ],
-          managers: [],
-          totalEarnings: 0,
-          transactions: []
-        }
-      ];
-      localStorage.setItem('booths', JSON.stringify(initialBooths));
-      setBooths(initialBooths);
+
+      if (data) {
+        // Transform database transactions to match our app's Transaction type
+        const formattedTransactions: Transaction[] = data.map(t => ({
+          id: t.id,
+          timestamp: new Date(t.created_at).getTime(),
+          buyerId: t.student_id,
+          buyerName: t.student_name,
+          sellerId: t.booth_id || undefined,
+          sellerName: undefined,
+          boothId: t.booth_id || undefined,
+          boothName: t.booth_name || undefined,
+          products: t.transaction_products?.map(p => ({
+            productId: p.product_id,
+            productName: p.product_name,
+            quantity: p.quantity,
+            price: p.price / 100 // Database stores in cents
+          })) || [],
+          amount: t.amount / 100, // Database stores in cents
+          type: t.type as 'purchase' | 'fund' | 'refund',
+          paymentMethod: t.type === 'fund' ? 'cash' : undefined,
+          sacMemberId: t.sac_member || undefined,
+          sacMemberName: undefined
+        }));
+
+        setTransactions(formattedTransactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast.error('Failed to load transactions');
     }
-  }, []);
+  };
 
-  // Update localStorage whenever transactions change
-  useEffect(() => {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    
-    // Update recent transactions
-    const recent = [...transactions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-    setRecentTransactions(recent);
-  }, [transactions]);
+  const fetchAllBooths = async () => {
+    try {
+      const { data: boothsData, error: boothsError } = await supabase
+        .from('booths')
+        .select('*');
 
-  // Update localStorage whenever booths change
-  useEffect(() => {
-    localStorage.setItem('booths', JSON.stringify(booths));
-  }, [booths]);
+      if (boothsError) {
+        throw boothsError;
+      }
+
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*');
+
+      if (productsError) {
+        throw productsError;
+      }
+
+      if (boothsData) {
+        // Transform database booths to match our app's Booth type
+        const formattedBooths: Booth[] = boothsData.map(b => {
+          // Find products for this booth
+          const boothProducts = productsData?.filter(p => p.booth_id === b.id) || [];
+          
+          return {
+            id: b.id,
+            name: b.name,
+            description: b.description || '',
+            pin: b.pin,
+            products: boothProducts.map(p => ({
+              id: p.id,
+              name: p.name,
+              price: p.price / 100, // Database stores in cents
+              boothId: p.booth_id,
+              salesCount: 0
+            })),
+            managers: b.members || [],
+            totalEarnings: b.sales / 100, // Database stores in cents
+            transactions: []
+          };
+        });
+
+        setBooths(formattedBooths);
+      }
+    } catch (error) {
+      console.error('Error fetching booths:', error);
+      toast.error('Failed to load booths');
+    }
+  };
 
   const loadUserTransactions = (userId: string) => {
-    return transactions.filter(t => t.buyerId === userId || t.sellerId === userId);
+    return transactions.filter(t => t.buyerId === userId);
   };
 
   const loadBoothTransactions = (boothId: string) => {
     return transactions.filter(t => t.boothId === boothId);
   };
 
-  const addFunds = async (amount: number, userId: string, paymentMethod: 'cash' | 'card', sacMemberId: string, sacMemberName: string) => {
+  const addFunds = async (
+    amount: number, 
+    studentId: string, 
+    paymentMethod: 'cash' | 'card',
+    sacMemberId: string,
+    sacMemberName: string
+  ) => {
     try {
+      // Find user
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tickets, name')
+        .eq('id', studentId)
+        .single();
+      
+      if (userError) {
+        throw userError;
+      }
+      
+      // Calculate new balance
+      const amountInCents = Math.round(amount * 100);
+      const newBalance = (userData.tickets || 0) + amountInCents;
+      
+      // Start a transaction
+      // Update user balance
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ tickets: newBalance })
+        .eq('id', studentId);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
       // Create transaction record
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          student_id: studentId,
+          student_name: userData.name,
+          amount: amountInCents,
+          type: 'fund',
+          sac_member: sacMemberName
+        })
+        .select()
+        .single();
+      
+      if (transactionError) {
+        throw transactionError;
+      }
+      
+      // Add to local state
       const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
-        buyerId: userId,
-        buyerName: '', // Will update with actual name
-        amount,
+        id: transactionData.id,
+        timestamp: new Date(transactionData.created_at).getTime(),
+        buyerId: studentId,
+        buyerName: userData.name,
+        amount: amount,
         type: 'fund',
         paymentMethod,
         sacMemberId,
         sacMemberName
       };
-
-      // Get user to update balance and get name
-      const usersStr = localStorage.getItem('users');
-      const users: User[] = usersStr ? JSON.parse(usersStr) : [];
       
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex === -1) {
-        throw new Error('User not found');
-      }
+      setTransactions(prev => [newTransaction, ...prev]);
       
-      // Update transaction with buyer name
-      newTransaction.buyerName = users[userIndex].name;
-      
-      // Update user balance
-      users[userIndex].balance += amount;
-      localStorage.setItem('users', JSON.stringify(users));
-      
-      // Add transaction to records
-      setTransactions(prev => [...prev, newTransaction]);
-      
-      // Update current user if it's the same
-      if (user && user.id === userId) {
-        // In a real app, you would refresh the user from the server
-        // For demo, we'll update the local user object
-      }
-      
-      toast.success(`Added $${amount.toFixed(2)} to account`);
       return true;
-      
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add funds');
-      console.error(error);
+      console.error('Error adding funds:', error);
+      toast.error('Failed to add funds');
       return false;
     }
   };
 
-  const processPayment = async (
+  const processPurchase = async (
+    boothId: string,
     buyerId: string,
     buyerName: string,
-    boothId: string,
-    boothName: string,
     sellerId: string,
     sellerName: string,
-    cartItems: CartItem[]
+    cartItems: CartItem[],
+    boothName: string
   ) => {
     try {
-      // Calculate total amount
-      const totalAmount = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-      
-      // Get user to check balance
-      const usersStr = localStorage.getItem('users');
-      const users: User[] = usersStr ? JSON.parse(usersStr) : [];
-      
-      const buyer = users.find(u => u.id === buyerId);
-      if (!buyer) {
-        throw new Error('Buyer not found');
+      if (cartItems.length === 0) {
+        toast.error('Cart is empty');
+        return false;
       }
       
-      if (buyer.balance < totalAmount) {
-        throw new Error('Insufficient balance');
+      // Calculate total amount
+      const totalAmount = cartItems.reduce(
+        (sum, item) => sum + (item.product.price * item.quantity),
+        0
+      );
+      
+      const totalAmountInCents = Math.round(totalAmount * 100);
+      
+      // Find user to check balance
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tickets')
+        .eq('id', buyerId)
+        .single();
+      
+      if (userError) {
+        throw userError;
+      }
+      
+      if (userData.tickets < totalAmountInCents) {
+        toast.error('Insufficient balance');
+        return false;
+      }
+      
+      // Calculate new balance
+      const newBalance = userData.tickets - totalAmountInCents;
+      
+      // Update user balance
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({ tickets: newBalance })
+        .eq('id', buyerId);
+      
+      if (updateUserError) {
+        throw updateUserError;
+      }
+      
+      // Update booth sales
+      const { data: boothData, error: boothError } = await supabase
+        .from('booths')
+        .select('sales')
+        .eq('id', boothId)
+        .single();
+      
+      if (boothError) {
+        throw boothError;
+      }
+      
+      const newSales = (boothData.sales || 0) + totalAmountInCents;
+      
+      const { error: updateBoothError } = await supabase
+        .from('booths')
+        .update({ sales: newSales })
+        .eq('id', boothId);
+      
+      if (updateBoothError) {
+        throw updateBoothError;
       }
       
       // Create transaction record
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          student_id: buyerId,
+          student_name: buyerName,
+          booth_id: boothId,
+          booth_name: boothName,
+          amount: totalAmountInCents,
+          type: 'purchase'
+        })
+        .select()
+        .single();
+      
+      if (transactionError) {
+        throw transactionError;
+      }
+      
+      // Create transaction products
+      const transactionProducts = cartItems.map(item => ({
+        transaction_id: transactionData.id,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        quantity: item.quantity,
+        price: Math.round(item.product.price * 100)
+      }));
+      
+      const { error: productsError } = await supabase
+        .from('transaction_products')
+        .insert(transactionProducts);
+      
+      if (productsError) {
+        throw productsError;
+      }
+      
+      // Add to local state
       const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
+        id: transactionData.id,
+        timestamp: new Date(transactionData.created_at).getTime(),
         buyerId,
         buyerName,
         sellerId,
@@ -209,7 +337,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         boothId,
         boothName,
         products: cartItems.map(item => ({
-          productId: item.productId,
+          productId: item.product.id,
           productName: item.product.name,
           quantity: item.quantity,
           price: item.product.price
@@ -218,263 +346,180 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         type: 'purchase'
       };
       
-      // Update buyer balance
-      const buyerIndex = users.findIndex(u => u.id === buyerId);
-      users[buyerIndex].balance -= totalAmount;
+      setTransactions(prev => [newTransaction, ...prev]);
       
-      // Add products to favorite if not already there
-      if (!users[buyerIndex].favoriteProducts) {
-        users[buyerIndex].favoriteProducts = [];
-      }
-      
-      cartItems.forEach(item => {
-        if (!users[buyerIndex].favoriteProducts!.includes(item.productId)) {
-          users[buyerIndex].favoriteProducts!.push(item.productId);
-        }
-      });
-      
-      localStorage.setItem('users', JSON.stringify(users));
-      
-      // Update booth earnings and product sales counts
-      const updatedBooths = [...booths];
-      const boothIndex = updatedBooths.findIndex(b => b.id === boothId);
-      
-      if (boothIndex !== -1) {
-        updatedBooths[boothIndex].totalEarnings += totalAmount;
-        
-        // Update product sales counts
-        cartItems.forEach(item => {
-          const productIndex = updatedBooths[boothIndex].products.findIndex(p => p.id === item.productId);
-          if (productIndex !== -1) {
-            const currentSalesCount = updatedBooths[boothIndex].products[productIndex].salesCount || 0;
-            updatedBooths[boothIndex].products[productIndex].salesCount = currentSalesCount + item.quantity;
+      // Update booths state
+      setBooths(prev => 
+        prev.map(booth => {
+          if (booth.id === boothId) {
+            return {
+              ...booth,
+              totalEarnings: booth.totalEarnings + totalAmount,
+              transactions: [newTransaction, ...(booth.transactions || [])]
+            };
           }
-        });
-        
-        setBooths(updatedBooths);
-      }
+          return booth;
+        })
+      );
       
-      // Add transaction to records
-      setTransactions(prev => [...prev, newTransaction]);
-      
-      toast.success('Purchase successful');
       return true;
-      
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Payment failed');
-      console.error(error);
+      console.error('Error processing purchase:', error);
+      toast.error('Failed to process purchase');
       return false;
     }
   };
-
-  const getLeaderboard = () => {
-    return booths.map(booth => ({
-      boothId: booth.id,
-      boothName: booth.name,
-      earnings: booth.totalEarnings
-    })).sort((a, b) => b.earnings - a.earnings);
+  
+  const getBoothById = (boothId: string) => {
+    return booths.find(b => b.id === boothId);
   };
-
-  const getUserFavoriteProducts = (userId: string) => {
-    // Get user
-    const usersStr = localStorage.getItem('users');
-    const users: User[] = usersStr ? JSON.parse(usersStr) : [];
-    
-    const user = users.find(u => u.id === userId);
-    if (!user || !user.favoriteProducts || user.favoriteProducts.length === 0) {
-      return [];
-    }
-    
-    // Count product purchases
-    const productCounts: Record<string, number> = {};
-    
-    transactions
-      .filter(t => t.buyerId === userId && t.type === 'purchase' && t.products)
-      .forEach(transaction => {
-        transaction.products?.forEach(product => {
-          if (productCounts[product.productId]) {
-            productCounts[product.productId] += product.quantity;
-          } else {
-            productCounts[product.productId] = product.quantity;
-          }
-        });
-      });
-    
-    // Get product names and sort by count
-    const favoriteProducts = Object.entries(productCounts)
-      .map(([productId, count]) => {
-        // Find product name by searching all booths
-        let productName = 'Unknown Product';
-        
-        for (const booth of booths) {
-          const product = booth.products.find(p => p.id === productId);
-          if (product) {
-            productName = product.name;
-            break;
-          }
-        }
-        
-        return { productId, productName, count };
-      })
-      .sort((a, b) => b.count - a.count);
-    
-    return favoriteProducts;
+  
+  const getBoothsByUserId = (userId: string) => {
+    return booths.filter(booth => booth.managers.includes(userId));
   };
-
-  const createBooth = async (name: string, description: string, pin: string, creatorId: string) => {
+  
+  const createBooth = async (name: string, description: string, userId: string) => {
     try {
+      // Generate a random 6-digit PIN
+      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      
       // Create new booth
+      const { data, error } = await supabase
+        .from('booths')
+        .insert({
+          name,
+          description,
+          pin,
+          members: [userId],
+          sales: 0
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update user's booth access
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('booth_access')
+        .eq('id', userId)
+        .single();
+      
+      if (userError) {
+        throw userError;
+      }
+      
+      const updatedBoothAccess = [...(userData.booth_access || []), data.id];
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ booth_access: updatedBoothAccess })
+        .eq('id', userId);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Add to local state
       const newBooth: Booth = {
-        id: Date.now().toString(),
-        name,
-        description,
-        pin,
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        pin: data.pin,
         products: [],
-        managers: [creatorId],
+        managers: [userId],
         totalEarnings: 0,
         transactions: []
       };
       
-      // Add booth to state and localStorage
       setBooths(prev => [...prev, newBooth]);
       
-      // Add booth to user's booths
-      const usersStr = localStorage.getItem('users');
-      const users: User[] = usersStr ? JSON.parse(usersStr) : [];
-      
-      const userIndex = users.findIndex(u => u.id === creatorId);
-      if (userIndex !== -1) {
-        users[userIndex].booths = [...(users[userIndex].booths || []), newBooth.id];
-        localStorage.setItem('users', JSON.stringify(users));
-      }
-      
-      toast.success(`Created booth: ${name}`);
-      return newBooth.id;
-      
+      return data.id;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create booth');
-      console.error(error);
-      return '';
+      console.error('Error creating booth:', error);
+      toast.error('Failed to create booth');
+      return null;
     }
   };
-
-  const getBoothById = (boothId: string) => {
-    return booths.find(booth => booth.id === boothId);
-  };
-
-  const getBoothsByUserId = (userId: string) => {
-    return booths.filter(booth => booth.managers.includes(userId));
-  };
-
-  const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
+  
+  const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId'>) => {
     try {
-      const updatedBooths = [...booths];
-      const boothIndex = updatedBooths.findIndex(b => b.id === boothId);
+      const priceInCents = Math.round(product.price * 100);
       
-      if (boothIndex === -1) {
-        throw new Error('Booth not found');
+      // Create product in database
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: product.name,
+          price: priceInCents,
+          booth_id: boothId,
+          image: product.image
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
       }
       
+      // Add to local state
       const newProduct: Product = {
-        id: Date.now().toString(),
-        ...product,
-        boothId,
-        salesCount: 0
+        id: data.id,
+        name: data.name,
+        price: data.price / 100,
+        boothId: data.booth_id,
+        salesCount: 0,
+        image: data.image
       };
       
-      updatedBooths[boothIndex].products.push(newProduct);
-      setBooths(updatedBooths);
+      setBooths(prev => 
+        prev.map(booth => {
+          if (booth.id === boothId) {
+            return {
+              ...booth,
+              products: [...booth.products, newProduct]
+            };
+          }
+          return booth;
+        })
+      );
       
-      toast.success(`Added product: ${product.name}`);
       return true;
-      
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add product');
-      console.error(error);
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product');
       return false;
     }
   };
-
-  const updateProductInBooth = async (boothId: string, productId: string, productUpdates: Partial<Product>) => {
-    try {
-      const updatedBooths = [...booths];
-      const boothIndex = updatedBooths.findIndex(b => b.id === boothId);
-      
-      if (boothIndex === -1) {
-        throw new Error('Booth not found');
-      }
-      
-      const productIndex = updatedBooths[boothIndex].products.findIndex(p => p.id === productId);
-      
-      if (productIndex === -1) {
-        throw new Error('Product not found');
-      }
-      
-      updatedBooths[boothIndex].products[productIndex] = {
-        ...updatedBooths[boothIndex].products[productIndex],
-        ...productUpdates
-      };
-      
-      setBooths(updatedBooths);
-      
-      toast.success(`Updated product: ${updatedBooths[boothIndex].products[productIndex].name}`);
-      return true;
-      
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update product');
-      console.error(error);
-      return false;
-    }
-  };
-
-  const removeProductFromBooth = async (boothId: string, productId: string) => {
-    try {
-      const updatedBooths = [...booths];
-      const boothIndex = updatedBooths.findIndex(b => b.id === boothId);
-      
-      if (boothIndex === -1) {
-        throw new Error('Booth not found');
-      }
-      
-      const productIndex = updatedBooths[boothIndex].products.findIndex(p => p.id === productId);
-      
-      if (productIndex === -1) {
-        throw new Error('Product not found');
-      }
-      
-      const productName = updatedBooths[boothIndex].products[productIndex].name;
-      updatedBooths[boothIndex].products.splice(productIndex, 1);
-      
-      setBooths(updatedBooths);
-      
-      toast.success(`Removed product: ${productName}`);
-      return true;
-      
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove product');
-      console.error(error);
-      return false;
-    }
+  
+  const getLeaderboard = () => {
+    const boothEarnings = booths.map(booth => ({
+      boothId: booth.id,
+      boothName: booth.name,
+      earnings: booth.totalEarnings
+    }));
+    
+    return boothEarnings.sort((a, b) => b.earnings - a.earnings);
   };
 
   return (
     <TransactionContext.Provider
       value={{
         transactions,
-        booths,
+        recentTransactions: transactions.slice(0, 10),
         loadUserTransactions,
         loadBoothTransactions,
         addFunds,
-        processPayment,
-        getLeaderboard,
-        getUserFavoriteProducts,
-        createBooth,
+        processPurchase,
         getBoothById,
         getBoothsByUserId,
+        createBooth,
         addProductToBooth,
-        updateProductInBooth,
-        removeProductFromBooth,
-        recentTransactions
+        getLeaderboard,
+        fetchAllTransactions,
+        fetchAllBooths
       }}
     >
       {children}
