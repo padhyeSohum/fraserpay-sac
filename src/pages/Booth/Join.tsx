@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -73,7 +72,6 @@ const JoinBooth = () => {
       const boothId = await createBooth(
         values.name,
         values.description || '',
-        values.pin,
         currentUser.id
       );
       

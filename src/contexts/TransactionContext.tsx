@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,8 @@ interface TransactionContextType {
   getBoothById: (boothId: string) => Booth | undefined;
   getBoothsByUserId: (userId: string) => Booth[];
   createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
-  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId'>) => Promise<boolean>;
+  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
+  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
   fetchAllTransactions: () => Promise<void>;
   fetchAllBooths: () => Promise<void>;
@@ -29,7 +29,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  // Load transactions and booths on mount
   useEffect(() => {
     if (user) {
       Promise.all([
@@ -54,7 +53,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       if (data) {
-        // Transform database transactions to match our app's Transaction type
         const formattedTransactions: Transaction[] = data.map(t => ({
           id: t.id,
           timestamp: new Date(t.created_at).getTime(),
@@ -68,9 +66,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             productId: p.product_id,
             productName: p.product_name,
             quantity: p.quantity,
-            price: p.price / 100 // Database stores in cents
+            price: p.price / 100
           })) || [],
-          amount: t.amount / 100, // Database stores in cents
+          amount: t.amount / 100,
           type: t.type as 'purchase' | 'fund' | 'refund',
           paymentMethod: t.type === 'fund' ? 'cash' : undefined,
           sacMemberId: t.sac_member || undefined,
@@ -104,9 +102,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       if (boothsData) {
-        // Transform database booths to match our app's Booth type
         const formattedBooths: Booth[] = boothsData.map(b => {
-          // Find products for this booth
           const boothProducts = productsData?.filter(p => p.booth_id === b.id) || [];
           
           return {
@@ -117,12 +113,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             products: boothProducts.map(p => ({
               id: p.id,
               name: p.name,
-              price: p.price / 100, // Database stores in cents
+              price: p.price / 100,
               boothId: p.booth_id,
               salesCount: 0
             })),
             managers: b.members || [],
-            totalEarnings: b.sales / 100, // Database stores in cents
+            totalEarnings: b.sales / 100,
             transactions: []
           };
         });
@@ -151,7 +147,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     sacMemberName: string
   ) => {
     try {
-      // Find user
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('tickets, name')
@@ -162,12 +157,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw userError;
       }
       
-      // Calculate new balance
       const amountInCents = Math.round(amount * 100);
       const newBalance = (userData.tickets || 0) + amountInCents;
       
-      // Start a transaction
-      // Update user balance
       const { error: updateError } = await supabase
         .from('users')
         .update({ tickets: newBalance })
@@ -177,7 +169,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw updateError;
       }
       
-      // Create transaction record
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -194,7 +185,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw transactionError;
       }
       
-      // Add to local state
       const newTransaction: Transaction = {
         id: transactionData.id,
         timestamp: new Date(transactionData.created_at).getTime(),
@@ -226,164 +216,147 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     cartItems: CartItem[],
     boothName: string
   ) => {
-    try {
-      if (cartItems.length === 0) {
-        toast.error('Cart is empty');
-        return false;
-      }
-      
-      // Calculate total amount
-      const totalAmount = cartItems.reduce(
-        (sum, item) => sum + (item.product.price * item.quantity),
-        0
-      );
-      
-      const totalAmountInCents = Math.round(totalAmount * 100);
-      
-      // Find user to check balance
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tickets')
-        .eq('id', buyerId)
-        .single();
-      
-      if (userError) {
-        throw userError;
-      }
-      
-      if (userData.tickets < totalAmountInCents) {
-        toast.error('Insufficient balance');
-        return false;
-      }
-      
-      // Calculate new balance
-      const newBalance = userData.tickets - totalAmountInCents;
-      
-      // Update user balance
-      const { error: updateUserError } = await supabase
-        .from('users')
-        .update({ tickets: newBalance })
-        .eq('id', buyerId);
-      
-      if (updateUserError) {
-        throw updateUserError;
-      }
-      
-      // Update booth sales
-      const { data: boothData, error: boothError } = await supabase
-        .from('booths')
-        .select('sales')
-        .eq('id', boothId)
-        .single();
-      
-      if (boothError) {
-        throw boothError;
-      }
-      
-      const newSales = (boothData.sales || 0) + totalAmountInCents;
-      
-      const { error: updateBoothError } = await supabase
-        .from('booths')
-        .update({ sales: newSales })
-        .eq('id', boothId);
-      
-      if (updateBoothError) {
-        throw updateBoothError;
-      }
-      
-      // Create transaction record
-      const { data: transactionData, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          student_id: buyerId,
-          student_name: buyerName,
-          booth_id: boothId,
-          booth_name: boothName,
-          amount: totalAmountInCents,
-          type: 'purchase'
-        })
-        .select()
-        .single();
-      
-      if (transactionError) {
-        throw transactionError;
-      }
-      
-      // Create transaction products
-      const transactionProducts = cartItems.map(item => ({
-        transaction_id: transactionData.id,
-        product_id: item.product.id,
-        product_name: item.product.name,
-        quantity: item.quantity,
-        price: Math.round(item.product.price * 100)
-      }));
-      
-      const { error: productsError } = await supabase
-        .from('transaction_products')
-        .insert(transactionProducts);
-      
-      if (productsError) {
-        throw productsError;
-      }
-      
-      // Add to local state
-      const newTransaction: Transaction = {
-        id: transactionData.id,
-        timestamp: new Date(transactionData.created_at).getTime(),
-        buyerId,
-        buyerName,
-        sellerId,
-        sellerName,
-        boothId,
-        boothName,
-        products: cartItems.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          quantity: item.quantity,
-          price: item.product.price
-        })),
-        amount: totalAmount,
-        type: 'purchase'
-      };
-      
-      setTransactions(prev => [newTransaction, ...prev]);
-      
-      // Update booths state
-      setBooths(prev => 
-        prev.map(booth => {
-          if (booth.id === boothId) {
-            return {
-              ...booth,
-              totalEarnings: booth.totalEarnings + totalAmount,
-              transactions: [newTransaction, ...(booth.transactions || [])]
-            };
-          }
-          return booth;
-        })
-      );
-      
-      return true;
-    } catch (error) {
-      console.error('Error processing purchase:', error);
-      toast.error('Failed to process purchase');
+    if (cartItems.length === 0) {
+      toast.error('Cart is empty');
       return false;
     }
+    
+    const totalAmount = cartItems.reduce(
+      (sum, item) => sum + (item.product.price * item.quantity),
+      0
+    );
+    
+    const totalAmountInCents = Math.round(totalAmount * 100);
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tickets')
+      .eq('id', buyerId)
+      .single();
+    
+    if (userError) {
+      throw userError;
+    }
+    
+    if (userData.tickets < totalAmountInCents) {
+      toast.error('Insufficient balance');
+      return false;
+    }
+    
+    const newBalance = userData.tickets - totalAmountInCents;
+    
+    const { error: updateUserError } = await supabase
+      .from('users')
+      .update({ tickets: newBalance })
+      .eq('id', buyerId);
+    
+    if (updateUserError) {
+      throw updateUserError;
+    }
+    
+    const { data: boothData, error: boothError } = await supabase
+      .from('booths')
+      .select('sales')
+      .eq('id', boothId)
+      .single();
+    
+    if (boothError) {
+      throw boothError;
+    }
+    
+    const newSales = (boothData.sales || 0) + totalAmountInCents;
+    
+    const { error: updateBoothError } = await supabase
+      .from('booths')
+      .update({ sales: newSales })
+      .eq('id', boothId);
+    
+    if (updateBoothError) {
+      throw updateBoothError;
+    }
+    
+    const { data: transactionData, error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        student_id: buyerId,
+        student_name: buyerName,
+        booth_id: boothId,
+        booth_name: boothName,
+        amount: totalAmountInCents,
+        type: 'purchase'
+      })
+      .select()
+      .single();
+    
+    if (transactionError) {
+      throw transactionError;
+    }
+    
+    const transactionProducts = cartItems.map(item => ({
+      transaction_id: transactionData.id,
+      product_id: item.product.id,
+      product_name: item.product.name,
+      quantity: item.quantity,
+      price: Math.round(item.product.price * 100)
+    }));
+    
+    const { error: productsError } = await supabase
+      .from('transaction_products')
+      .insert(transactionProducts);
+    
+    if (productsError) {
+      throw productsError;
+    }
+    
+    const newTransaction: Transaction = {
+      id: transactionData.id,
+      timestamp: new Date(transactionData.created_at).getTime(),
+      buyerId,
+      buyerName,
+      sellerId,
+      sellerName,
+      boothId,
+      boothName,
+      products: cartItems.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })),
+      amount: totalAmount,
+      type: 'purchase'
+    };
+    
+    setTransactions(prev => [newTransaction, ...prev]);
+    
+    setBooths(prev => 
+      prev.map(booth => {
+        if (booth.id === boothId) {
+          return {
+            ...booth,
+            totalEarnings: booth.totalEarnings + totalAmount,
+            transactions: [newTransaction, ...(booth.transactions || [])]
+          };
+        }
+        return booth;
+      })
+    );
+    
+    return true;
   };
-  
+
   const getBoothById = (boothId: string) => {
     return booths.find(b => b.id === boothId);
   };
-  
+
   const getBoothsByUserId = (userId: string) => {
     return booths.filter(booth => booth.managers.includes(userId));
   };
-  
+
   const createBooth = async (name: string, description: string, userId: string) => {
     try {
-      // Generate a random 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Create new booth
       const { data, error } = await supabase
         .from('booths')
         .insert({
@@ -400,7 +373,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw error;
       }
       
-      // Update user's booth access
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('booth_access')
@@ -422,7 +394,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw updateError;
       }
       
-      // Add to local state
       const newBooth: Booth = {
         id: data.id,
         name: data.name,
@@ -443,12 +414,11 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return null;
     }
   };
-  
-  const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId'>) => {
+
+  const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
     try {
       const priceInCents = Math.round(product.price * 100);
       
-      // Create product in database
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -464,14 +434,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw error;
       }
       
-      // Add to local state
       const newProduct: Product = {
         id: data.id,
         name: data.name,
         price: data.price / 100,
         boothId: data.booth_id,
-        salesCount: 0,
-        image: data.image
+        image: data.image,
+        salesCount: 0
       };
       
       setBooths(prev => 
@@ -493,7 +462,39 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
   };
-  
+
+  const removeProductFromBooth = async (boothId: string, productId: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId)
+        .eq('booth_id', boothId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setBooths(prev => 
+        prev.map(booth => {
+          if (booth.id === boothId) {
+            return {
+              ...booth,
+              products: booth.products.filter(product => product.id !== productId)
+            };
+          }
+          return booth;
+        })
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing product:', error);
+      toast.error('Failed to remove product');
+      return false;
+    }
+  };
+
   const getLeaderboard = () => {
     const boothEarnings = booths.map(booth => ({
       boothId: booth.id,
@@ -517,6 +518,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         getBoothsByUserId,
         createBooth,
         addProductToBooth,
+        removeProductFromBooth,
         getLeaderboard,
         fetchAllTransactions,
         fetchAllBooths

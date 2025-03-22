@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 const BoothSell = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, processPayment } = useTransactions();
+  const { getBoothById, processPurchase } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -139,14 +139,14 @@ const BoothSell = () => {
     }
     
     try {
-      const success = await processPayment(
+      const success = await processPurchase(
+        booth.id,
         customer.id,
         customer.name,
-        booth.id,
-        booth.name,
         user.id,
         user.name,
-        cart
+        cart,
+        booth.name
       );
       
       if (success) {
