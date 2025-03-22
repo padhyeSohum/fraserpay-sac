@@ -7,8 +7,11 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute
+      refetchOnWindowFocus: true,  // Always refetch when window regains focus
+      refetchOnMount: true,        // Always refetch when component mounts
+      refetchOnReconnect: true,    // Always refetch when reconnecting
+      staleTime: 0,                // Data is immediately stale
+      cacheTime: 5 * 60 * 1000,    // Only cache for 5 minutes
       meta: {
         onError: (error: unknown) => {
           console.error('Query error:', error);
@@ -54,6 +57,20 @@ const QueryProvider = ({ children }: QueryProviderProps) => {
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
+  }, []);
+
+  // Periodically clear query cache
+  React.useEffect(() => {
+    const clearQueryCache = () => {
+      // Invalidate all queries to force refetch
+      queryClient.invalidateQueries();
+    };
+    
+    // Clear query cache initially and every 15 minutes
+    clearQueryCache();
+    const interval = setInterval(clearQueryCache, 15 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (

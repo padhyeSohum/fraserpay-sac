@@ -1,4 +1,3 @@
-
 // Cache names
 const CACHE_NAME = 'fraser-pay-cache-v1';
 const STATIC_ASSETS = [
@@ -36,38 +35,67 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache or network
+// Fetch event - network-first strategy for API requests, cache-first for static assets
 self.addEventListener('fetch', (event) => {
+  // For API or dynamic requests, use network-first strategy
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('supabase') || 
+      event.request.method !== 'GET') {
+    
+    event.respondWith(
+      fetch(event.request)
+        .catch((error) => {
+          console.error('Fetch failed:', error);
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+  
+  // For other requests (static assets), check cache first, then network
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Return cached response if found
-        if (response) {
-          return response;
-        }
-        
-        // Clone the request
-        const fetchRequest = event.request.clone();
-        
-        // Make network request and cache the response
-        return fetch(fetchRequest).then(
-          (response) => {
-            // Check if valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+      .then((cachedResponse) => {
+        // Always try to get a fresh version from the network
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            // Update the cache with the fresh version
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
             }
-            
-            // Clone the response
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-              
-            return response;
-          }
-        );
+            return networkResponse;
+          })
+          .catch(() => cachedResponse); // Fall back to cached version if network fails
+          
+        // Return the cached response immediately if available, 
+        // otherwise wait for the network response
+        return cachedResponse || fetchPromise;
       })
   );
+});
+
+// Add message event listener to handle cache clearing requests
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        // Notify clients that cache has been cleared
+        self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({ type: 'CACHE_CLEARED' });
+          });
+        });
+      })
+    );
+  }
 });

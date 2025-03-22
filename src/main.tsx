@@ -22,11 +22,23 @@ const handleRenderError = (error: Error) => {
   }
 };
 
-// Function to check for service worker updates
-const checkForUpdates = () => {
+// Function to clear cache and check for service worker updates
+const clearCacheAndCheckForUpdates = () => {
   if ('serviceWorker' in navigator) {
+    // Clear cache on each visit
     navigator.serviceWorker.ready.then(registration => {
+      // Send message to service worker to clear cache
+      registration.active?.postMessage({ type: 'CLEAR_CACHE' });
+      
+      // Check for updates
       registration.update();
+    });
+    
+    // Listen for cache cleared messages
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'CACHE_CLEARED') {
+        console.log('Cache successfully cleared');
+      }
     });
   }
 };
@@ -39,6 +51,9 @@ const root = createRoot(rootElement);
 
 // Add global error handler
 try {
+  // Clear cache on initial load
+  clearCacheAndCheckForUpdates();
+  
   // Render app with proper React context
   root.render(
     <App />
@@ -67,9 +82,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       });
   });
   
-  // Check for updates periodically (every hour)
-  checkForUpdates();
-  setInterval(checkForUpdates, 60 * 60 * 1000);
+  // Clear cache and check for updates periodically (every 15 minutes)
+  clearCacheAndCheckForUpdates();
+  setInterval(clearCacheAndCheckForUpdates, 15 * 60 * 1000);
 }
 
 // Add support for custom domains

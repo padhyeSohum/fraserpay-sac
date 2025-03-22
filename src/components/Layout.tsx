@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultFooter = (
     <div className="text-center text-xs text-muted-foreground py-2">
-      Made with ❤️ by the John Fraser SAC
+      Made with ❤️ by Akshat Chopra for John Fraser SAC
     </div>
   );
 
