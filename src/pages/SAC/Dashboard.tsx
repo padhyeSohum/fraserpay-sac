@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -935,4 +936,224 @@ const SACDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="space-y-3">
+              {filteredUsers.map((user) => (
+                <Card key={user.id}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h3 className="font-semibold text-base">{user.name}</h3>
+                        <p className="text-muted-foreground text-sm">{user.email}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs bg-muted px-2 py-0.5 rounded">#{user.studentNumber}</p>
+                          <p className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded capitalize">{user.role}</p>
+                          <p className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">${user.balance.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-auto mt-2 sm:mt-0">
+                        <Select
+                          value={user.role}
+                          onValueChange={(value) => updateUserRole(user.id, value as UserRole)}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="booth">Booth Manager</SelectItem>
+                            <SelectItem value="sac">SAC Member</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => deleteUser(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No users found matching your criteria</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="manage-booths" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Booth Management</h2>
+              <Dialog open={newBoothOpen} onOpenChange={setNewBoothOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Building className="h-4 w-4" />
+                    Add Booth
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Booth</DialogTitle>
+                    <DialogDescription>
+                      Add a new booth to the system
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothName">Booth Name</Label>
+                      <Input
+                        id="newBoothName"
+                        placeholder="Enter booth name"
+                        value={newBoothName}
+                        onChange={(e) => setNewBoothName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothDescription">Description</Label>
+                      <Textarea
+                        id="newBoothDescription"
+                        placeholder="Enter booth description (optional)"
+                        value={newBoothDescription}
+                        onChange={(e) => setNewBoothDescription(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothPin">PIN Code</Label>
+                      <Input
+                        id="newBoothPin"
+                        placeholder="Enter 6-digit PIN (optional)"
+                        value={newBoothPin}
+                        onChange={(e) => setNewBoothPin(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave blank to generate random PIN
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setNewBoothOpen(false)}>Cancel</Button>
+                    <Button onClick={createBooth} disabled={isLoading}>
+                      {isLoading ? "Creating..." : "Create Booth"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Booths</CardTitle>
+                <CardDescription>
+                  Find booths by name or description
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search booths..."
+                    value={boothSearchQuery}
+                    onChange={(e) => setBoothSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="space-y-3">
+              {filteredBooths.map((booth) => (
+                <Card key={booth.id}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h3 className="font-semibold text-base">{booth.name}</h3>
+                        {booth.description && (
+                          <p className="text-muted-foreground text-sm">{booth.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs bg-muted px-2 py-0.5 rounded">PIN: {booth.pin}</p>
+                          <p className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                            ${booth.totalEarnings.toFixed(2)}
+                          </p>
+                          <p className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                            {booth.products.length} Products
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-auto mt-2 sm:mt-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={() => navigate(`/booth/${booth.id}/settings`)}
+                        >
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          Manage
+                        </Button>
+                        
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => deleteBooth(booth.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {filteredBooths.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No booths found matching your criteria</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+                <CardDescription>
+                  Configure global application settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center py-8 text-muted-foreground">
+                  Settings panel coming soon
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </Layout>
+  );
+};
+
+export default SACDashboard;
