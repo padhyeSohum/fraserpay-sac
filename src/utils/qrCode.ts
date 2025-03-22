@@ -1,8 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate a QR code synchronously to avoid Promise issues
-export const generateQRCode = (text: string): string => {
+// Generate a QR code using a better approach than just a placeholder
+export const generateQRCode = async (text: string): Promise<string> => {
   try {
     // We're using a third-party API to generate QR codes
     const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;

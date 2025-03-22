@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -16,7 +17,6 @@ interface AuthContextType {
   verifyBoothPin: (pin: string) => Promise<boolean>;
   joinBooth: (boothId: string) => void;
   session: Session | null;
-  refreshUserData: () => Promise<void>;
 }
 
 // Mock SAC PIN for demo purposes
@@ -274,43 +274,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUserData = async () => {
-    if (!user) return;
-    
-    try {
-      setIsLoading(true);
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (error) {
-        console.error('Error refreshing user data:', error);
-        return;
-      }
-      
-      if (userData) {
-        const refreshedUser: User = {
-          id: userData.id,
-          studentNumber: userData.student_number,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role as UserRole,
-          balance: userData.tickets / 100,
-          favoriteProducts: [],
-          booths: userData.booth_access || []
-        };
-        
-        setUser(refreshedUser);
-      }
-    } catch (error) {
-      console.error('Error refreshing user data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const verifySACPin = async (pin: string) => {
     if (pin === SAC_PIN && user) {
       try {
@@ -445,8 +408,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifySACPin,
         verifyBoothPin,
         joinBooth,
-        session,
-        refreshUserData
+        session
       }}
     >
       {children}

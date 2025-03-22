@@ -39,8 +39,10 @@ const root = createRoot(rootElement);
 
 // Add global error handler
 try {
-  // Render app without React.StrictMode (it's now in AppProviders)
-  root.render(<App />);
+  // Render app with proper React context
+  root.render(
+    <App />
+  );
 } catch (error) {
   handleRenderError(error as Error);
 }
