@@ -16,7 +16,7 @@ const QRCode = () => {
       const userData = encodeUserData(user.id);
       setQrData(userData);
       
-      // Generate QR code image
+      // Generate QR code image URL (not a Promise anymore)
       const qrUrl = generateQRCode(userData);
       setQrCodeUrl(qrUrl);
     }
