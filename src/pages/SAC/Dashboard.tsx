@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +14,11 @@ import TransactionItem from '@/components/TransactionItem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DataRangeFilter } from '@/components/DataRangeFilter';
 import { generateQRCode } from '@/utils/qrCode';
-import { Search, Printer } from 'lucide-react';
+import { Search, Printer, Trash2, Edit, Plus, UserPlus, Building } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, UserRole, Booth } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 const SACDashboard = () => {
   const { user } = useAuth();
@@ -43,6 +46,26 @@ const SACDashboard = () => {
   // QR Code printing
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
+  // User and booth management
+  const [users, setUsers] = useState<User[]>([]);
+  const [booths, setBooths] = useState<Booth[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [boothSearchQuery, setBoothSearchQuery] = useState('');
+  
+  // New user dialog
+  const [newUserOpen, setNewUserOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserNumber, setNewUserNumber] = useState('');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('student');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  
+  // New booth dialog
+  const [newBoothOpen, setNewBoothOpen] = useState(false);
+  const [newBoothName, setNewBoothName] = useState('');
+  const [newBoothDescription, setNewBoothDescription] = useState('');
+  const [newBoothPin, setNewBoothPin] = useState('');
+
   // Check if user is SAC member
   useEffect(() => {
     if (user && user.role !== 'sac') {
@@ -66,6 +89,95 @@ const SACDashboard = () => {
       totalRedeemed
     });
   }, [transactions]);
+
+  // Fetch users and booths
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Transform to match our User type
+      const appUsers: User[] = data.map(dbUser => ({
+        id: dbUser.id,
+        studentNumber: dbUser.student_number,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role as UserRole,
+        balance: dbUser.tickets,
+        favoriteProducts: [],
+        booths: dbUser.booth_access || []
+      }));
+      
+      setUsers(appUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchBooths = async () => {
+    try {
+      setIsLoading(true);
+      const { data: boothsData, error: boothsError } = await supabase
+        .from('booths')
+        .select('*');
+      
+      if (boothsError) throw boothsError;
+      
+      // Get all products
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*');
+      
+      if (productsError) throw productsError;
+      
+      // Transform to match our Booth type
+      const appBooths: Booth[] = boothsData.map(dbBooth => {
+        const boothProducts = productsData
+          .filter(p => p.booth_id === dbBooth.id)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price / 100,
+            boothId: p.booth_id,
+            image: p.image,
+            salesCount: 0
+          }));
+          
+        return {
+          id: dbBooth.id,
+          name: dbBooth.name,
+          description: dbBooth.description,
+          pin: dbBooth.pin,
+          products: boothProducts,
+          managers: dbBooth.members || [],
+          totalEarnings: (dbBooth.sales || 0) / 100,
+          transactions: []
+        };
+      });
+      
+      setBooths(appBooths);
+    } catch (error) {
+      console.error('Error fetching booths:', error);
+      toast.error('Failed to load booths');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'manage-users') {
+      fetchUsers();
+    } else if (activeTab === 'manage-booths') {
+      fetchBooths();
+    }
+  }, [activeTab]);
 
   const handleSearchUser = () => {
     if (!studentNumber) {
@@ -221,10 +333,12 @@ const SACDashboard = () => {
       showLogout
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="add-tickets" className="tab-button">Add Tickets</TabsTrigger>
           <TabsTrigger value="transactions" className="tab-button">Transactions</TabsTrigger>
           <TabsTrigger value="stats" className="tab-button">Statistics</TabsTrigger>
+          <TabsTrigger value="manage-users" className="tab-button">Users</TabsTrigger>
+          <TabsTrigger value="manage-booths" className="tab-button">Booths</TabsTrigger>
           <TabsTrigger value="settings" className="tab-button">Settings</TabsTrigger>
         </TabsList>
         
@@ -459,6 +573,291 @@ const SACDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="manage-users" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">User Management</h2>
+              <Dialog open={newUserOpen} onOpenChange={setNewUserOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Add a new user to the system with their details and role.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserName">Full Name</Label>
+                      <Input
+                        id="newUserName"
+                        placeholder="Enter full name"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserEmail">Email</Label>
+                      <Input
+                        id="newUserEmail"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserNumber">Student Number</Label>
+                      <Input
+                        id="newUserNumber"
+                        placeholder="Enter student number"
+                        value={newUserNumber}
+                        onChange={(e) => setNewUserNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserPassword">Password</Label>
+                      <Input
+                        id="newUserPassword"
+                        type="password"
+                        placeholder="Set password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserRole">Role</Label>
+                      <Select
+                        value={newUserRole}
+                        onValueChange={(value) => setNewUserRole(value as UserRole)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="booth">Booth Manager</SelectItem>
+                          <SelectItem value="sac">SAC Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setNewUserOpen(false)}>Cancel</Button>
+                    <Button onClick={createUser} disabled={isLoading}>
+                      {isLoading ? "Creating..." : "Create User"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Users</CardTitle>
+                <CardDescription>
+                  Find users by name, email, or student number
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg">Users ({filteredUsers.length})</h3>
+              {filteredUsers.length > 0 ? (
+                <div className="grid gap-4">
+                  {filteredUsers.map((u) => (
+                    <Card key={u.id} className="overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold">{u.name}</h4>
+                            <p className="text-sm text-muted-foreground">{u.email}</p>
+                            <div className="flex gap-2 items-center">
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                                #{u.studentNumber}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+                                {u.role}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">
+                                ${u.balance.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              defaultValue={u.role}
+                              onValueChange={(value) => updateUserRole(u.id, value as UserRole)}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="student">Student</SelectItem>
+                                <SelectItem value="booth">Booth</SelectItem>
+                                <SelectItem value="sac">SAC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button variant="destructive" size="icon" onClick={() => deleteUser(u.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No users found matching your search</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="manage-booths" className="animate-fade-in mt-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Booth Management</h2>
+              <Dialog open={newBoothOpen} onOpenChange={setNewBoothOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Building className="h-4 w-4" />
+                    Add Booth
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Booth</DialogTitle>
+                    <DialogDescription>
+                      Add a new booth to the event.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothName">Booth Name</Label>
+                      <Input
+                        id="newBoothName"
+                        placeholder="Enter booth name"
+                        value={newBoothName}
+                        onChange={(e) => setNewBoothName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothDescription">Description</Label>
+                      <Textarea
+                        id="newBoothDescription"
+                        placeholder="Enter booth description"
+                        value={newBoothDescription}
+                        onChange={(e) => setNewBoothDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newBoothPin">PIN Code</Label>
+                      <Input
+                        id="newBoothPin"
+                        placeholder="Set access PIN"
+                        value={newBoothPin}
+                        onChange={(e) => setNewBoothPin(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This PIN will be used by booth managers to gain access.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setNewBoothOpen(false)}>Cancel</Button>
+                    <Button onClick={createBooth} disabled={isLoading}>
+                      {isLoading ? "Creating..." : "Create Booth"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Booths</CardTitle>
+                <CardDescription>
+                  Find booths by name or description
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search booths..."
+                    value={boothSearchQuery}
+                    onChange={(e) => setBoothSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg">Booths ({filteredBooths.length})</h3>
+              {filteredBooths.length > 0 ? (
+                <div className="grid gap-4">
+                  {filteredBooths.map((b) => (
+                    <Card key={b.id} className="overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold">{b.name}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{b.description}</p>
+                            <div className="flex gap-2 items-center">
+                              <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                PIN: {b.pin}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">
+                                ${b.totalEarnings.toFixed(2)}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                                {b.products.length} Products
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/booth/${b.id}`)}>
+                              View
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={() => deleteBooth(b.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No booths found matching your search</p>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
         

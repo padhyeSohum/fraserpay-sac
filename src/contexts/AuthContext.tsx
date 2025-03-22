@@ -173,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Student number or email already registered');
       }
       
-      // Register user with Supabase Auth
+      // Register user with Supabase Auth with email confirmation disabled
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -181,7 +181,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             student_number: studentNumber,
             name
-          }
+          },
+          emailRedirectTo: window.location.origin,
         }
       });
       
@@ -207,7 +208,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       toast.success('Registration successful');
-      // Navigation is handled in the auth state change listener
+      // Auto-sign in the user after registration
+      if (!authData.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          throw signInError;
+        }
+      }
       
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed');
