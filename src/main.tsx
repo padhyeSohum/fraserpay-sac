@@ -43,24 +43,29 @@ const clearCacheAndCheckForUpdates = () => {
   }
 };
 
-// Create React root and render App with error handling
-const rootElement = document.getElementById("root");
-if (!rootElement) throw new Error('Failed to find the root element');
+// Function to safely mount the application
+const mountApp = () => {
+  // Get root element and verify it exists
+  const rootElement = document.getElementById("root");
+  if (!rootElement) {
+    console.error('Failed to find the root element');
+    return;
+  }
 
-const root = createRoot(rootElement);
-
-// Add global error handler
-try {
-  // Clear cache on initial load
-  clearCacheAndCheckForUpdates();
-  
-  // Render app with proper React context
-  root.render(
-    <App />
-  );
-} catch (error) {
-  handleRenderError(error as Error);
-}
+  // Create React root safely
+  try {
+    const root = createRoot(rootElement);
+    
+    // Render app with proper React context
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  } catch (error) {
+    handleRenderError(error as Error);
+  }
+};
 
 // Add global error handling
 window.addEventListener('error', (event) => {
@@ -68,6 +73,15 @@ window.addEventListener('error', (event) => {
   handleRenderError(event.error);
   // Prevent default browser error handling
   event.preventDefault();
+});
+
+// Initialize everything in a controlled sequence
+document.addEventListener('DOMContentLoaded', () => {
+  // Clear cache on initial load
+  clearCacheAndCheckForUpdates();
+  
+  // Mount the application once DOM is fully ready
+  mountApp();
 });
 
 // Register service worker for PWA support
@@ -85,13 +99,4 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   // Clear cache and check for updates periodically (every 15 minutes)
   clearCacheAndCheckForUpdates();
   setInterval(clearCacheAndCheckForUpdates, 15 * 60 * 1000);
-}
-
-// Add support for custom domains
-if (window.location.hostname === 'fraserpay.johnfrasersac.com') {
-  // Set any custom domain specific configuration here if needed
-  console.log('Fraser Pay running on custom domain');
-  
-  // You can add custom domain specific logic here if needed in the future
-  document.title = 'Fraser Pay - JF SAC';
 }

@@ -133,11 +133,26 @@
       
       // Remove splash screen and show content when app is ready
       window.addEventListener('load', () => {
-        // Delay a bit to ensure everything is loaded
-        setTimeout(() => {
-          document.getElementById('splash').classList.add('hidden');
-          document.getElementById('root').classList.add('loaded');
-        }, 500);
+        // Use requestAnimationFrame to ensure DOM is ready before removal
+        requestAnimationFrame(() => {
+          // Delay a bit to ensure everything is loaded
+          setTimeout(() => {
+            const splash = document.getElementById('splash');
+            const root = document.getElementById('root');
+            
+            if (splash && root) {
+              splash.classList.add('hidden');
+              root.classList.add('loaded');
+              
+              // Completely remove splash after transition completes
+              setTimeout(() => {
+                if (splash.parentNode) {
+                  splash.parentNode.removeChild(splash);
+                }
+              }, 500);
+            }
+          }, 500);
+        });
       });
       
       // Clear cache on each visit
@@ -149,5 +164,10 @@
         });
       }
     </script>
+    
+    <!-- Footer to mark completion -->
+    <footer style="text-align: center; padding: 16px; font-size: 12px; color: #71717a; margin-top: 32px;">
+      Made with ❤️ by Akshat Chopra for John Fraser SAC
+    </footer>
   </body>
 </html>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -20,8 +20,20 @@ const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
           <TransactionProvider>
             <TooltipProvider delayDuration={0}>
               {children}
-              <Toaster />
-              <Sonner />
+              {/* Use only one toast system to prevent DOM conflicts */}
+              <Sonner 
+                closeButton 
+                richColors 
+                position="top-right" 
+                toastOptions={{
+                  className: "!bg-background",
+                  style: { 
+                    borderColor: "hsl(var(--border))",
+                    backgroundColor: "hsl(var(--background))",
+                    color: "hsl(var(--foreground))"
+                  }
+                }}
+              />
             </TooltipProvider>
           </TransactionProvider>
         </AuthProvider>
