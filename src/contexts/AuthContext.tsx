@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -191,8 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name
           },
           emailRedirectTo: window.location.origin,
-          // Disable email confirmation
-          emailConfirmationUrl: window.location.origin
+          // Remove the emailConfirmationUrl property since it's not valid
         }
       });
       
