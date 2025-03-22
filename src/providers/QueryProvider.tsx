@@ -25,12 +25,13 @@ const queryClient = new QueryClient({
       }
     }
   },
-  // Global error handler for unhandled errors
-  queryCache: {
-    onError: (error) => {
-      console.error('Global query cache error:', error);
-    },
-  },
+});
+
+// Set up query cache event listeners
+queryClient.getQueryCache().subscribe({
+  onError: (error) => {
+    console.error('Global query cache error:', error);
+  }
 });
 
 interface QueryProviderProps {
