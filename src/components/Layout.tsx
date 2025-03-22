@@ -38,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({
       // Don't allow going back from dashboard
       return;
     }
+    // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
   };
 

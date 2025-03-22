@@ -29,7 +29,7 @@ import SACDashboard from "@/pages/SAC/Dashboard";
 // Shared Pages
 import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/NotFound";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,22 +89,25 @@ const RoleProtectedRoute = ({
 const AppRoutes = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const [initialRedirectComplete, setInitialRedirectComplete] = useState(false);
 
-  // Redirect based on authentication status and user role
+  // Redirect based on authentication status and user role only once during initial load
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      // Specific redirect logic based on roles
-      if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
-        if (user.role === 'sac') {
-          // Navigate to SAC dashboard for SAC members
-          window.location.href = '/sac/dashboard';
-        } else {
-          // Navigate to regular dashboard for students
-          window.location.href = '/dashboard';
+    // Only execute this logic on initial page load and when auth loading is complete
+    if (!isLoading && !initialRedirectComplete) {
+      if (isAuthenticated && user) {
+        // Only redirect if we're at login, register, or root
+        if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
+          if (user.role === 'sac') {
+            window.location.href = '/sac/dashboard';
+          } else {
+            window.location.href = '/dashboard';
+          }
         }
       }
+      setInitialRedirectComplete(true);
     }
-  }, [isAuthenticated, isLoading, user, location.pathname]);
+  }, [isAuthenticated, isLoading, user, location.pathname, initialRedirectComplete]);
 
   return (
     <Routes>
