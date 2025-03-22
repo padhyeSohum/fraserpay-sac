@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               name: userData.name,
               email: userData.email,
               role: userData.role as UserRole,
-              balance: userData.tickets,
+              balance: userData.tickets / 100, // Convert from cents to dollars
               favoriteProducts: [],
               booths: userData.booth_access || []
             };
@@ -67,7 +67,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (event === 'SIGNED_IN') {
               if (appUser.role === 'sac') {
                 navigate('/sac/dashboard');
+              } else if (appUser.role === 'booth') {
+                // If the user is a booth manager, direct them to booth dashboard
+                if (appUser.booths && appUser.booths.length > 0) {
+                  navigate(`/booth/${appUser.booths[0]}`);
+                } else {
+                  navigate('/dashboard');
+                }
               } else {
+                // Regular students
                 navigate('/dashboard');
               }
             }
@@ -102,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: userData.name,
             email: userData.email,
             role: userData.role as UserRole,
-            balance: userData.tickets,
+            balance: userData.tickets / 100, // Convert from cents to dollars
             favoriteProducts: [],
             booths: userData.booth_access || []
           };
@@ -173,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Student number or email already registered');
       }
       
-      // Register user with Supabase Auth with email confirmation disabled
+      // Register user with Supabase Auth without email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -183,6 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name
           },
           emailRedirectTo: window.location.origin,
+          // Disable email confirmation
+          emailConfirmationUrl: window.location.origin
         }
       });
       
