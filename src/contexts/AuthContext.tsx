@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -311,6 +312,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       setIsLoading(true);
+      console.log("Verifying booth PIN:", pin);
+      
       // Find booth with matching PIN
       const { data: boothData, error: boothError } = await supabase
         .from('booths')
@@ -318,14 +321,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('pin', pin)
         .single();
       
-      if (boothError || !boothData) {
+      if (boothError) {
+        console.error("Booth PIN verification error:", boothError);
         throw new Error('Invalid booth PIN');
       }
+      
+      if (!boothData) {
+        console.error("No booth found with that PIN");
+        throw new Error('Invalid booth PIN');
+      }
+      
+      console.log("Found booth:", boothData);
       
       // Check if user already has access
       const hasAccess = user.booths?.includes(boothData.id);
       
       if (hasAccess) {
+        console.log("User already has access to booth:", boothData.id);
         toast.info(`You already have access to ${boothData.name}`);
         return true;
       }
@@ -340,6 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', user.id);
       
       if (updateError) {
+        console.error("Error updating user's booth access:", updateError);
         throw updateError;
       }
       
@@ -364,6 +377,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
       
+      console.log("User successfully joined booth:", boothData.id);
       toast.success(`You now have access to ${boothData.name}`);
       return true;
       

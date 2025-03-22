@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -355,8 +356,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const createBooth = async (name: string, description: string, userId: string) => {
     try {
+      console.log("Creating booth:", { name, description, userId });
+      
+      // Generate a 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
+      // Insert the new booth
       const { data, error } = await supabase
         .from('booths')
         .insert({
@@ -370,9 +375,18 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .single();
       
       if (error) {
+        console.error("Error creating booth:", error);
         throw error;
       }
       
+      if (!data) {
+        console.error("No data returned from booth creation");
+        throw new Error("Failed to create booth");
+      }
+      
+      console.log("Booth created:", data);
+      
+      // Update user's booth access
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('booth_access')
@@ -380,6 +394,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .single();
       
       if (userError) {
+        console.error("Error fetching user booth access:", userError);
         throw userError;
       }
       
@@ -391,9 +406,11 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .eq('id', userId);
       
       if (updateError) {
+        console.error("Error updating user booth access:", updateError);
         throw updateError;
       }
       
+      // Add the new booth to local state
       const newBooth: Booth = {
         id: data.id,
         name: data.name,
@@ -406,6 +423,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       };
       
       setBooths(prev => [...prev, newBooth]);
+      console.log("Booth added to local state:", newBooth);
       
       return data.id;
     } catch (error) {

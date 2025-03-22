@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +28,7 @@ const joinBoothSchema = z.object({
 const JoinBooth = () => {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyBoothPin } = useAuth();
+  const { verifyBoothPin, user } = useAuth();
   const { createBooth } = useTransactions();
   const navigate = useNavigate();
 
@@ -51,13 +52,22 @@ const JoinBooth = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting to verify booth PIN:", values.pin);
       const success = await verifyBoothPin(values.pin);
+      console.log("PIN verification result:", success);
+      
       if (success) {
         toast.success("Successfully joined booth!");
-        navigate('/dashboard');
+        // Update to fetch the booth ID and navigate to it directly
+        const boothAccess = user?.booths || [];
+        if (boothAccess.length > 0) {
+          navigate(`/booth/${boothAccess[boothAccess.length - 1]}`);
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
-      console.error(error);
+      console.error("Join booth error:", error);
       toast.error(error instanceof Error ? error.message : "Unable to join booth");
     } finally {
       setIsLoading(false);
@@ -68,12 +78,18 @@ const JoinBooth = () => {
     setIsLoading(true);
     
     try {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user) {
+        throw new Error("You must be logged in to create a booth");
+      }
+      
+      console.log("Creating booth with values:", values);
       const boothId = await createBooth(
         values.name,
         values.description || '',
-        currentUser.id
+        user.id
       );
+      
+      console.log("Booth creation result:", boothId);
       
       if (boothId) {
         toast.success("Booth created successfully!");
@@ -82,12 +98,15 @@ const JoinBooth = () => {
         toast.error("Failed to create booth");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Create booth error:", error);
       toast.error(error instanceof Error ? error.message : "Unable to create booth");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Only allow SAC members to create booths
+  const canCreateBooth = user?.role === 'sac';
 
   return (
     <Layout title={mode === 'join' ? "Join a Booth" : "Create a Booth"} showBack>
@@ -99,13 +118,15 @@ const JoinBooth = () => {
                 <CardTitle className="text-2xl font-bold">
                   {mode === 'join' ? "Join a Booth" : "Create a Booth"}
                 </CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setMode(mode === 'join' ? 'create' : 'join')}
-                >
-                  {mode === 'join' ? "Create" : "Join"}
-                </Button>
+                {canCreateBooth && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setMode(mode === 'join' ? 'create' : 'join')}
+                  >
+                    {mode === 'join' ? "Create" : "Join"}
+                  </Button>
+                )}
               </div>
               <CardDescription>
                 {mode === 'join' 
@@ -147,7 +168,7 @@ const JoinBooth = () => {
                     </Button>
                   </form>
                 </Form>
-              ) : (
+              ) : canCreateBooth ? (
                 <Form {...createForm}>
                   <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-4">
                     <FormField
@@ -212,13 +233,17 @@ const JoinBooth = () => {
                     </Button>
                   </form>
                 </Form>
+              ) : (
+                <div className="text-center p-4">
+                  <p className="text-muted-foreground">Only SAC members can create booths</p>
+                </div>
               )}
             </CardContent>
             
             <CardFooter className="text-xs text-center text-muted-foreground">
               <p className="w-full">
                 {mode === 'join' 
-                  ? "Don't have a PIN? You can create your own booth." 
+                  ? "Don't have a PIN? Contact a booth manager or SAC member." 
                   : "Share the PIN with other booth members so they can join."}
               </p>
             </CardFooter>
