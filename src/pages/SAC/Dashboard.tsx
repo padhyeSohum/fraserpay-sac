@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -961,15 +960,18 @@ const SACDashboard = () => {
                 {leaderboard.length > 0 ? (
                   <div className="space-y-3">
                     {leaderboard.map((booth, index) => (
-                      <div key={booth.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div key={booth.boothId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                         <div className="flex items-center">
                           <span className="font-bold text-lg w-8">{index + 1}.</span>
                           <div>
-                            <h3 className="font-medium">{booth.name}</h3>
-                            <p className="text-sm text-muted-foreground">{booth.products?.length || 0} products</p>
+                            <h3 className="font-medium">{booth.boothName}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {/* Since booth.products doesn't exist, we'll remove this information */}
+                              {/* or we could fetch it separately if needed */}
+                            </p>
                           </div>
                         </div>
-                        <p className="font-semibold">${booth.totalEarnings.toFixed(2)}</p>
+                        <p className="font-semibold">${booth.earnings.toFixed(2)}</p>
                       </div>
                     ))}
                   </div>
