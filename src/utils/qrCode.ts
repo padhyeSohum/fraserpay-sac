@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 
-// Generate a real QR code as base64 data URL
+// Generate a real QR code as SVG string
 export const generateQRCode = (text: string): string => {
   const qrCode = ReactDOMServer.renderToString(
     React.createElement(QRCodeSVG, {

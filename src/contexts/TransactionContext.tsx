@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { createSampleBooths } from '@/utils/seedData';
 
 interface TransactionContextType {
   transactions: Transaction[];
@@ -35,7 +35,11 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       Promise.all([
         fetchAllTransactions(),
         fetchAllBooths()
-      ]).finally(() => setIsLoading(false));
+      ]).then(() => {
+        createSampleBooths().catch(error => {
+          console.error('Failed to create sample booths:', error);
+        });
+      }).finally(() => setIsLoading(false));
     }
   }, [user]);
 
@@ -425,6 +429,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setBooths(prev => [...prev, newBooth]);
       console.log("Booth added to local state:", newBooth);
       
+      // Refresh booths from server to ensure we have the latest data
+      fetchAllBooths();
+      
       return data.id;
     } catch (error) {
       console.error('Error creating booth:', error);
@@ -449,6 +456,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .single();
       
       if (error) {
+        console.error('Error adding product:', error);
         throw error;
       }
       
@@ -473,10 +481,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         })
       );
       
+      toast.success(`Added product: ${product.name}`);
+      
       return true;
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error('Failed to add product: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return false;
     }
   };

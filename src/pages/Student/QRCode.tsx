@@ -28,8 +28,7 @@ const QRCode = () => {
   const regenerateQR = () => {
     if (user) {
       setIsRefreshing(true);
-      // In a real app, this would generate a new temporary QR code
-      // For demo, we'll use the same QR code but animate a refresh
+      // Generate a new QR code with the same data
       setTimeout(() => {
         const qrUrl = generateQRCode(qrData);
         setQrCodeUrl(qrUrl);
@@ -48,13 +47,10 @@ const QRCode = () => {
               
               <div 
                 className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {qrCodeUrl ? (
-                  <img 
-                    src={qrCodeUrl} 
-                    alt="Your payment QR code" 
-                    className="w-full h-full"
-                  />
+                  <div dangerouslySetInnerHTML={{ __html: decodeURIComponent(qrCodeUrl.split(',')[1]) }} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-muted-foreground">Loading QR code...</p>
