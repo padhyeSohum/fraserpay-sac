@@ -27,10 +27,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Set up query cache event listeners
-queryClient.getQueryCache().subscribe({
-  onError: (error) => {
-    console.error('Global query cache error:', error);
+// Set up query cache event listeners using the correct listener signature
+queryClient.getQueryCache().subscribe(event => {
+  if (event.type === 'error') {
+    console.error('Global query cache error:', event.error);
   }
 });
 
