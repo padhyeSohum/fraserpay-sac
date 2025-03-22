@@ -9,15 +9,19 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 60000, // 1 minute
-      onError: (error) => {
-        console.error('Query error:', error);
-        // This prevents uncaught promise rejections from freezing the app
+      meta: {
+        onError: (error: unknown) => {
+          console.error('Query error:', error);
+          // This prevents uncaught promise rejections from freezing the app
+        }
       }
     },
     mutations: {
-      onError: (error) => {
-        console.error('Mutation error:', error);
-        // This prevents uncaught promise rejections from freezing the app
+      meta: {
+        onError: (error: unknown) => {
+          console.error('Mutation error:', error);
+          // This prevents uncaught promise rejections from freezing the app
+        }
       }
     }
   }
