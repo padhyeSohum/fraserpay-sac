@@ -37,17 +37,14 @@ const Layout: React.FC<LayoutProps> = ({
   const { logout, isLoading, user } = useAuth();
 
   const handleBack = () => {
-    // Use custom back handler if provided, otherwise use default behavior
     if (onBackClick) {
       onBackClick();
       return;
     }
     
     if (location.pathname === '/dashboard') {
-      // Don't allow going back from dashboard
       return;
     }
-    // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
   };
 
@@ -74,11 +71,10 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultFooter = (
     <div className="text-center text-xs text-muted-foreground py-2">
-      Made with ❤️ by the John Fraser SAC
+      Made with ❤️ by Akshat Chopra for John Fraser SAC
     </div>
   );
 
-  // Simplified loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
