@@ -18,7 +18,7 @@ const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
       <BrowserRouter>
         <AuthProvider>
           <TransactionProvider>
-            <TooltipProvider delayDuration={0}>
+            <TooltipProvider>
               {children}
               <Toaster />
               <Sonner />
