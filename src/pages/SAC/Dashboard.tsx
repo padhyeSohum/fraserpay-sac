@@ -306,13 +306,20 @@ const SACDashboard = () => {
     try {
       setIsLoading(true);
       
-      const finalPin = newBoothPin || Math.floor(100000 + Math.random() * 900000).toString();
+      let finalPin = newBoothPin;
+      if (!finalPin) {
+        finalPin = Math.floor(100000 + Math.random() * 900000).toString();
+      } else if (finalPin.length !== 6 || !/^\d+$/.test(finalPin)) {
+        toast.error('PIN must be exactly 6 digits');
+        setIsLoading(false);
+        return;
+      }
       
       const { data, error } = await supabase
         .from('booths')
         .insert({
           name: newBoothName,
-          description: newBoothDescription,
+          description: newBoothDescription || '',
           pin: finalPin,
           members: [],
           sales: 0
@@ -320,7 +327,14 @@ const SACDashboard = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating booth:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Failed to create booth - no data returned');
+      }
       
       setNewBoothOpen(false);
       setNewBoothName('');
@@ -343,7 +357,7 @@ const SACDashboard = () => {
       setBooths(prevBooths => [...prevBooths, newBooth]);
     } catch (error) {
       console.error('Error creating booth:', error);
-      toast.error('Failed to create booth');
+      toast.error(error instanceof Error ? error.message : 'Failed to create booth');
     } finally {
       setIsLoading(false);
     }

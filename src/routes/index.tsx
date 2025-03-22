@@ -48,11 +48,12 @@ export const routes = [
     protected: true 
   },
   
-  // Booth Routes with ProtectedRoute
+  // Booth Routes with ProtectedRoute and Role restrictions
   { 
     path: "/booth/join", 
     element: <BoothJoin />,
-    protected: true 
+    protected: true,
+    requiredRoles: ['sac', 'booth'] // Only SAC members and booth managers can access
   },
   { 
     path: "/booth/:boothId", 
