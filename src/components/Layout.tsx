@@ -40,6 +40,16 @@ const Layout: React.FC<LayoutProps> = ({
     navigate(-1);
   };
 
+  const defaultLogo = (
+    <div className="flex items-center gap-2">
+      <img 
+        src="/lovable-uploads/5e41cbb8-760b-43c2-8adf-34be4aaeaf15.png" 
+        alt="Fraser Pay" 
+        className="h-8 w-auto"
+      />
+    </div>
+  );
+
   const defaultFooter = (
     <div className="text-center text-xs text-muted-foreground py-2">
       Made with ❤️ by the John Fraser SAC
@@ -56,8 +66,8 @@ const Layout: React.FC<LayoutProps> = ({
             </Button>
           )}
           
-          <div>
-            {logo}
+          <div className="flex items-center gap-2">
+            {logo || defaultLogo}
             
             {title && (
               <h1 className="text-lg font-semibold">{title}</h1>

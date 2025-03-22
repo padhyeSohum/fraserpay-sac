@@ -36,6 +36,10 @@
     --ring: 262 83% 58%;
 
     --radius: 0.75rem;
+    
+    /* Fraser Pay brand colors */
+    --fraser-green: 160 84% 39%;
+    --fraser-dark: 220 14% 24%;
   }
 
   .dark {
@@ -66,6 +70,10 @@
     --border: 217 32% 17%;
     --input: 217 32% 17%;
     --ring: 262 83% 58%;
+    
+    /* Fraser Pay brand colors */
+    --fraser-green: 160 70% 39%;
+    --fraser-dark: 220 14% 80%;
   }
 }
 
@@ -119,5 +127,17 @@
   
   .floating-animation {
     @apply animate-float;
+  }
+  
+  .fraser-logo {
+    @apply h-8 w-auto;
+  }
+  
+  .fraser-green {
+    @apply text-[hsl(var(--fraser-green))];
+  }
+  
+  .fraser-dark {
+    @apply text-[hsl(var(--fraser-dark))];
   }
 }

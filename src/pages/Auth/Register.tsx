@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +43,6 @@ const Register = () => {
       return;
     }
     
-    // Very basic email validation
     if (!email.includes('@')) {
       toast({
         title: "Invalid email",
@@ -59,7 +57,6 @@ const Register = () => {
     try {
       await register(studentNumber, name, email, password);
       setSuccess(true);
-      // Clear form fields
       setStudentNumber('');
       setName('');
       setEmail('');
