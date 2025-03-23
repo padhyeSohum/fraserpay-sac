@@ -126,7 +126,7 @@ const SACDashboard: React.FC = () => {
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
             ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance) / 100
+            balance: (result.updatedBalance || foundStudent.balance)
           });
         }
       }
@@ -165,7 +165,7 @@ const SACDashboard: React.FC = () => {
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
             ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance) / 100
+            balance: (result.updatedBalance || foundStudent.balance)
           });
         }
       }

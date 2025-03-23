@@ -48,6 +48,13 @@ const Layout: React.FC<LayoutProps> = ({
       // Don't allow going back from dashboard
       return;
     }
+    
+    // Special case for SAC dashboard - go to home
+    if (location.pathname === '/sac/dashboard') {
+      navigate('/');
+      return;
+    }
+    
     // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
   };
