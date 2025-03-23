@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { processPurchase } from '@/contexts/transactions/transactionService';
 import { CartItem, Product } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BoothTransactionDialogProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
   const { user } = useAuth();
   const userId = user?.id;
   const userName = user?.name;
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!isOpen) {
@@ -148,7 +150,6 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
     setIsProcessingTransaction(true);
     
     try {
-      // Convert our cart format to the expected CartItem format with productId property
       const cartItems: CartItem[] = cart.map(item => ({
         productId: item.product.id,
         product: item.product,
@@ -181,7 +182,6 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
         
         toast.success('Transaction processed successfully!');
         
-        // Reset cart after successful transaction
         setCart([]);
       } else {
         toast.error('Failed to process transaction');
@@ -196,122 +196,124 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Process Booth Transaction</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-          {/* Left Side: Booth and Student Selection */}
-          <div>
-            <Card>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="booth">Select Booth</Label>
-                  <Select onValueChange={handleBoothChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a booth" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {booths.map((booth) => (
-                        <SelectItem key={booth.id} value={booth.id}>
-                          {booth.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label htmlFor="studentNumber">Student Number</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="studentNumber"
-                      placeholder="Enter student number"
-                      value={studentNumber}
-                      onChange={(e) => setStudentNumber(e.target.value)}
-                    />
-                    <Button type="button" onClick={findStudentByNumber} disabled={isStudentLoading}>
-                      {isStudentLoading ? 'Loading...' : 'Find Student'}
-                    </Button>
-                  </div>
-                </div>
-
-                {foundStudent && (
-                  <div className="mt-4">
-                    <h3 className="text-lg font-semibold">Student Details</h3>
-                    <p>Name: {foundStudent.name}</p>
-                    <p>Student Number: {foundStudent.studentNumber}</p>
-                    <p>Balance: ${foundStudent.balance.toFixed(2)}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Side: Cart and Transaction Details */}
-          <div>
-            <Card>
-              <CardContent className="space-y-4">
-                <h2 className="text-lg font-semibold">Cart</h2>
-                {cart.length === 0 ? (
-                  <p>Cart is empty</p>
-                ) : (
+        <ScrollArea className="flex-1 max-h-[calc(90vh-8rem)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 px-1">
+            {/* Left Side: Booth and Student Selection */}
+            <div>
+              <Card>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    {cart.map((item) => (
-                      <div key={item.product.id} className="flex items-center justify-between">
-                        <span>{item.product.name} x {item.quantity}</span>
-                        <span>${(item.product.price * item.quantity).toFixed(2)}</span>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFromCart(item.product.id)}>
-                          Remove
+                    <Label htmlFor="booth">Select Booth</Label>
+                    <Select onValueChange={handleBoothChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a booth" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {booths.map((booth) => (
+                          <SelectItem key={booth.id} value={booth.id}>
+                            {booth.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="studentNumber">Student Number</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="studentNumber"
+                        placeholder="Enter student number"
+                        value={studentNumber}
+                        onChange={(e) => setStudentNumber(e.target.value)}
+                      />
+                      <Button type="button" onClick={findStudentByNumber} disabled={isStudentLoading}>
+                        {isStudentLoading ? 'Loading...' : 'Find Student'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {foundStudent && (
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold">Student Details</h3>
+                      <p>Name: {foundStudent.name}</p>
+                      <p>Student Number: {foundStudent.studentNumber}</p>
+                      <p>Balance: ${foundStudent.balance.toFixed(2)}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Side: Cart and Transaction Details */}
+            <div>
+              <Card>
+                <CardContent className="space-y-4">
+                  <h2 className="text-lg font-semibold">Cart</h2>
+                  {cart.length === 0 ? (
+                    <p>Cart is empty</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {cart.map((item) => (
+                        <div key={item.product.id} className="flex items-center justify-between">
+                          <span>{item.product.name} x {item.quantity}</span>
+                          <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFromCart(item.product.id)}>
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <Separator />
+                      <div className="flex items-center justify-between font-semibold">
+                        <span>Total:</span>
+                        <span>${calculateTotal().toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {selectedBooth && foundStudent && (
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={handleProcessTransaction}
+                      disabled={isProcessingTransaction || cart.length === 0}
+                    >
+                      {isProcessingTransaction ? 'Processing...' : 'Process Transaction'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {selectedBooth && getBoothById && getBoothById(selectedBooth) && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold">Products at this Booth</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {getBoothById(selectedBooth)?.products?.map((product) => (
+                      <div key={product.id} className="border rounded-md p-2">
+                        <p className="font-semibold">{product.name}</p>
+                        <p>${product.price.toFixed(2)}</p>
+                        <Button type="button" size="sm" onClick={() => handleAddToCart(product)}>
+                          Add to Cart
                         </Button>
                       </div>
                     ))}
-                    <Separator />
-                    <div className="flex items-center justify-between font-semibold">
-                      <span>Total:</span>
-                      <span>${calculateTotal().toFixed(2)}</span>
-                    </div>
                   </div>
-                )}
-
-                <Separator />
-
-                {selectedBooth && foundStudent && (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={handleProcessTransaction}
-                    disabled={isProcessingTransaction || cart.length === 0}
-                  >
-                    {isProcessingTransaction ? 'Processing...' : 'Process Transaction'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {selectedBooth && getBoothById && getBoothById(selectedBooth) && (
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold">Products at this Booth</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {getBoothById(selectedBooth)?.products?.map((product) => (
-                    <div key={product.id} className="border rounded-md p-2">
-                      <p className="font-semibold">{product.name}</p>
-                      <p>${product.price.toFixed(2)}</p>
-                      <Button type="button" size="sm" onClick={() => handleAddToCart(product)}>
-                        Add to Cart
-                      </Button>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="mt-4">
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Close
           </Button>
