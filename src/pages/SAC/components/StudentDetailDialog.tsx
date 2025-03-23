@@ -8,9 +8,8 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { Minus, Plus, Printer } from 'lucide-react';
+import { Minus, Plus, Printer, QrCode } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 interface StudentDetailDialogProps {
   isOpen: boolean;
@@ -87,28 +86,27 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                     qrCodeUrl 
                   }} 
                 />
-                <InteractiveHoverButton 
-                  text="Print QR"
-                  icon={<Printer className="h-4 w-4" />}
-                  className="w-32"
-                  onClick={onPrintQRCode}
-                />
+                <Button variant="outline" onClick={onPrintQRCode}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print QR Code
+                </Button>
               </div>
             )}
             
             <div className="flex gap-2 justify-center mt-4">
-              <InteractiveHoverButton 
-                text="Add Funds"
-                icon={<Plus className="h-4 w-4" />}
-                className="w-32"
+              <Button 
                 onClick={() => student.id && onAddFunds(student.id)}
-              />
-              <InteractiveHoverButton 
-                text="Refund"
-                icon={<Minus className="h-4 w-4" />}
-                className="w-32 border-destructive hover:bg-destructive"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Funds
+              </Button>
+              <Button 
+                variant="outline" 
                 onClick={() => student.id && onRefund(student.id)}
-              />
+              >
+                <Minus className="h-4 w-4 mr-2" />
+                Refund
+              </Button>
             </div>
           </div>
         </ScrollArea>
