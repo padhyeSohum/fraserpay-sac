@@ -75,6 +75,24 @@ window.addEventListener('error', (event) => {
   event.preventDefault();
 });
 
+// Force a cache bust for deployed environments
+if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  const timestamp = new Date().getTime();
+  const scripts = document.getElementsByTagName('script');
+  for (let i = 0; i < scripts.length; i++) {
+    if (scripts[i].src && !scripts[i].src.includes('?')) {
+      scripts[i].src = scripts[i].src + '?v=' + timestamp;
+    }
+  }
+  
+  const links = document.getElementsByTagName('link');
+  for (let i = 0; i < links.length; i++) {
+    if (links[i].rel === 'stylesheet' && links[i].href && !links[i].href.includes('?')) {
+      links[i].href = links[i].href + '?v=' + timestamp;
+    }
+  }
+}
+
 // Initialize everything in a controlled sequence
 document.addEventListener('DOMContentLoaded', () => {
   // Clear cache on initial load

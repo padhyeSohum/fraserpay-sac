@@ -15,7 +15,19 @@ const NotFound = () => {
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
-  }, [location.pathname]);
+    
+    // Report this error to monitoring (would be implemented in production)
+    if (typeof window !== 'undefined') {
+      // Track 404 errors in analytics
+      const referrer = document.referrer || 'direct';
+      console.info('404 tracking info:', {
+        path: location.pathname,
+        referrer,
+        timestamp: new Date().toISOString(),
+        isAuthenticated
+      });
+    }
+  }, [location.pathname, isAuthenticated]);
 
   const handleGoHome = () => {
     if (isAuthenticated) {
@@ -23,6 +35,10 @@ const NotFound = () => {
     } else {
       navigate("/login");
     }
+  };
+
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -33,9 +49,14 @@ const NotFound = () => {
         <p className="text-muted-foreground mb-8">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <Button onClick={handleGoHome} className="w-full">
-          Return to {isAuthenticated ? "Dashboard" : "Login"}
-        </Button>
+        <div className="space-y-3">
+          <Button onClick={handleGoHome} className="w-full">
+            Return to {isAuthenticated ? "Dashboard" : "Login"}
+          </Button>
+          <Button onClick={handleGoBack} variant="outline" className="w-full">
+            Go Back
+          </Button>
+        </div>
       </div>
     </div>
   );
