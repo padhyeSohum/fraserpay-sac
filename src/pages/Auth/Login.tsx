@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -8,21 +9,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { AlertCircle } from 'lucide-react';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { isPWA } from '@/utils/pwa';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPWAPrompt, setShowPWAPrompt] = useState(false);
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
+      
+      // Show PWA install prompt after login only on mobile and not already in PWA mode
+      if (isMobile && !isPWA()) {
+        setShowPWAPrompt(true);
+      }
+      
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, isMobile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +144,8 @@ const Login = () => {
           </Card>
         </div>
       </div>
+      
+      {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
     </Layout>
   );
 };

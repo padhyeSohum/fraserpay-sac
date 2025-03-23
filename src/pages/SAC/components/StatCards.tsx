@@ -32,9 +32,12 @@ const StatCards: React.FC<StatCardsProps> = ({
     totalRevenue: stats?.totalRevenue || 0
   };
 
-  // Format currency properly
+  // Format currency properly with two decimal places
   const formatCurrency = (amount: number) => {
-    return amount.toFixed(2);
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   return (

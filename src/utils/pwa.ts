@@ -38,15 +38,23 @@ export const setupInstallPrompt = (
 // Show the install prompt
 export const showInstallPrompt = async (deferredPrompt: any): Promise<boolean> => {
   if (!deferredPrompt) {
+    console.log('No deferred prompt available to show');
     return false;
   }
 
-  // Show the install prompt
-  deferredPrompt.prompt();
-  
-  // Wait for the user to respond to the prompt
-  const { outcome } = await deferredPrompt.userChoice;
-  
-  // Return true if installed, false otherwise
-  return outcome === 'accepted';
+  try {
+    // Show the install prompt
+    deferredPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    console.log(`PWA install prompt outcome: ${outcome}`);
+    
+    // Return true if installed, false otherwise
+    return outcome === 'accepted';
+  } catch (error) {
+    console.error('Error showing PWA install prompt:', error);
+    return false;
+  }
 };
