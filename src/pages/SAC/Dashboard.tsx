@@ -12,7 +12,6 @@ import TransactionItem from '@/components/TransactionItem';
 import { Label } from '@/components/ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, CreditCard, DollarSign, BarChart3, ArrowUp, ArrowDown, QrCode, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
@@ -115,10 +114,14 @@ const SACDashboard = () => {
       const usersStr = localStorage.getItem('users');
       const users = usersStr ? JSON.parse(usersStr) : [];
       
-      const foundStudent = users.find((u: any) => 
-        u.studentNumber === searchStudentNumber || 
-        u.studentNumber === searchStudentNumber.trim()
-      );
+      // Fix: Improve student number matching by standardizing format
+      const searchValue = searchStudentNumber.trim();
+      
+      const foundStudent = users.find((u: any) => {
+        // Normalize both student numbers for comparison
+        const userStudentNumber = u.studentNumber ? u.studentNumber.toString().trim() : '';
+        return userStudentNumber === searchValue;
+      });
       
       if (foundStudent) {
         setSearchedStudent(foundStudent);
@@ -508,19 +511,32 @@ const SACDashboard = () => {
               </CardHeader>
               <CardContent>
                 {boothStats.length > 0 ? (
-                  <div className="w-full h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={boothStats}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis 
-                          label={{ value: 'Revenue ($)', angle: -90, position: 'insideLeft' }} 
-                          tickFormatter={(value) => `$${value}`}
-                        />
-                        <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']} />
-                        <Bar dataKey="earnings" fill="#8884d8" name="Revenue" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-2">
+                    {boothStats
+                      .sort((a, b) => b.earnings - a.earnings)
+                      .map((booth, index) => (
+                        <div 
+                          key={booth.name} 
+                          className={`p-3 rounded-md flex justify-between items-center ${
+                            index === 0 ? 'bg-amber-100' :
+                            index === 1 ? 'bg-gray-100' :
+                            index === 2 ? 'bg-amber-50' : 'bg-white border'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold
+                              ${index === 0 ? 'bg-amber-500 text-white' :
+                                index === 1 ? 'bg-gray-400 text-white' :
+                                index === 2 ? 'bg-amber-400 text-amber-900' : 'bg-gray-200'
+                              }`}
+                            >
+                              {index + 1}
+                            </div>
+                            <span className="font-medium">{booth.name}</span>
+                          </div>
+                          <span className="font-semibold">${booth.earnings.toFixed(2)}</span>
+                        </div>
+                      ))}
                   </div>
                 ) : (
                   <div className="text-center py-6 text-muted-foreground">
