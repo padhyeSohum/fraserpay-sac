@@ -174,7 +174,11 @@ const SACDashboard: React.FC = () => {
   }, [userSearchTerm, usersList]);
   
   const handleHomeClick = () => {
-    navigate('/');
+    if (user?.role === 'sac') {
+      navigate('/sac/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleAddFunds = async () => {
@@ -1100,3 +1104,4 @@ const SACDashboard: React.FC = () => {
 };
 
 export default SACDashboard;
+
