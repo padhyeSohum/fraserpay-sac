@@ -1,10 +1,10 @@
-
-import { Transaction, CartItem, User } from '@/types';
+import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
+    console.log('Fetching all transactions from Supabase');
     const { data, error } = await supabase
       .from('transactions')
       .select(`
@@ -14,10 +14,12 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('Supabase error:', error);
       throw error;
     }
 
     if (data) {
+      console.log('Transactions data received:', data.length, 'records');
       const formattedTransactions: Transaction[] = data.map(t => ({
         id: t.id,
         timestamp: new Date(t.created_at).getTime(),
@@ -55,14 +57,12 @@ export const loadUserTransactions = (transactions: Transaction[], userId: string
 };
 
 export const addFunds = async (
-  amount: number, 
   studentId: string, 
-  paymentMethod: 'cash' | 'card',
-  sacMemberId: string,
-  sacMemberName: string
+  amount: number, 
+  sacMemberId: string
 ): Promise<{ success: boolean, transaction?: Transaction, updatedBalance?: number }> => {
   try {
-    console.log("Starting addFunds process:", { amount, studentId, paymentMethod, sacMemberId, sacMemberName });
+    console.log("Starting addFunds process:", { amount, studentId, sacMemberId });
     
     // Fetch the current user data to get their existing balance
     const { data: userData, error: userError } = await supabase
@@ -98,8 +98,8 @@ export const addFunds = async (
         student_id: studentId,
         student_name: userData.name,
         amount: amountInCents,
-        type: 'fund',
-        sac_member: sacMemberName
+        type: amount >= 0 ? 'fund' : 'refund',
+        sac_member: sacMemberId
       })
       .select()
       .single();
@@ -130,11 +130,11 @@ export const addFunds = async (
       timestamp: new Date(transactionData.created_at).getTime(),
       buyerId: studentId,
       buyerName: userData.name,
-      amount: amount,
-      type: 'fund',
-      paymentMethod,
+      amount: Math.abs(amount),
+      type: amount >= 0 ? 'fund' : 'refund',
+      paymentMethod: 'cash',
       sacMemberId,
-      sacMemberName
+      sacMemberName: undefined
     };
     
     // Verify the update was successful by fetching the user again
@@ -163,8 +163,8 @@ export const addFunds = async (
       }
     }
     
-    toast.success(`Added $${amount.toFixed(2)} to ${userData.name}'s account`);
-    console.log("Funds added successfully:", newTransaction);
+    toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
+    console.log("Funds processed successfully:", newTransaction);
     
     return { 
       success: true, 
@@ -172,8 +172,8 @@ export const addFunds = async (
       updatedBalance: newBalance / 100 // Convert back to dollars for UI
     };
   } catch (error) {
-    console.error('Error adding funds:', error);
-    toast.error('Failed to add funds: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    console.error('Error processing funds:', error);
+    toast.error('Failed to process funds: ' + (error instanceof Error ? error.message : 'Unknown error'));
     return { success: false };
   }
 };

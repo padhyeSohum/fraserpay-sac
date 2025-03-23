@@ -93,19 +93,32 @@ const SACDashboard: React.FC = () => {
   
   useEffect(() => {
     if (user && user.role === 'sac') {
-      loadBooths();
+      console.log('SAC Dashboard: Initializing data');
+      loadData();
+    }
+  }, [user]);
+  
+  const loadData = async () => {
+    try {
+      await loadBooths();
+      
       const allTransactions = getSACTransactions();
+      console.log('SAC Dashboard: Loaded transactions', allTransactions.length);
       setTransactions(allTransactions);
       setFilteredTransactions(allTransactions);
       
       const boothLeaderboard = getLeaderboard();
+      console.log('SAC Dashboard: Loaded leaderboard', boothLeaderboard.length);
       setLeaderboard(boothLeaderboard);
       
-      loadUsers();
+      await loadUsers();
       
       calculateStats(allTransactions);
+    } catch (error) {
+      console.error('Error loading SAC dashboard data:', error);
+      toast.error('Failed to load dashboard data');
     }
-  }, [user]);
+  };
   
   const calculateStats = (allTransactions: any[]) => {
     const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -129,6 +142,7 @@ const SACDashboard: React.FC = () => {
       if (error) throw error;
       
       if (data) {
+        console.log('SAC Dashboard: Loaded users', data.length);
         setUsersList(data);
         setFilteredUsers(data);
         
@@ -478,7 +492,7 @@ const SACDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">
-              ${(stats.totalRevenue / 100).toFixed(2)}
+              ${(stats.totalRevenue).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -1051,7 +1065,7 @@ const SACDashboard: React.FC = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Total Revenue:</span>
-                        <span className="font-medium">${(stats.totalRevenue / 100).toFixed(2)}</span>
+                        <span className="font-medium">${(stats.totalRevenue).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Average Transaction:</span>
@@ -1100,4 +1114,3 @@ const SACDashboard: React.FC = () => {
 };
 
 export default SACDashboard;
-

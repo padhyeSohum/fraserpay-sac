@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
-import { Transaction, TransactionStats, DateRange } from '@/types';
+import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { 
   loadUserTransactions, 
   fetchAllTransactions 
@@ -11,7 +11,7 @@ import { getLeaderboard } from '../boothService';
 export interface UseTransactionManagementReturn {
   transactions: Transaction[];
   recentTransactions: Transaction[];
-  loadBoothTransactions: (boothId: string, booths: Array<any>) => Transaction[];
+  loadBoothTransactions: (boothId: string, booths: Booth[]) => Transaction[];
   loadUserFundsTransactions: () => Transaction[];
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
@@ -19,32 +19,37 @@ export interface UseTransactionManagementReturn {
   getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
 }
 
-export const useTransactionManagement = (booths: Array<any>): UseTransactionManagementReturn => {
+export const useTransactionManagement = (booths: Booth[]): UseTransactionManagementReturn => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
   // Load transactions on mount
   useEffect(() => {
-    if (user) {
-      const fetchTransactionsData = async () => {
+    const fetchTransactionsData = async () => {
+      console.log('Initializing transaction data fetch');
+      try {
         const allTransactions = await fetchAllTransactions();
+        console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
         
         // Set recent transactions
         if (user && allTransactions.length > 0) {
           const userTxs = allTransactions.filter(t => t.buyerId === user.id);
+          console.log('User transactions:', userTxs.length);
           setRecentTransactions(userTxs.slice(0, 5)); // Most recent 5 transactions
         }
-      };
-      
-      fetchTransactionsData();
-    }
+      } catch (error) {
+        console.error('Error in fetchTransactionsData:', error);
+      }
+    };
+    
+    fetchTransactionsData();
   }, [user]);
 
-  const loadBoothTransactions = (boothId: string, booths: Array<any>) => {
-    const booth = booths.find(b => b.id === boothId);
-    return booth ? booth.transactions : [];
+  const loadBoothTransactions = (boothId: string, booths: Booth[]) => {
+    // Filter transactions for the specific booth
+    return transactions.filter(t => t.boothId === boothId);
   };
 
   const loadUserFundsTransactions = () => {
@@ -109,7 +114,28 @@ export const useTransactionManagement = (booths: Array<any>): UseTransactionMana
   };
   
   const getLeaderboardImpl = () => {
-    return getLeaderboard(booths);
+    // Calculate booth earnings from transactions
+    const boothEarnings: {[key: string]: {name: string, earnings: number}} = {};
+    
+    transactions.forEach(t => {
+      if (t.boothId && t.type === 'purchase') {
+        if (!boothEarnings[t.boothId]) {
+          boothEarnings[t.boothId] = {
+            name: t.boothName || 'Unknown Booth',
+            earnings: 0
+          };
+        }
+        boothEarnings[t.boothId].earnings += t.amount;
+      }
+    });
+    
+    return Object.entries(boothEarnings)
+      .map(([boothId, data]) => ({
+        boothId,
+        boothName: data.name,
+        earnings: data.earnings
+      }))
+      .sort((a, b) => b.earnings - a.earnings);
   };
 
   return {
