@@ -19,6 +19,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ShoppingCart, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { Booth, CartItem } from '@/types';
@@ -158,7 +159,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
           Booth Transaction
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Make Transaction for Booth</DialogTitle>
           <DialogDescription>
@@ -166,128 +167,130 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Select Booth</Label>
-              <Select value={selectedBooth} onValueChange={setSelectedBooth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a booth" />
-                </SelectTrigger>
-                <SelectContent>
-                  {booths.map(booth => (
-                    <SelectItem key={booth.id} value={booth.id}>
-                      {booth.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Find Student</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter student number..."
-                  value={transactionStudentNumber}
-                  onChange={(e) => setTransactionStudentNumber(e.target.value)}
-                />
-                <Button 
-                  variant="outline" 
-                  type="button"
-                  onClick={handleSearchStudentForTransaction}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+        <ScrollArea className="max-h-[calc(90vh-11rem)] pr-4">
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Select Booth</Label>
+                <Select value={selectedBooth} onValueChange={setSelectedBooth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a booth" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {booths.map(booth => (
+                      <SelectItem key={booth.id} value={booth.id}>
+                        {booth.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-          </div>
-          
-          {foundStudent && (
-            <div className="bg-muted p-3 rounded-md">
-              <div className="font-medium">Student: {foundStudent.name}</div>
-              <div className="text-sm">Balance: ${foundStudent.balance.toFixed(2)}</div>
-            </div>
-          )}
-          
-          {selectedBooth && getBoothById(selectedBooth) && (
-            <div>
-              <Label className="mb-2 block">Products</Label>
-              <div className="border rounded-md divide-y">
-                {getBoothById(selectedBooth)?.products.map((product) => (
-                  <div key={product.id} className="flex justify-between items-center p-3">
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-muted-foreground">${product.price.toFixed(2)}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          const cartItem = cart.find(item => item.productId === product.id);
-                          if (cartItem) {
-                            decrementQuantity(product.id);
-                          }
-                        }}
-                        disabled={!cart.some(item => item.productId === product.id)}
-                      >
-                        -
-                      </Button>
-                      <span>
-                        {cart.find(item => item.productId === product.id)?.quantity || 0}
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          const cartItem = cart.find(item => item.productId === product.id);
-                          if (cartItem) {
-                            incrementQuantity(product.id);
-                          } else {
-                            addToCart(product);
-                          }
-                        }}
-                      >
-                        +
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {cart.length > 0 && (
-            <div>
-              <Label className="mb-2 block">Cart</Label>
-              <div className="border rounded-md divide-y">
-                {cart.map((item) => (
-                  <div key={item.productId} className="flex justify-between items-center p-3">
-                    <div>
-                      <div className="font-medium">{item.product.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.quantity} × ${item.product.price.toFixed(2)} = ${(item.quantity * item.product.price).toFixed(2)}
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => removeFromCart(item.productId)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <div className="p-3 bg-muted font-medium">
-                  Total: ${cart.reduce((sum, item) => sum + (item.quantity * item.product.price), 0).toFixed(2)}
+              
+              <div className="space-y-2">
+                <Label>Find Student</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter student number..."
+                    value={transactionStudentNumber}
+                    onChange={(e) => setTransactionStudentNumber(e.target.value)}
+                  />
+                  <Button 
+                    variant="outline" 
+                    type="button"
+                    onClick={handleSearchStudentForTransaction}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+            
+            {foundStudent && (
+              <div className="bg-muted p-3 rounded-md">
+                <div className="font-medium">Student: {foundStudent.name}</div>
+                <div className="text-sm">Balance: ${foundStudent.balance.toFixed(2)}</div>
+              </div>
+            )}
+            
+            {selectedBooth && getBoothById(selectedBooth) && (
+              <div>
+                <Label className="mb-2 block">Products</Label>
+                <div className="border rounded-md divide-y">
+                  {getBoothById(selectedBooth)?.products.map((product) => (
+                    <div key={product.id} className="flex justify-between items-center p-3">
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-muted-foreground">${product.price.toFixed(2)}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const cartItem = cart.find(item => item.productId === product.id);
+                            if (cartItem) {
+                              decrementQuantity(product.id);
+                            }
+                          }}
+                          disabled={!cart.some(item => item.productId === product.id)}
+                        >
+                          -
+                        </Button>
+                        <span>
+                          {cart.find(item => item.productId === product.id)?.quantity || 0}
+                        </span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const cartItem = cart.find(item => item.productId === product.id);
+                            if (cartItem) {
+                              incrementQuantity(product.id);
+                            } else {
+                              addToCart(product);
+                            }
+                          }}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {cart.length > 0 && (
+              <div>
+                <Label className="mb-2 block">Cart</Label>
+                <div className="border rounded-md divide-y">
+                  {cart.map((item) => (
+                    <div key={item.productId} className="flex justify-between items-center p-3">
+                      <div>
+                        <div className="font-medium">{item.product.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.quantity} × ${item.product.price.toFixed(2)} = ${(item.quantity * item.product.price).toFixed(2)}
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => removeFromCart(item.productId)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="p-3 bg-muted font-medium">
+                    Total: ${cart.reduce((sum, item) => sum + (item.quantity * item.product.price), 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
         
-        <DialogFooter>
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
