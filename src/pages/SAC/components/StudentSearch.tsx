@@ -141,9 +141,9 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Student Search</CardTitle>
+    <Card className="w-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-medium">Student Search</CardTitle>
         <CardDescription>
           Find a student to view their details or manage their account
         </CardDescription>
@@ -155,32 +155,35 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
             onClose={() => setIsScanning(false)}
           />
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <Input
                 placeholder="Search by student ID, name, or email..."
                 value={studentSearchTerm}
                 onChange={(e) => setStudentSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleStudentSearch()}
+                className="w-full"
               />
             </div>
-            <Button onClick={handleStudentSearch} disabled={isSearching}>
-              {isSearching ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
-                </>
-              )}
-            </Button>
-            <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning || isProcessing}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Scan QR
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleStudentSearch} disabled={isSearching} className="flex-1 sm:flex-none">
+                {isSearching ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning || isProcessing} className="flex-1 sm:flex-none">
+                <QrCode className="h-4 w-4 mr-2" />
+                Scan QR
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

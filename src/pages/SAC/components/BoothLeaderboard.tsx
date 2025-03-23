@@ -13,9 +13,9 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
   isLoading = false
 }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Booth Leaderboard</CardTitle>
+    <Card className="h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-medium">Booth Leaderboard</CardTitle>
         <CardDescription>Top performing booths</CardDescription>
       </CardHeader>
       <CardContent>
@@ -46,7 +46,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
             </TableBody>
           </Table>
         ) : (
-          <div className="text-center py-2 text-muted-foreground">
+          <div className="text-center py-4 text-muted-foreground">
             <p>No booths to display</p>
           </div>
         )}

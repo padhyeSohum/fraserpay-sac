@@ -556,23 +556,25 @@ const Dashboard = () => {
       title="SAC Dashboard" 
       showBack={true}
     >
-      <div className="space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 space-y-6">
         <StatCards 
           stats={stats} 
           isLoading={isLoading}
         />
         
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mx-auto">
           <Button
-            className="flex-1"
             onClick={handleNewBoothClick}
+            size="lg"
+            className="w-full"
           >
             Create New Booth
           </Button>
           <Button
-            className="flex-1"
             variant="outline"
             onClick={handleBoothTransactionClick}
+            size="lg"
+            className="w-full"
           >
             Process Booth Transaction
           </Button>
@@ -580,8 +582,8 @@ const Dashboard = () => {
         
         <StudentSearch onStudentFound={handleStudentFound} />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7">
             <UsersTable 
               users={filteredUsers} 
               isLoading={isUserLoading} 
@@ -590,7 +592,8 @@ const Dashboard = () => {
               onUserSelect={handleUserSelected}
             />
           </div>
-          <div className="space-y-6">
+          
+          <div className="lg:col-span-5 space-y-6">
             <BoothLeaderboard 
               leaderboard={leaderboard} 
               isLoading={isBoothLoading}
