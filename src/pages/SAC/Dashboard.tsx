@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -40,7 +41,7 @@ import {
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Minus, Search, Printer } from 'lucide-react';
+import { Home, Plus, Minus, Search, Printer, Users, LayoutGrid, ChartBar } from 'lucide-react';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import { supabase } from '@/integrations/supabase/client';
 import { transformUserData } from '@/contexts/auth/authUtils';
@@ -53,7 +54,10 @@ const SACDashboard: React.FC = () => {
     getLeaderboard, 
     addFunds, 
     booths, 
-    loadBooths 
+    loadBooths,
+    fetchAllBooths,
+    createBooth,
+    getBoothById
   } = useTransactions();
   
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -71,6 +75,26 @@ const SACDashboard: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
   
+  // New states for booth management
+  const [isCreateBoothOpen, setIsCreateBoothOpen] = useState(false);
+  const [boothName, setBoothName] = useState('');
+  const [boothDescription, setBoothDescription] = useState('');
+  const [isBoothLoading, setIsBoothLoading] = useState(false);
+  
+  // New states for user management
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [isUserLoading, setIsUserLoading] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  
+  // Stats states
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalBooths: 0,
+    totalTransactions: 0,
+    totalRevenue: 0
+  });
+  
   useEffect(() => {
     if (user && user.role === 'sac') {
       loadBooths();
@@ -80,8 +104,55 @@ const SACDashboard: React.FC = () => {
       
       const boothLeaderboard = getLeaderboard();
       setLeaderboard(boothLeaderboard);
+      
+      // Load users
+      loadUsers();
+      
+      // Calculate stats
+      calculateStats(allTransactions);
     }
   }, [user]);
+  
+  const calculateStats = (allTransactions: any[]) => {
+    // Calculate total revenue
+    const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+    
+    // Set stats
+    setStats({
+      totalUsers: usersList.length,
+      totalBooths: booths.length,
+      totalTransactions: allTransactions.length,
+      totalRevenue
+    });
+  };
+  
+  const loadUsers = async () => {
+    setIsUserLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        setUsersList(data);
+        setFilteredUsers(data);
+        
+        // Update stats with user count
+        setStats(prev => ({
+          ...prev,
+          totalUsers: data.length
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setIsUserLoading(false);
+    }
+  };
   
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -96,6 +167,24 @@ const SACDashboard: React.FC = () => {
       setFilteredTransactions(filtered);
     }
   }, [searchTerm, transactions]);
+  
+  useEffect(() => {
+    if (userSearchTerm.trim() === '') {
+      setFilteredUsers(usersList);
+    } else {
+      const filtered = usersList.filter(
+        user => 
+          (user.name && user.name.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
+          (user.email && user.email.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
+          (user.student_number && user.student_number.toLowerCase().includes(userSearchTerm.toLowerCase()))
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [userSearchTerm, usersList]);
+  
+  const handleHomeClick = () => {
+    navigate('/');
+  };
 
   const handleAddFunds = async () => {
     if (!studentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -122,6 +211,7 @@ const SACDashboard: React.FC = () => {
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
+        calculateStats(allTransactions);
         
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
@@ -161,6 +251,7 @@ const SACDashboard: React.FC = () => {
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
+        calculateStats(allTransactions);
         
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
@@ -224,6 +315,45 @@ const SACDashboard: React.FC = () => {
       toast.error('Failed to search for student');
     } finally {
       setIsSearching(false);
+    }
+  };
+  
+  const handleCreateBooth = async () => {
+    if (!boothName.trim()) {
+      toast.error('Please enter a booth name');
+      return;
+    }
+    
+    if (!user) {
+      toast.error('You must be logged in to create a booth');
+      return;
+    }
+    
+    setIsBoothLoading(true);
+    
+    try {
+      const boothId = await createBooth(boothName, boothDescription, user.id);
+      
+      if (boothId) {
+        setIsCreateBoothOpen(false);
+        setBoothName('');
+        setBoothDescription('');
+        toast.success('Booth created successfully');
+        
+        // Reload booths
+        await loadBooths();
+        
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          totalBooths: booths.length + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error creating booth:', error);
+      toast.error('Failed to create booth');
+    } finally {
+      setIsBoothLoading(false);
     }
   };
   
@@ -314,21 +444,21 @@ const SACDashboard: React.FC = () => {
         <Button 
           variant="outline" 
           size="icon"
-          onClick={() => navigate('/')}
+          onClick={handleHomeClick}
           title="Home"
         >
           <Home className="h-5 w-5" />
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle>Total Transactions</CardTitle>
             <CardDescription>All transactions in the system</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{transactions.length}</p>
+            <p className="text-4xl font-bold">{stats.totalTransactions}</p>
           </CardContent>
         </Card>
         
@@ -338,7 +468,17 @@ const SACDashboard: React.FC = () => {
             <CardDescription>Active booths in the system</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{booths.length}</p>
+            <p className="text-4xl font-bold">{stats.totalBooths}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Users</CardTitle>
+            <CardDescription>Registered users in the system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">{stats.totalUsers}</p>
           </CardContent>
         </Card>
         
@@ -349,9 +489,7 @@ const SACDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">
-              {formatCurrency(
-                transactions.reduce((sum, t) => sum + t.amount, 0)
-              )}
+              {formatCurrency(stats.totalRevenue)}
             </p>
           </CardContent>
         </Card>
@@ -391,7 +529,58 @@ const SACDashboard: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-end gap-2 mb-6">
+        <Dialog open={isCreateBoothOpen} onOpenChange={setIsCreateBoothOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Create Booth
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Booth</DialogTitle>
+              <DialogDescription>
+                Create a new booth for the Fraser Pay system.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="boothName" className="text-right">
+                  Booth Name
+                </Label>
+                <Input
+                  id="boothName"
+                  value={boothName}
+                  onChange={(e) => setBoothName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="boothDescription" className="text-right">
+                  Description
+                </Label>
+                <Input
+                  id="boothDescription"
+                  value={boothDescription}
+                  onChange={(e) => setBoothDescription(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateBoothOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateBooth} disabled={isBoothLoading}>
+                {isBoothLoading ? 'Creating...' : 'Create Booth'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
         <Dialog open={isAddFundsOpen} onOpenChange={setIsAddFundsOpen}>
           <DialogTrigger asChild>
             <Button>Add Funds to Student</Button>
@@ -579,6 +768,9 @@ const SACDashboard: React.FC = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="leaderboard">Booth Leaderboard</TabsTrigger>
+          <TabsTrigger value="booths">Manage Booths</TabsTrigger>
+          <TabsTrigger value="users">Manage Users</TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="transactions">
@@ -686,6 +878,230 @@ const SACDashboard: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="booths">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Manage Booths</CardTitle>
+                <CardDescription>
+                  View and manage all booths in the system
+                </CardDescription>
+              </div>
+              <Button onClick={() => setIsCreateBoothOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Booth
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {booths.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center">
+                        No booths found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    booths.map((booth) => (
+                      <TableRow key={booth.id}>
+                        <TableCell>{booth.name}</TableCell>
+                        <TableCell>{booth.description || 'No description'}</TableCell>
+                        <TableCell>
+                          {booth.createdAt ? formatDate(new Date(booth.createdAt)) : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigate(`/booth/${booth.id}`)}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Users</CardTitle>
+              <CardDescription>
+                View and manage all users in the system
+              </CardDescription>
+              <div className="mt-4">
+                <Input
+                  placeholder="Search users..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Student ID</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Balance</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isUserLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading users...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.student_number || 'N/A'}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              user.role === 'sac'
+                                ? 'bg-purple-100 text-purple-800'
+                                : user.role === 'booth'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {user.role}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          ${(user.tickets / 100).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setFoundStudent({
+                                  id: user.id,
+                                  name: user.name,
+                                  studentNumber: user.student_number,
+                                  email: user.email,
+                                  balance: user.tickets / 100,
+                                  qrCode: user.qr_code
+                                });
+                                
+                                if (user.qr_code || user.id) {
+                                  const userData = user.qr_code || encodeUserData(user.id);
+                                  const qrUrl = generateQRCode(userData);
+                                  setQrCodeUrl(qrUrl);
+                                }
+                                
+                                setIsStudentDetailOpen(true);
+                              }}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="statistics">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Statistics</CardTitle>
+              <CardDescription>
+                Overview of system performance and metrics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Transaction Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span>Total Transactions:</span>
+                        <span className="font-medium">{stats.totalTransactions}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Revenue:</span>
+                        <span className="font-medium">{formatCurrency(stats.totalRevenue)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Average Transaction:</span>
+                        <span className="font-medium">
+                          {stats.totalTransactions > 0
+                            ? formatCurrency(stats.totalRevenue / stats.totalTransactions)
+                            : '$0.00'}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">User Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span>Total Users:</span>
+                        <span className="font-medium">{stats.totalUsers}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Booths:</span>
+                        <span className="font-medium">{stats.totalBooths}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Transactions per User:</span>
+                        <span className="font-medium">
+                          {stats.totalUsers > 0
+                            ? (stats.totalTransactions / stats.totalUsers).toFixed(2)
+                            : '0'}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
