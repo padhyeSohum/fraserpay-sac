@@ -75,6 +75,13 @@ export const createBooth = async (
     // Generate a random PIN if one was not provided
     const pin = customPin || Math.floor(100000 + Math.random() * 900000).toString();
     
+    // Ensure userId is a valid UUID before proceeding
+    if (!userId) {
+      console.error("Invalid userId for booth creation");
+      throw new Error("User ID is required to create a booth");
+    }
+    
+    // Create the booth in Supabase with the user as a member
     const { data, error } = await supabase
       .from('booths')
       .insert({
@@ -97,8 +104,9 @@ export const createBooth = async (
       throw new Error("Failed to create booth");
     }
     
-    console.log("Booth created:", data);
+    console.log("Booth created successfully:", data);
     
+    // Update the user's booth_access array to include the new booth
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('booth_access')
@@ -107,33 +115,27 @@ export const createBooth = async (
     
     if (userError) {
       console.error("Error fetching user booth access:", userError);
-      throw userError;
+      // Continue even if this fails, as the booth was created successfully
+    } else {
+      const updatedBoothAccess = [...(userData.booth_access || []), data.id];
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ booth_access: updatedBoothAccess })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error("Error updating user booth access:", updateError);
+        // Continue even if this fails, as the booth was created successfully
+      }
     }
     
-    const updatedBoothAccess = [...(userData.booth_access || []), data.id];
-    
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ booth_access: updatedBoothAccess })
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error("Error updating user booth access:", updateError);
-      throw updateError;
-    }
-    
-    console.log("Booth added to local state:", {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      pin: data.pin,
-      managers: [userId]
-    });
+    toast.success(`Booth "${name}" created successfully!`);
     
     return data.id;
   } catch (error) {
     console.error('Error creating booth:', error);
-    toast.error('Failed to create booth');
+    toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
     return null;
   }
 };

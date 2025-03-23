@@ -17,7 +17,7 @@ export interface UseBoothManagementReturn {
   loadStudentBooths: () => Booth[];
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
-  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
+  createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
   isLoading: boolean;
 }
 
@@ -71,6 +71,25 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     return await fetchAllBooths();
   };
 
+  const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {
+    setIsLoading(true);
+    try {
+      const boothId = await createBooth(name, description, userId, customPin);
+      
+      if (boothId) {
+        // Refresh the booths list to include the new booth
+        await loadBooths();
+      }
+      
+      return boothId;
+    } catch (error) {
+      console.error('Error in useBoothManagement.createBooth:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     booths,
     getBoothById: getBoothByIdImpl,
@@ -78,7 +97,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     loadStudentBooths,
     getBoothsByUserId: getBoothsByUserIdImpl,
     fetchAllBooths: fetchAllBoothsImpl,
-    createBooth,
+    createBooth: createBoothImpl,
     isLoading
   };
 };
