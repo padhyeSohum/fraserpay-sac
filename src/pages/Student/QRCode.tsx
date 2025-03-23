@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
-import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 const QRCode = () => {
   const { user } = useAuth();
@@ -57,15 +57,13 @@ const QRCode = () => {
                 )}
               </div>
               
-              <Button
-                variant="outline"
+              <InteractiveHoverButton
+                text="Refresh"
+                icon={<RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+                className={`mb-4 w-40 ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
                 onClick={regenerateQR}
                 disabled={isRefreshing}
-                className="mb-4"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh QR Code
-              </Button>
+              />
               
               <p className="text-sm text-muted-foreground text-center">
                 This is your unique payment QR code. Present it to booth vendors to make purchases.

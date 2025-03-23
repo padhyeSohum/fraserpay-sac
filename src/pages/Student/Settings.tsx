@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 const Settings = () => {
   const { user, logout, verifySACPin } = useAuth();
@@ -66,7 +67,7 @@ const Settings = () => {
                 <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>Transaction Alerts</span>
               </div>
-              <Button variant="outline" size="sm">Configure</Button>
+              <InteractiveHoverButton text="Configure" className="w-28" />
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
@@ -74,7 +75,7 @@ const Settings = () => {
                 <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>Booth Updates</span>
               </div>
-              <Button variant="outline" size="sm">Configure</Button>
+              <InteractiveHoverButton text="Configure" className="w-28" />
             </div>
           </CardContent>
         </Card>
@@ -90,7 +91,7 @@ const Settings = () => {
                 <HelpCircle className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>How to Use FraserPay</span>
               </div>
-              <Button variant="outline" size="sm">View</Button>
+              <InteractiveHoverButton text="View" className="w-28" />
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
@@ -98,13 +99,11 @@ const Settings = () => {
                 <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>SAC Admin Access</span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
+              <InteractiveHoverButton 
+                text="Verify" 
+                className="w-28"
                 onClick={handleSACAccess}
-              >
-                Verify
-              </Button>
+              />
             </div>
           </CardContent>
           <CardFooter>

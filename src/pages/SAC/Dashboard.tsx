@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -6,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { Home, Plus } from 'lucide-react';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import { supabase } from '@/integrations/supabase/client';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 // Import our new components
 import StatCards from './components/StatCards';
@@ -448,14 +450,12 @@ const SACDashboard: React.FC = () => {
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">SAC Dashboard</h1>
-        <Button 
-          variant="outline" 
-          size="icon"
+        <InteractiveHoverButton 
+          text="Home"
+          icon={<Home className="h-5 w-5" />}
+          className="w-28"
           onClick={handleHomeClick}
-          title="Home"
-        >
-          <Home className="h-5 w-5" />
-        </Button>
+        />
       </div>
       
       {/* Stats Display */}
@@ -490,14 +490,21 @@ const SACDashboard: React.FC = () => {
           isLoading={isBoothLoading}
         />
         
-        <Button
+        <InteractiveHoverButton
+          text="Add Booth"
+          icon={<Plus className="h-4 w-4" />}
+          className="w-36 mr-2"
+          onClick={() => setIsCreateBoothOpen(true)}
+        />
+        
+        <InteractiveHoverButton
+          text="Add Funds"
+          className="w-36"
           onClick={() => {
             setStudentId('');
             setIsAddFundsOpen(true);
           }}
-        >
-          Add Funds to Student
-        </Button>
+        />
       </div>
       
       {/* Dialogs */}

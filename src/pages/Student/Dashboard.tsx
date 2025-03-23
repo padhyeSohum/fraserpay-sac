@@ -8,6 +8,7 @@ import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -92,32 +93,26 @@ const Dashboard = () => {
         
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+          <InteractiveHoverButton
+            text="QR Code"
+            icon={<QrCode className="h-5 w-5" />}
+            className="w-full h-20 bg-white/80 hover:bg-white flex flex-col items-center justify-center"
             onClick={handleViewQRCode}
-          >
-            <QrCode className="h-6 w-6 mb-1" />
-            <span className="text-xs">QR Code</span>
-          </Button>
+          />
           
-          <Button
-            variant="outline"
-            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+          <InteractiveHoverButton
+            text="Leaderboard"
+            icon={<ListOrdered className="h-5 w-5" />}
+            className="w-full h-20 bg-white/80 hover:bg-white flex flex-col items-center justify-center"
             onClick={handleViewLeaderboard}
-          >
-            <ListOrdered className="h-6 w-6 mb-1" />
-            <span className="text-xs">Leaderboard</span>
-          </Button>
+          />
           
-          <Button
-            variant="outline"
-            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+          <InteractiveHoverButton
+            text="Settings"
+            icon={<Settings className="h-5 w-5" />}
+            className="w-full h-20 bg-white/80 hover:bg-white flex flex-col items-center justify-center"
             onClick={handleViewSettings}
-          >
-            <Settings className="h-6 w-6 mb-1" />
-            <span className="text-xs">Settings</span>
-          </Button>
+          />
         </div>
         
         {/* User's Booths Section */}
