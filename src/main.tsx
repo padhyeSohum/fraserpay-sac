@@ -22,27 +22,6 @@ const handleRenderError = (error: Error) => {
   }
 };
 
-// Function to clear cache and check for service worker updates
-const clearCacheAndCheckForUpdates = () => {
-  if ('serviceWorker' in navigator) {
-    // Clear cache on each visit
-    navigator.serviceWorker.ready.then(registration => {
-      // Send message to service worker to clear cache
-      registration.active?.postMessage({ type: 'CLEAR_CACHE' });
-      
-      // Check for updates
-      registration.update();
-    });
-    
-    // Listen for cache cleared messages
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data && event.data.type === 'CACHE_CLEARED') {
-        console.log('Cache successfully cleared');
-      }
-    });
-  }
-};
-
 // Function to safely mount the application
 const mountApp = () => {
   // Get root element and verify it exists
@@ -54,14 +33,11 @@ const mountApp = () => {
 
   // Create React root safely
   try {
+    console.log('Creating React root...');
     const root = createRoot(rootElement);
     
     // Render app with proper React context
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
+    root.render(<App />);
   } catch (error) {
     handleRenderError(error as Error);
   }
@@ -100,8 +76,15 @@ if (window.location.hostname !== 'localhost' && window.location.hostname !== '12
 
 // Initialize everything in a controlled sequence
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM content loaded, mounting app...');
   // Clear cache on initial load
-  clearCacheAndCheckForUpdates();
+  if ('caches' in window) {
+    caches.keys().then(cacheNames => {
+      cacheNames.forEach(cacheName => {
+        caches.delete(cacheName);
+      });
+    });
+  }
   
   // Mount the application once DOM is fully ready
   mountApp();
@@ -118,8 +101,4 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         console.error('Service Worker registration failed:', error);
       });
   });
-  
-  // Clear cache and check for updates periodically (every 15 minutes)
-  clearCacheAndCheckForUpdates();
-  setInterval(clearCacheAndCheckForUpdates, 15 * 60 * 1000);
 }

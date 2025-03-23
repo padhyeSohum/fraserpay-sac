@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
 import { TransactionContextType } from './types';
@@ -20,6 +20,7 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
+  const isMounted = useRef(true);
 
   // Use our custom hooks for each feature area
   const boothManagement = useBoothManagement();
@@ -30,17 +31,25 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Initialize data on mount
   useEffect(() => {
+    isMounted.current = true;
+    
     const initializeData = async () => {
       try {
         await boothManagement.fetchAllBooths();
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
       } finally {
-        setIsInitialized(true);
+        if (isMounted.current) {
+          setIsInitialized(true);
+        }
       }
     };
 
     initializeData();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   // Function to update transactions list when a new transaction is created

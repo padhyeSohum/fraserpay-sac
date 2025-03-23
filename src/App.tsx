@@ -6,12 +6,16 @@ import { measurePerformance, registerConnectivityListeners, preloadCriticalResou
 import { toast } from 'sonner';
 
 const App = () => {
+  // Use useRef for mutable values that don't cause re-renders
   const [isReady, setIsReady] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     // Initialize app in a controlled sequence
     const initializeApp = async () => {
       try {
+        console.log('Starting app initialization...');
+        
         // Step 1: Measure app performance
         measurePerformance();
         
@@ -38,11 +42,14 @@ const App = () => {
           }
         );
         
+        console.log('App initialization complete');
         // Mark app as ready when initialization is complete
+        setIsInitializing(false);
         setIsReady(true);
       } catch (error) {
         console.error('Failed to initialize app:', error);
         // Allow the app to render even if initialization fails
+        setIsInitializing(false);
         setIsReady(true);
       }
     };
@@ -51,8 +58,9 @@ const App = () => {
     
     // Add a timeout to ensure the app always loads even if something hangs
     const fallbackTimer = setTimeout(() => {
-      if (!isReady) {
+      if (isInitializing) {
         console.warn('App initialization timeout reached. Forcing app to load.');
+        setIsInitializing(false);
         setIsReady(true);
       }
     }, 5000); // 5 second timeout
@@ -61,17 +69,19 @@ const App = () => {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [isInitializing]);
   
-  // Only render the app once initialization is complete
+  // Return null during initialization to avoid premature rendering
   if (!isReady) {
-    return null; // Return null during initialization to avoid premature rendering
+    return null;
   }
   
   return (
-    <AppProviders>
-      <AppRoutes />
-    </AppProviders>
+    <React.StrictMode>
+      <AppProviders>
+        <AppRoutes />
+      </AppProviders>
+    </React.StrictMode>
   );
 };
 
