@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
@@ -10,6 +10,7 @@ const AppRoutes: React.FC = () => {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const routeInitialized = useRef(false);
   
   // Handle loading timeout state
   useEffect(() => {
@@ -29,45 +30,39 @@ const AppRoutes: React.FC = () => {
     setLoadingTimeout(false);
   }, [location.pathname]);
   
-  // Handle page refresh and direct URL access
+  // Handle page refresh and direct URL access - optimize to run once
   useEffect(() => {
+    if (routeInitialized.current) return;
+    
+    const handleRouteInitialization = () => {
+      // Only run once per session
+      routeInitialized.current = true;
+      
+      console.log("Initializing routes on path:", location.pathname);
+      
+      // Handle direct URL access
+      if (isAuthenticated && !isLoading) {
+        // For root path, redirect to dashboard if authenticated
+        if (location.pathname === '/' || location.pathname === '') {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    };
+    
+    if (!isLoading) {
+      handleRouteInitialization();
+    }
+    
     // Track page refreshes to maintain state
     const handleBeforeUnload = () => {
-      sessionStorage.setItem('wasRefreshed', 'true');
-      // Save current path for restoration after refresh
       sessionStorage.setItem('lastPath', location.pathname);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Handle page refresh or direct URL access
-    const wasRefreshed = sessionStorage.getItem('wasRefreshed') === 'true';
-    const lastPath = sessionStorage.getItem('lastPath');
-    
-    if (wasRefreshed && isAuthenticated) {
-      // Restore the last path if it exists, otherwise go to dashboard
-      if (lastPath && lastPath !== '/' && lastPath !== '/login' && lastPath !== '/register') {
-        navigate(lastPath);
-      } else if (location.pathname === '/' || location.pathname === '') {
-        navigate('/dashboard');
-      }
-      sessionStorage.removeItem('wasRefreshed');
-      sessionStorage.removeItem('lastPath');
-    }
-    
-    // Direct URL access detection - ensure proper route handling
-    if (!document.referrer && isAuthenticated) {
-      console.log("Direct URL access detected, ensuring proper routing");
-      
-      if (location.pathname === '/' || location.pathname === '') {
-        navigate('/dashboard');
-      }
-    }
-    
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isAuthenticated, navigate, location.pathname]);
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
   
   // Show loading screen for initial auth state determination, but with a timeout fallback
   if (isLoading) {
@@ -76,17 +71,6 @@ const AppRoutes: React.FC = () => {
   }
   
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
-
-  // If we're at a protected route and not authenticated, redirect to login
-  const isProtectedRoute = routes.some(route => 
-    route.protected && 
-    (location.pathname === route.path || 
-     (route.path.includes(':') && location.pathname.startsWith(route.path.split(':')[0])))
-  );
-
-  if (isProtectedRoute && !isAuthenticated && !isLoading) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <Routes>

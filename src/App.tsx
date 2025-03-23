@@ -1,16 +1,22 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { toast } from 'sonner';
 
 const App = () => {
-  // Use useRef for mutable values that don't cause re-renders
+  // Use useState for reactive state that triggers re-renders
   const [isReady, setIsReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  // Use useRef for tracking initialization attempts to prevent duplicate initialization
+  const initAttempted = useRef(false);
 
   useEffect(() => {
+    // Prevent multiple initialization attempts
+    if (initAttempted.current) return;
+    initAttempted.current = true;
+    
     // Initialize app in a controlled sequence
     const initializeApp = async () => {
       try {
@@ -69,7 +75,7 @@ const App = () => {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, [isInitializing]);
+  }, []); // Remove isInitializing from dependency array to prevent loops
   
   // Return null during initialization to avoid premature rendering
   if (!isReady) {
@@ -77,11 +83,9 @@ const App = () => {
   }
   
   return (
-    <React.StrictMode>
-      <AppProviders>
-        <AppRoutes />
-      </AppProviders>
-    </React.StrictMode>
+    <AppProviders>
+      <AppRoutes />
+    </AppProviders>
   );
 };
 
