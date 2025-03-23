@@ -13,45 +13,45 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { api } from '@/utils/api';
-import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 
 interface FundsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  student: any;
-  refetchStudents: (options?: RefetchOptions) => Promise<QueryObserverResult<any, Error>>;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  studentId: string;
+  onSubmit: (studentId: string, amount: number) => Promise<void>;
+  readOnlyId?: boolean;
 }
 
 const FundsDialog: React.FC<FundsDialogProps> = ({
   isOpen,
   onOpenChange,
-  student,
-  refetchStudents
+  title,
+  description,
+  confirmLabel,
+  confirmVariant = 'default',
+  studentId,
+  onSubmit,
+  readOnlyId = false
 }) => {
-  const [studentId, setStudentId] = useState('');
+  const [localStudentId, setLocalStudentId] = useState(studentId);
   const [studentNumber, setStudentNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
 
   // Sync studentId with local state when it changes
   useEffect(() => {
-    if (student) {
-      setStudentId(student.id || '');
-      setFoundStudent(student);
-    } else {
-      setStudentId('');
-    }
-    
+    setLocalStudentId(studentId);
     // Reset student info when dialog opens/closes
     if (!isOpen) {
       setStudentNumber('');
-      setAmount('');
       setFoundStudent(null);
     }
-  }, [student, isOpen]);
+  }, [studentId, isOpen]);
 
   const handleFindByStudentNumber = async () => {
     if (!studentNumber.trim()) {
@@ -75,7 +75,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       }
       
       if (data) {
-        setStudentId(data.id);
+        setLocalStudentId(data.id);
         setFoundStudent({
           name: data.name,
           balance: data.tickets / 100
@@ -92,47 +92,18 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     }
   };
 
-  const handleAddFunds = async () => {
-    if (!studentId || !amount) {
-      toast.error('Student ID and amount are required');
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      await api.post(`/students/${studentId}/funds`, { 
-        amount: parseFloat(amount) 
-      });
-      
-      toast.success('Funds added successfully!');
-      await refetchStudents();
-      onOpenChange(false);
-      
-      // Reset form
-      setAmount('');
-      setStudentNumber('');
-      setFoundStudent(null);
-    } catch (error) {
-      console.error('Error adding funds:', error);
-      toast.error('Failed to add funds');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Funds</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Add funds to a student's account.
+            {description}
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          {!student && (
+          {!readOnlyId && (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="studentNumber" className="text-right">
@@ -160,18 +131,24 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
               {foundStudent && (
                 <div className="px-4 py-2 rounded-md bg-muted/50">
                   <p><strong>Name:</strong> {foundStudent.name}</p>
-                  <p><strong>Current Balance:</strong> ${foundStudent.balance?.toFixed(2) || '0.00'}</p>
+                  <p><strong>Current Balance:</strong> ${foundStudent.balance.toFixed(2)}</p>
                 </div>
               )}
             </>
           )}
 
-          {(student || foundStudent) && (
-            <div className="px-4 py-2 rounded-md bg-muted/50">
-              <p><strong>Name:</strong> {student?.name || foundStudent?.name}</p>
-              <p><strong>Current Balance:</strong> ${(student?.balance || foundStudent?.balance || 0).toFixed(2)}</p>
-            </div>
-          )}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="studentId" className="text-right">
+              Student ID
+            </Label>
+            <Input
+              id="studentId"
+              value={localStudentId}
+              onChange={(e) => setLocalStudentId(e.target.value)}
+              className="col-span-3"
+              readOnly={readOnlyId || foundStudent !== null}
+            />
+          </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="amount" className="text-right">
@@ -194,10 +171,15 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
             Cancel
           </Button>
           <Button 
-            onClick={handleAddFunds}
-            disabled={!studentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || isSubmitting}
+            variant={confirmVariant} 
+            onClick={() => {
+              if (localStudentId && amount) {
+                onSubmit(localStudentId, parseFloat(amount));
+              }
+            }}
+            disabled={!localStudentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
           >
-            {isSubmitting ? 'Adding Funds...' : 'Add Funds'}
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
