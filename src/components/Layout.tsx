@@ -3,11 +3,10 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlusCircle } from 'lucide-react';
+import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { resetAuthState } from '@/utils/auth';
 import { toast } from 'sonner';
-import Navigation from './Navigation';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +19,6 @@ interface LayoutProps {
   onBackClick?: () => void;
   logo?: React.ReactNode;
   footer?: React.ReactNode;
-  hideNavigation?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -33,8 +31,7 @@ const Layout: React.FC<LayoutProps> = ({
   onAddClick,
   onBackClick,
   logo,
-  footer,
-  hideNavigation = false
+  footer
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -112,46 +109,50 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
-      <header className="py-4 px-6 flex flex-col border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            {showBack && (
-              <Button variant="ghost" size="icon" onClick={handleBack} className="rounded-full">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            )}
-            
-            <div className="flex items-center gap-2">
-              {logo || defaultLogo}
-              
-              {title && (
-                <h1 className="text-lg font-semibold">{title}</h1>
-              )}
-              
-              {subtitle && (
-                <p className="text-sm text-muted-foreground">{subtitle}</p>
-              )}
-            </div>
-          </div>
+      <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center gap-2">
+          {showBack && (
+            <Button variant="ghost" size="icon" onClick={handleBack} className="rounded-full">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
           
           <div className="flex items-center gap-2">
-            {showAddButton && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onAddClick}
-                className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                <PlusCircle className="h-5 w-5" />
-              </Button>
+            {logo || defaultLogo}
+            
+            {title && (
+              <h1 className="text-lg font-semibold">{title}</h1>
+            )}
+            
+            {subtitle && (
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
             )}
           </div>
         </div>
         
-        {/* Always show Navigation for authenticated users */}
-        {user && !isLoading && !hideNavigation && (
-          <Navigation />
-        )}
+        <div className="flex items-center gap-2">
+          {showAddButton && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onAddClick}
+              className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              <PlusCircle className="h-5 w-5" />
+            </Button>
+          )}
+          
+          {showLogout && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
       </header>
       
       <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full">

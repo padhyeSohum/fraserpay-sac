@@ -40,8 +40,7 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
           })),
           managers: b.members || [],
           totalEarnings: b.sales / 100,
-          transactions: [],
-          createdAt: b.created_at // Add the createdAt property from created_at
+          transactions: []
         };
       });
 
@@ -63,17 +62,11 @@ export const getBoothsByUserId = (booths: Booth[], userId: string): Booth[] => {
   return booths.filter(booth => booth.managers.includes(userId));
 };
 
-export const createBooth = async (
-  name: string, 
-  description: string, 
-  userId: string, 
-  customPin?: string
-): Promise<string | null> => {
+export const createBooth = async (name: string, description: string, userId: string): Promise<string | null> => {
   try {
-    console.log("Creating booth:", { name, description, userId, customPin });
+    console.log("Creating booth:", { name, description, userId });
     
-    // Generate a random 6-digit PIN if a custom one wasn't provided
-    const pin = customPin || Math.floor(100000 + Math.random() * 900000).toString();
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
     
     const { data, error } = await supabase
       .from('booths')

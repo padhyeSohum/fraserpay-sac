@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -17,12 +16,12 @@ import { useForm } from 'react-hook-form';
 const createBoothSchema = z.object({
   name: z.string().min(3, "Booth name must be at least 3 characters"),
   description: z.string().optional(),
-  pin: z.string().length(6, "PIN must be exactly 6 digits").regex(/^\d{6}$/, "PIN must contain only digits"),
+  pin: z.string().length(6, "PIN must be exactly 6 digits"),
 });
 
 // Create a schema for joining a booth
 const joinBoothSchema = z.object({
-  pin: z.string().length(6, "PIN must be exactly 6 digits").regex(/^\d{6}$/, "PIN must contain only digits"),
+  pin: z.string().length(6, "PIN must be exactly 6 digits"),
 });
 
 const JoinBooth = () => {
@@ -86,8 +85,7 @@ const JoinBooth = () => {
       const boothId = await createBooth(
         values.name,
         values.description || '',
-        user.id,
-        values.pin
+        user.id
       );
       
       console.log("Booth creation result:", boothId);

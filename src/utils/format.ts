@@ -5,7 +5,7 @@ export const formatCurrency = (amount: number): string => {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2
-  }).format(amount);
+  }).format(amount / 100);
 };
 
 // Format dates (e.g. Mar 15, 2024)

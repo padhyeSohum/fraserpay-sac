@@ -9,7 +9,7 @@ export interface TransactionContextType {
   loadStudentBooths: () => Booth[];
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
-  createBooth: (name: string, description: string, userId: string, pin?: string) => Promise<string | null>;
+  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
   
   // Product management
   loadBoothProducts: (boothId: string) => Product[];
