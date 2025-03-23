@@ -92,12 +92,12 @@ export const addFunds = async (
       studentNumber: userData.student_number
     });
     
-    // Start a transaction to ensure atomicity of the operations
-    // First, update the user's balance in Supabase
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ tickets: newBalance })
-      .eq('id', userId);
+    // Use the security definer function to update user balance
+    const { data: updateResult, error: updateError } = await supabase
+      .rpc('update_user_balance', {
+        user_id: userId,
+        new_balance: newBalance
+      });
     
     if (updateError) {
       console.error("Error updating user balance:", updateError);
@@ -250,15 +250,15 @@ export const processPurchase = async (
     
     const newBalance = userData.tickets - totalAmountInCents;
     
-    // IMPORTANT: First update the user balance to ensure funds are reserved
-    // This is the first and most critical operation
-    const { error: updateUserError } = await supabase
-      .from('users')
-      .update({ tickets: newBalance })
-      .eq('id', buyerId);
+    // Use security definer function to update user balance
+    const { data: updateResult, error: updateError } = await supabase
+      .rpc('update_user_balance', {
+        user_id: buyerId,
+        new_balance: newBalance
+      });
     
-    if (updateUserError) {
-      console.error('Error updating user balance:', updateUserError);
+    if (updateError) {
+      console.error('Error updating user balance:', updateError);
       toast.error('Failed to update user balance');
       return { success: false };
     }
@@ -281,11 +281,12 @@ export const processPurchase = async (
         actual: verifiedUser.tickets / 100
       });
       
-      // If verification failed, try one more time to update the balance
+      // If verification failed, try one more time to update the balance using the RPC function
       const { error: retryError } = await supabase
-        .from('users')
-        .update({ tickets: newBalance })
-        .eq('id', buyerId);
+        .rpc('update_user_balance', {
+          user_id: buyerId,
+          new_balance: newBalance
+        });
         
       if (retryError) {
         console.error('Error in retry update:', retryError);
@@ -317,9 +318,10 @@ export const processPurchase = async (
       // Critical error: funds were deducted but transaction not recorded
       // We should attempt to refund the user
       await supabase
-        .from('users')
-        .update({ tickets: userData.tickets })
-        .eq('id', buyerId);
+        .rpc('update_user_balance', {
+          user_id: buyerId,
+          new_balance: userData.tickets
+        });
       console.error('Transaction failed, attempted to restore user balance');
       return { success: false };
     }
@@ -386,9 +388,10 @@ export const processPurchase = async (
       });
       // Make one last attempt to ensure the balance is correct
       await supabase
-        .from('users')
-        .update({ tickets: newBalance })
-        .eq('id', buyerId);
+        .rpc('update_user_balance', {
+          user_id: buyerId,
+          new_balance: newBalance
+        });
     }
     
     const newTransaction: Transaction = {
