@@ -1,4 +1,40 @@
 
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth';
+import { toast } from 'sonner';
+import Layout from '@/components/Layout';
+import { supabase } from '@/integrations/supabase/client';
+import { encodeUserData, generateQRCode } from '@/utils/qrCode';
+import StatCards from './components/StatCards';
+import UsersTable from './components/UsersTable';
+import StudentSearch from './components/StudentSearch';
+import TransactionsTable from './components/TransactionsTable';
+import BoothLeaderboard from './components/BoothLeaderboard';
+import CreateBoothDialog from './components/CreateBoothDialog';
+import StudentDetailDialog from './components/StudentDetailDialog';
+import FundsDialog from './components/FundsDialog';
+import BoothTransactionDialog from './components/BoothTransactionDialog';
+
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [isUserLoading, setIsUserLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTickets: 0,
+    totalBooths: 0,
+    totalTransactions: 0
+  });
+  
+  const [foundStudent, setFoundStudent] = useState<any | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
+  
+  useEffect(() => {
+    loadUsers();
+  }, []);
+  
   const loadUsers = async () => {
     setIsUserLoading(true);
     try {
@@ -92,3 +128,39 @@
     
     setIsStudentDetailOpen(true);
   };
+  
+  return (
+    <Layout title="SAC Dashboard">
+      <div className="space-y-6">
+        <StatCards stats={stats} />
+        
+        <StudentSearch onStudentFound={handleStudentFound} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <UsersTable 
+              users={filteredUsers} 
+              isLoading={isUserLoading} 
+              onUserSelected={handleUserSelected}
+            />
+          </div>
+          <div className="space-y-6">
+            <BoothLeaderboard />
+            <TransactionsTable />
+          </div>
+        </div>
+        
+        <CreateBoothDialog />
+        
+        <StudentDetailDialog 
+          student={foundStudent}
+          qrCodeUrl={qrCodeUrl}
+          isOpen={isStudentDetailOpen}
+          onOpenChange={setIsStudentDetailOpen}
+        />
+      </div>
+    </Layout>
+  );
+};
+
+export default Dashboard;

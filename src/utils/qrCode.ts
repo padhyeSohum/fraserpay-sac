@@ -1,5 +1,5 @@
 
-import QRCode from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { renderToString } from "react-dom/server";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,16 +45,16 @@ export const validateQRCode = (qrData: string): { isValid: boolean; userId?: str
 // Generate QR code SVG as string
 export const generateQRCode = (data: string): string => {
   try {
-    // First try to render the QR code
-    const qrCodeString = renderToString(
-      QRCode({
-        value: data,
-        size: 300,
-        level: "H",
-        includeMargin: true,
-        renderAs: "svg"
-      })
-    );
+    // Create a QRCode element with the correct props
+    const qrCodeElement = QRCodeSVG({
+      value: data,
+      size: 300,
+      level: "H",
+      includeMargin: true
+    });
+    
+    // Render it to a string
+    const qrCodeString = renderToString(qrCodeElement);
     
     return qrCodeString;
   } catch (e) {
