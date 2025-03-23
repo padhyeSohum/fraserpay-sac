@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -19,6 +20,7 @@ interface LayoutProps {
   onBackClick?: () => void;
   logo?: React.ReactNode;
   footer?: React.ReactNode;
+  hideNavigation?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -31,7 +33,8 @@ const Layout: React.FC<LayoutProps> = ({
   onAddClick,
   onBackClick,
   logo,
-  footer
+  footer,
+  hideNavigation = false
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,8 +148,8 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
         
-        {/* Add the Navigation component here */}
-        {user && !isLoading && (
+        {/* Always show Navigation for authenticated users unless explicitly hidden */}
+        {user && !isLoading && !hideNavigation && (
           <Navigation />
         )}
       </header>

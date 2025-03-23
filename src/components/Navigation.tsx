@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { 
   LayoutDashboard, 
@@ -9,7 +9,9 @@ import {
   ListOrdered, 
   ShoppingCart, 
   LogOut, 
-  Store
+  Store,
+  CreditCard,
+  User
 } from 'lucide-react';
 import { 
   Menubar, 
@@ -24,6 +26,7 @@ import { resetAuthState } from '@/utils/auth';
 
 const Navigation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
@@ -37,22 +40,39 @@ const Navigation = () => {
     }
   };
 
+  // Determine active status for menu items
+  const isPathActive = (path: string | string[]) => {
+    const currentPath = location.pathname;
+    if (Array.isArray(path)) {
+      return path.some(p => currentPath.startsWith(p));
+    }
+    return currentPath.startsWith(path);
+  };
+
   return (
-    <Menubar className="w-full border-0 bg-transparent flex justify-between mb-4">
+    <Menubar className="w-full border-0 bg-transparent flex justify-between my-2">
       <div className="flex">
         {/* Dashboard */}
         <MenubarMenu>
-          <MenubarTrigger className="p-2">
+          <MenubarTrigger 
+            className={`p-2 ${isPathActive(['/dashboard', '/sac/dashboard']) ? 'bg-accent' : ''}`}
+          >
             <LayoutDashboard className="h-5 w-5 mr-1" />
             <span>Dashboard</span>
           </MenubarTrigger>
           <MenubarContent>
-            <MenubarItem onClick={() => navigate(user?.role === 'sac' ? '/sac/dashboard' : '/dashboard')}>
+            <MenubarItem 
+              onClick={() => navigate(user?.role === 'sac' ? '/sac/dashboard' : '/dashboard')}
+              className={isPathActive(['/dashboard', '/sac/dashboard']) ? 'bg-accent/50' : ''}
+            >
               <LayoutDashboard className="h-4 w-4 mr-2" />
               <span>Main Dashboard</span>
             </MenubarItem>
             {user?.role === 'sac' && (
-              <MenubarItem onClick={() => navigate('/sac/dashboard')}>
+              <MenubarItem 
+                onClick={() => navigate('/sac/dashboard')}
+                className={isPathActive('/sac/dashboard') ? 'bg-accent/50' : ''}
+              >
                 <Store className="h-4 w-4 mr-2" />
                 <span>SAC Dashboard</span>
               </MenubarItem>
@@ -62,12 +82,17 @@ const Navigation = () => {
 
         {/* Booths */}
         <MenubarMenu>
-          <MenubarTrigger className="p-2">
+          <MenubarTrigger 
+            className={`p-2 ${isPathActive('/booth') ? 'bg-accent' : ''}`}
+          >
             <Store className="h-5 w-5 mr-1" />
             <span>Booths</span>
           </MenubarTrigger>
           <MenubarContent>
-            <MenubarItem onClick={() => navigate('/booth/join')}>
+            <MenubarItem 
+              onClick={() => navigate('/booth/join')}
+              className={isPathActive('/booth/join') ? 'bg-accent/50' : ''}
+            >
               <Store className="h-4 w-4 mr-2" />
               <span>Join Booth</span>
             </MenubarItem>
@@ -76,20 +101,31 @@ const Navigation = () => {
 
         {/* Features */}
         <MenubarMenu>
-          <MenubarTrigger className="p-2">
+          <MenubarTrigger 
+            className={`p-2 ${isPathActive(['/qr-code', '/leaderboard', '/transactions']) ? 'bg-accent' : ''}`}
+          >
             <QrCode className="h-5 w-5 mr-1" />
             <span>Features</span>
           </MenubarTrigger>
           <MenubarContent>
-            <MenubarItem onClick={() => navigate('/qr-code')}>
+            <MenubarItem 
+              onClick={() => navigate('/qr-code')}
+              className={isPathActive('/qr-code') ? 'bg-accent/50' : ''}
+            >
               <QrCode className="h-4 w-4 mr-2" />
               <span>QR Code</span>
             </MenubarItem>
-            <MenubarItem onClick={() => navigate('/leaderboard')}>
+            <MenubarItem 
+              onClick={() => navigate('/leaderboard')}
+              className={isPathActive('/leaderboard') ? 'bg-accent/50' : ''}
+            >
               <ListOrdered className="h-4 w-4 mr-2" />
               <span>Leaderboard</span>
             </MenubarItem>
-            <MenubarItem onClick={() => navigate('/transactions')}>
+            <MenubarItem 
+              onClick={() => navigate('/transactions')}
+              className={isPathActive('/transactions') ? 'bg-accent/50' : ''}
+            >
               <ShoppingCart className="h-4 w-4 mr-2" />
               <span>Transactions</span>
             </MenubarItem>
@@ -98,13 +134,25 @@ const Navigation = () => {
       </div>
 
       <div className="flex">
-        {/* Settings & Logout */}
+        {/* Account & Settings */}
         <MenubarMenu>
-          <MenubarTrigger className="p-2">
-            <Settings className="h-5 w-5 mr-1" />
+          <MenubarTrigger 
+            className={`p-2 ${isPathActive('/settings') ? 'bg-accent' : ''}`}
+          >
+            <User className="h-5 w-5 mr-1" />
             <span>Account</span>
           </MenubarTrigger>
           <MenubarContent>
+            <MenubarItem className="text-sm opacity-70 cursor-default">
+              <span>Signed in as</span>
+            </MenubarItem>
+            <MenubarItem className="font-medium cursor-default">
+              {user?.name || 'User'}
+            </MenubarItem>
+            <MenubarItem className="text-xs text-muted-foreground cursor-default mb-1">
+              {user?.balance !== undefined ? `Balance: $${user.balance.toFixed(2)}` : ''}
+            </MenubarItem>
+            <MenubarSeparator />
             <MenubarItem onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />
               <span>Settings</span>
