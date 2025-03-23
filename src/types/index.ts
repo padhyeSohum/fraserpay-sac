@@ -21,7 +21,7 @@ export interface Booth {
   managers: string[]; // User IDs of managers
   totalEarnings: number;
   transactions: Transaction[];
-  createdAt?: string; // Adding the missing createdAt property
+  createdAt?: string; // Added createdAt property
 }
 
 export interface Product {
