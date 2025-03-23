@@ -478,7 +478,7 @@ const SACDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">
-              {formatCurrency(stats.totalRevenue)}
+              ${(stats.totalRevenue / 100).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -819,7 +819,7 @@ const SACDashboard: React.FC = () => {
                           {transaction.boothName || 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(transaction.amount)}
+                          ${(transaction.amount / 100).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -860,7 +860,7 @@ const SACDashboard: React.FC = () => {
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{booth.boothName}</TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(booth.earnings)}
+                          ${(booth.earnings / 100).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -1051,13 +1051,13 @@ const SACDashboard: React.FC = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Total Revenue:</span>
-                        <span className="font-medium">{formatCurrency(stats.totalRevenue)}</span>
+                        <span className="font-medium">${(stats.totalRevenue / 100).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Average Transaction:</span>
                         <span className="font-medium">
                           {stats.totalTransactions > 0
-                            ? formatCurrency(stats.totalRevenue / stats.totalTransactions)
+                            ? `$${((stats.totalRevenue / stats.totalTransactions) / 100).toFixed(2)}`
                             : '$0.00'}
                         </span>
                       </div>
