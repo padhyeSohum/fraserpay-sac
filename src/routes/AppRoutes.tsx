@@ -48,14 +48,14 @@ const AppRoutes: React.FC = () => {
       // Restore the last path if it exists, otherwise go to dashboard
       if (lastPath && lastPath !== '/' && lastPath !== '/login' && lastPath !== '/register') {
         navigate(lastPath);
-      } else if (location.pathname === '/') {
+      } else if (location.pathname === '/' || location.pathname === '') {
         navigate('/dashboard');
       }
       sessionStorage.removeItem('wasRefreshed');
       sessionStorage.removeItem('lastPath');
     }
     
-    // Direct URL access detection
+    // Direct URL access detection - ensure proper route handling
     if (!document.referrer && isAuthenticated) {
       console.log("Direct URL access detected, ensuring proper routing");
       
@@ -122,6 +122,7 @@ const AppRoutes: React.FC = () => {
         } 
       />
       
+      {/* Catch-all route for 404 handling */}
       <Route path="*" element={<Navigate to="/not-found" replace />} />
     </Routes>
   );

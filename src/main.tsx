@@ -75,6 +75,11 @@ window.addEventListener('error', (event) => {
   event.preventDefault();
 });
 
+// Handle SPA routing for direct URL access
+if (window.location.pathname !== '/' && !window.location.pathname.includes('.')) {
+  console.log('Direct URL access detected:', window.location.pathname);
+}
+
 // Force a cache bust for deployed environments
 if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
   const timestamp = new Date().getTime();
