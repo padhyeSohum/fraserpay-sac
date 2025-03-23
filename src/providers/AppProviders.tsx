@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { TransactionProvider } from "@/contexts/TransactionContext";
+import { TransactionProvider } from "@/contexts/transactions/TransactionContext";
 import QueryProvider from "./QueryProvider";
 
 interface AppProvidersProps {
