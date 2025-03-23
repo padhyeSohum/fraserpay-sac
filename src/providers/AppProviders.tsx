@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/auth';
 import { TransactionProvider } from '@/contexts/transactions';
-import { ThemeProvider } from '@/components/ui/theme-provider';
+import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from './QueryProvider';
 
