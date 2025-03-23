@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -39,8 +40,12 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { useNavigate } from 'react-router-dom';
+import { Home, Plus, Minus, Search, Printer } from 'lucide-react';
+import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 
 const SACDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { 
     getSACTransactions, 
@@ -54,10 +59,17 @@ const SACDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [amount, setAmount] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
+  
+  // Student search functionality
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [foundStudent, setFoundStudent] = useState<any | null>(null);
+  const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   
   useEffect(() => {
     if (user && user.role === 'sac') {
@@ -84,7 +96,7 @@ const SACDashboard: React.FC = () => {
       setFilteredTransactions(filtered);
     }
   }, [searchTerm, transactions]);
-  
+
   const handleAddFunds = async () => {
     if (!studentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       toast.error('Please enter a valid student ID and amount');
@@ -111,11 +123,154 @@ const SACDashboard: React.FC = () => {
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
+        
+        // If this was for the found student, update the balance
+        if (foundStudent && foundStudent.id === studentId) {
+          setFoundStudent({...foundStudent, balance: newBalance});
+        }
       }
     } catch (error) {
       console.error('Error adding funds:', error);
       toast.error('Failed to add funds');
     }
+  };
+  
+  const handleRefundFunds = async () => {
+    if (!studentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      toast.error('Please enter a valid student ID and amount');
+      return;
+    }
+    
+    const amountValue = parseFloat(amount);
+    
+    if (!user) {
+      toast.error('You must be logged in to refund funds');
+      return;
+    }
+    
+    try {
+      // Process a negative amount for a refund
+      const newBalance = await addFunds(studentId, -amountValue, user.id);
+      
+      if (newBalance >= 0) {
+        setIsRefundOpen(false);
+        setStudentId('');
+        setAmount('');
+        toast.success(`Successfully refunded $${amountValue.toFixed(2)} from account`);
+        
+        // Refresh transactions
+        const allTransactions = getSACTransactions();
+        setTransactions(allTransactions);
+        setFilteredTransactions(allTransactions);
+        
+        // If this was for the found student, update the balance
+        if (foundStudent && foundStudent.id === studentId) {
+          setFoundStudent({...foundStudent, balance: newBalance});
+        }
+      }
+    } catch (error) {
+      console.error('Error refunding funds:', error);
+      toast.error('Failed to refund funds');
+    }
+  };
+  
+  const handleStudentSearch = () => {
+    if (!studentSearchTerm.trim()) {
+      toast.error('Please enter a student ID or name to search');
+      return;
+    }
+    
+    // Get users from localStorage
+    const usersStr = localStorage.getItem('users');
+    const users = usersStr ? JSON.parse(usersStr) : [];
+    
+    // Search for student by ID, name, or email
+    const student = users.find((u: any) => 
+      u.id.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+      u.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+      (u.email && u.email.toLowerCase().includes(studentSearchTerm.toLowerCase())) ||
+      (u.student_number && u.student_number.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+    );
+    
+    if (student) {
+      setFoundStudent(student);
+      setIsStudentDetailOpen(true);
+      
+      // Generate QR code for the student
+      if (student.id) {
+        const userData = encodeUserData(student.id);
+        const qrUrl = generateQRCode(userData);
+        setQrCodeUrl(qrUrl);
+      }
+    } else {
+      toast.error('No student found with that ID or name');
+    }
+  };
+  
+  const handlePrintQRCode = () => {
+    if (!qrCodeUrl) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print the QR code');
+      return;
+    }
+    
+    // Write the QR code to the new window and print it
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Print QR Code</title>
+          <style>
+            body { 
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              padding: 20px;
+              box-sizing: border-box;
+            }
+            .container {
+              text-align: center;
+            }
+            .qr-code {
+              width: 400px;
+              height: 400px;
+              margin: 20px auto;
+            }
+            h1 {
+              font-size: 24px;
+              margin-bottom: 5px;
+            }
+            p {
+              margin: 5px 0;
+              font-size: 16px;
+            }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${foundStudent.name}</h1>
+            <p>Balance: $${foundStudent.balance?.toFixed(2) || '0.00'}</p>
+            <div class="qr-code">
+              ${decodeURIComponent(qrCodeUrl.split(',')[1])}
+            </div>
+            <button onclick="window.print(); setTimeout(() => window.close(), 500);">
+              Print QR Code
+            </button>
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
   };
   
   if (!user || user.role !== 'sac') {
@@ -135,7 +290,17 @@ const SACDashboard: React.FC = () => {
   
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">SAC Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">SAC Dashboard</h1>
+        <Button 
+          variant="outline" 
+          size="icon"
+          onClick={() => navigate('/')}
+          title="Home"
+        >
+          <Home className="h-5 w-5" />
+        </Button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
@@ -172,6 +337,31 @@ const SACDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Student Search</CardTitle>
+          <CardDescription>
+            Find a student to view their details or manage their account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="Search by student ID, name, or email..."
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleStudentSearch()}
+              />
+            </div>
+            <Button onClick={handleStudentSearch}>
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       
       <div className="flex justify-end mb-6">
         <Dialog open={isAddFundsOpen} onOpenChange={setIsAddFundsOpen}>
@@ -223,6 +413,133 @@ const SACDashboard: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
+      
+      {/* Student Detail Dialog */}
+      <Dialog open={isStudentDetailOpen} onOpenChange={setIsStudentDetailOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Student Details</DialogTitle>
+            <DialogDescription>
+              View and manage student account
+            </DialogDescription>
+          </DialogHeader>
+          
+          {foundStudent && (
+            <div className="py-4">
+              <div className="flex flex-col items-center mb-4">
+                {qrCodeUrl && (
+                  <div 
+                    className="w-48 h-48 bg-white p-2 rounded-lg shadow-sm mb-2"
+                    dangerouslySetInnerHTML={{ __html: decodeURIComponent(qrCodeUrl.split(',')[1]) }}
+                  />
+                )}
+                <p className="text-sm text-muted-foreground">Student QR Code</p>
+              </div>
+              
+              <div className="grid gap-3">
+                <div className="grid grid-cols-3 items-center gap-2">
+                  <Label className="text-right font-medium">Name:</Label>
+                  <span className="col-span-2">{foundStudent.name}</span>
+                </div>
+                
+                <div className="grid grid-cols-3 items-center gap-2">
+                  <Label className="text-right font-medium">Student ID:</Label>
+                  <span className="col-span-2">{foundStudent.student_number || foundStudent.id}</span>
+                </div>
+                
+                <div className="grid grid-cols-3 items-center gap-2">
+                  <Label className="text-right font-medium">Balance:</Label>
+                  <span className="col-span-2 font-semibold">${foundStudent.balance?.toFixed(2) || '0.00'}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-2 mt-6">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handlePrintQRCode}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print QR
+                </Button>
+                
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    setStudentId(foundStudent.id);
+                    setIsStudentDetailOpen(false);
+                    setIsAddFundsOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Funds
+                </Button>
+                
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    setStudentId(foundStudent.id);
+                    setIsStudentDetailOpen(false);
+                    setIsRefundOpen(true);
+                  }}
+                >
+                  <Minus className="h-4 w-4 mr-2" />
+                  Refund
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Refund Dialog */}
+      <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refund Funds from Student Account</DialogTitle>
+            <DialogDescription>
+              Enter the amount to refund from the student's account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="refundStudentId" className="text-right">
+                Student ID
+              </Label>
+              <Input
+                id="refundStudentId"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                className="col-span-3"
+                readOnly={!!foundStudent}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="refundAmount" className="text-right">
+                Amount ($)
+              </Label>
+              <Input
+                id="refundAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRefundOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRefundFunds}>Refund Funds</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Tabs defaultValue="transactions">
         <TabsList className="mb-6">
