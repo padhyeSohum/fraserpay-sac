@@ -8,7 +8,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { Minus, Plus, Printer } from 'lucide-react';
+import { Minus, Plus, Printer, QrCode } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface StudentDetailDialogProps {
@@ -81,7 +81,10 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
               <div className="flex flex-col items-center gap-4">
                 <div 
                   className="border p-3 rounded-md bg-white"
-                  dangerouslySetInnerHTML={{ __html: qrCodeUrl }} 
+                  dangerouslySetInnerHTML={{ __html: qrCodeUrl.includes('data:') ? 
+                    decodeURIComponent(qrCodeUrl.split(',')[1]) : 
+                    qrCodeUrl 
+                  }} 
                 />
                 <Button variant="outline" onClick={onPrintQRCode}>
                   <Printer className="h-4 w-4 mr-2" />
@@ -92,14 +95,14 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             
             <div className="flex gap-2 justify-center mt-4">
               <Button 
-                onClick={() => onAddFunds(student.id)}
+                onClick={() => student.id && onAddFunds(student.id)}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Funds
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => onRefund(student.id)}
+                onClick={() => student.id && onRefund(student.id)}
               >
                 <Minus className="h-4 w-4 mr-2" />
                 Refund

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { QrCode, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
@@ -15,6 +15,7 @@ interface StudentSearchProps {
 const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleStudentSearch = async () => {
     if (!studentSearchTerm.trim()) {
@@ -25,6 +26,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     setIsSearching(true);
     
     try {
+      console.log('Searching for student:', studentSearchTerm);
       let { data: userData, error } = await supabase
         .from('users')
         .select('*')
@@ -40,6 +42,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
       
       if (userData && userData.length > 0) {
         const student = userData[0];
+        console.log('Found student:', student);
         
         const foundStudent = {
           id: student.id,
@@ -50,14 +53,23 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
           qrCode: student.qr_code
         };
         
-        let qrCodeUrl = '';
-        if (student.qr_code || student.id) {
-          const userData = student.qr_code || encodeUserData(student.id);
-          qrCodeUrl = generateQRCode(userData);
+        // Generate QR code
+        let qrCodeData = student.qr_code || encodeUserData(student.id);
+        console.log('Generating QR code with data:', qrCodeData);
+        let qrCodeSvg = generateQRCode(qrCodeData);
+        
+        // Update the user's QR code if needed
+        if (!student.qr_code) {
+          console.log('Updating user QR code in Supabase');
+          await supabase
+            .from('users')
+            .update({ qr_code: qrCodeData })
+            .eq('id', student.id);
         }
         
-        onStudentFound(foundStudent, qrCodeUrl);
+        onStudentFound(foundStudent, qrCodeSvg);
       } else {
+        console.log('No student found with search term:', studentSearchTerm);
         toast.error('No student found with that ID, name, or email');
       }
     } catch (error) {
@@ -66,6 +78,17 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleScanQRCode = () => {
+    setIsScanning(true);
+    toast.info('QR Code scanning is not implemented in this preview');
+    
+    // In a real app, you would open a scanner here
+    // For now, we just simulate a timeout and then turn off scanning
+    setTimeout(() => {
+      setIsScanning(false);
+    }, 1500);
   };
 
   return (
@@ -98,6 +121,10 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
                 Search
               </>
             )}
+          </Button>
+          <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning}>
+            <QrCode className="h-4 w-4 mr-2" />
+            {isScanning ? 'Scanning...' : 'Scan QR'}
           </Button>
         </div>
       </CardContent>
