@@ -1,3 +1,4 @@
+
 // Cache names
 const CACHE_NAME = 'fraser-pay-cache-v1';
 const STATIC_ASSETS = [
@@ -37,6 +38,18 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network-first strategy for API requests, cache-first for static assets
 self.addEventListener('fetch', (event) => {
+  // Skip navigation requests to let the SPA router handle them
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          // If network fails, try to return cached index.html
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+  
   // For API or dynamic requests, use network-first strategy
   if (event.request.url.includes('/api/') || 
       event.request.url.includes('supabase') || 
