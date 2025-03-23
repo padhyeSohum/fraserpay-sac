@@ -13,6 +13,9 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { LayoutGrid, Plus, Trash } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/utils/api';
+import { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 
 interface ProductField {
   name: string;
@@ -22,25 +25,19 @@ interface ProductField {
 interface CreateBoothDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBooth: (
-    name: string, 
-    description: string, 
-    customPin: string, 
-    products: ProductField[]
-  ) => void;
-  isLoading: boolean;
+  refetchBooths: (options?: RefetchOptions) => Promise<QueryObserverResult<any, Error>>;
 }
 
 const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
   isOpen,
   onOpenChange,
-  onCreateBooth,
-  isLoading
+  refetchBooths
 }) => {
   const [boothName, setBoothName] = useState('');
   const [boothDescription, setBoothDescription] = useState('');
   const [customPin, setCustomPin] = useState('');
   const [initialProducts, setInitialProducts] = useState<Array<ProductField>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const addProductField = () => {
     setInitialProducts([...initialProducts, { name: '', price: '' }]);
@@ -58,8 +55,37 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
     setInitialProducts(updatedProducts);
   };
   
-  const handleCreate = () => {
-    onCreateBooth(boothName, boothDescription, customPin, initialProducts);
+  const handleCreate = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Call API to create booth
+      await api.post('/booths', {
+        name: boothName,
+        description: boothDescription,
+        customPin,
+        products: initialProducts
+      });
+      
+      toast.success('Booth created successfully!');
+      
+      // Reset form
+      setBoothName('');
+      setBoothDescription('');
+      setCustomPin('');
+      setInitialProducts([]);
+      
+      // Close dialog
+      onOpenChange(false);
+      
+      // Refresh booths data
+      await refetchBooths();
+    } catch (error) {
+      toast.error('Failed to create booth.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleCancel = () => {
@@ -72,12 +98,6 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <LayoutGrid className="h-4 w-4 mr-2" />
-          Create Booth
-        </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Booth</DialogTitle>
