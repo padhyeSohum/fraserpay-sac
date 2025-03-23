@@ -26,7 +26,14 @@ export interface StatsData {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { addFunds, booths, fetchAllBooths, getBoothById } = useTransactions();
+  const { 
+    addFunds, 
+    booths, 
+    fetchAllBooths, 
+    getBoothById, 
+    createBooth: createBoothFromContext,
+    addProductToBooth: addProductToBoothFromContext 
+  } = useTransactions();
   
   const [usersList, setUsersList] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
@@ -284,7 +291,7 @@ const Dashboard = () => {
         throw new Error("You must be logged in to create a booth");
       }
       
-      const boothId = await createBooth(
+      const boothId = await createBoothFromContext(
         boothData.name,
         boothData.description || '',
         user.id,
@@ -299,7 +306,7 @@ const Dashboard = () => {
         console.log("Adding products to booth:", boothData.products);
         
         for (const product of boothData.products) {
-          await addProductToBooth(boothId, product);
+          await addProductToBoothFromContext(boothId, product);
         }
       }
       
