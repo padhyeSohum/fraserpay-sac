@@ -1,4 +1,3 @@
-
 import { QRCodeSVG } from 'qrcode.react';
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
@@ -18,7 +17,6 @@ export const generateQRCode = (text: string): string => {
       })
     );
     
-    // Return the SVG directly
     return qrCode;
   } catch (error) {
     console.error('Error generating QR code:', error);

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { RefreshCw } from 'lucide-react';
 
 const QRCode = () => {
   const { user } = useAuth();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [qrCodeSvg, setQrCodeSvg] = useState<string>('');
   const [qrData, setQrData] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -19,8 +20,8 @@ const QRCode = () => {
       setQrData(userData);
       
       // Generate QR code image
-      const qrUrl = generateQRCode(userData);
-      setQrCodeUrl(qrUrl);
+      const qrSvg = generateQRCode(userData);
+      setQrCodeSvg(qrSvg);
     }
   }, [user]);
 
@@ -29,8 +30,8 @@ const QRCode = () => {
       setIsRefreshing(true);
       // Generate a new QR code with the same data
       setTimeout(() => {
-        const qrUrl = generateQRCode(qrData);
-        setQrCodeUrl(qrUrl);
+        const qrSvg = generateQRCode(qrData);
+        setQrCodeSvg(qrSvg);
         setIsRefreshing(false);
       }, 800);
     }
@@ -46,10 +47,9 @@ const QRCode = () => {
               
               <div 
                 className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                {qrCodeUrl ? (
-                  <div dangerouslySetInnerHTML={{ __html: decodeURIComponent(qrCodeUrl.split(',')[1]) }} />
+                {qrCodeSvg ? (
+                  <div dangerouslySetInnerHTML={{ __html: qrCodeSvg }} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-muted-foreground">Loading QR code...</p>
