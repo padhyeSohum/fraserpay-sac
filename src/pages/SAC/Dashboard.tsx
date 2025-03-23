@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -40,10 +41,11 @@ import {
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Minus, Search, Printer, Users, LayoutGrid, ChartBar } from 'lucide-react';
+import { Home, Plus, Minus, Search, Printer, Users, LayoutGrid, ChartBar, Scan, ShoppingCart } from 'lucide-react';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import { supabase } from '@/integrations/supabase/client';
 import { transformUserData } from '@/contexts/auth/authUtils';
+import { findUserByStudentNumber } from '@/contexts/transactions/boothService';
 
 const SACDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -56,7 +58,15 @@ const SACDashboard: React.FC = () => {
     loadBooths,
     fetchAllBooths,
     createBooth,
-    getBoothById
+    getBoothById,
+    processPurchase,
+    cart,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    incrementQuantity,
+    decrementQuantity,
+    addProductToBooth
   } = useTransactions();
   
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -77,12 +87,23 @@ const SACDashboard: React.FC = () => {
   const [isCreateBoothOpen, setIsCreateBoothOpen] = useState(false);
   const [boothName, setBoothName] = useState('');
   const [boothDescription, setBoothDescription] = useState('');
+  const [customPin, setCustomPin] = useState('');
   const [isBoothLoading, setIsBoothLoading] = useState(false);
   
   const [usersList, setUsersList] = useState<any[]>([]);
   const [isUserLoading, setIsUserLoading] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  
+  // New state for adding products to a new booth
+  const [initialProducts, setInitialProducts] = useState<Array<{name: string, price: string}>>([]);
+  
+  // New state for booth transactions
+  const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
+  const [selectedBooth, setSelectedBooth] = useState<string>('');
+  const [transactionStudentNumber, setTransactionStudentNumber] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
   
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -323,9 +344,30 @@ const SACDashboard: React.FC = () => {
     }
   };
   
+  const addProductField = () => {
+    setInitialProducts([...initialProducts, { name: '', price: '' }]);
+  };
+  
+  const updateProductField = (index: number, field: 'name' | 'price', value: string) => {
+    const updatedProducts = [...initialProducts];
+    updatedProducts[index][field] = value;
+    setInitialProducts(updatedProducts);
+  };
+  
+  const removeProductField = (index: number) => {
+    const updatedProducts = [...initialProducts];
+    updatedProducts.splice(index, 1);
+    setInitialProducts(updatedProducts);
+  };
+  
   const handleCreateBooth = async () => {
     if (!boothName.trim()) {
       toast.error('Please enter a booth name');
+      return;
+    }
+    
+    if (customPin && (customPin.length !== 6 || !/^\d+$/.test(customPin))) {
+      toast.error('PIN must be a 6-digit number');
       return;
     }
     
@@ -337,12 +379,29 @@ const SACDashboard: React.FC = () => {
     setIsBoothLoading(true);
     
     try {
-      const boothId = await createBooth(boothName, boothDescription, user.id);
+      // Create the booth with optional custom PIN
+      const boothId = await createBooth(boothName, boothDescription, user.id, customPin);
       
       if (boothId) {
+        // Add all products to the booth
+        const productPromises = initialProducts
+          .filter(p => p.name.trim() && p.price.trim() && !isNaN(parseFloat(p.price)))
+          .map(p => addProductToBooth(boothId, {
+            name: p.name,
+            price: parseFloat(p.price)
+          }));
+        
+        if (productPromises.length > 0) {
+          await Promise.all(productPromises);
+        }
+        
+        // Reset form fields
         setIsCreateBoothOpen(false);
         setBoothName('');
         setBoothDescription('');
+        setCustomPin('');
+        setInitialProducts([]);
+        
         toast.success('Booth created successfully');
         
         await loadBooths();
@@ -357,6 +416,85 @@ const SACDashboard: React.FC = () => {
       toast.error('Failed to create booth');
     } finally {
       setIsBoothLoading(false);
+    }
+  };
+  
+  const handleSearchStudentForTransaction = async () => {
+    if (!transactionStudentNumber) {
+      toast.error('Please enter a student number');
+      return;
+    }
+    
+    try {
+      const student = await findUserByStudentNumber(transactionStudentNumber);
+      
+      if (student) {
+        setFoundStudent(student);
+        toast.success(`Found student: ${student.name}`);
+      } else {
+        toast.error('No student found with that number');
+      }
+    } catch (error) {
+      console.error('Error finding student:', error);
+      toast.error('Failed to find student');
+    }
+  };
+  
+  const handleBoothTransaction = async () => {
+    if (!selectedBooth) {
+      toast.error('Please select a booth');
+      return;
+    }
+    
+    if (!foundStudent) {
+      toast.error('Please find a student first');
+      return;
+    }
+    
+    if (cart.length === 0) {
+      toast.error('Please add products to cart');
+      return;
+    }
+    
+    const booth = getBoothById(selectedBooth);
+    if (!booth) {
+      toast.error('Selected booth not found');
+      return;
+    }
+    
+    setIsProcessingTransaction(true);
+    
+    try {
+      const transaction = await processPurchase(
+        booth.id,
+        foundStudent.id,
+        foundStudent.name,
+        user?.id || '',
+        user?.name || '',
+        cart,
+        booth.name
+      );
+      
+      if (transaction.success) {
+        clearCart();
+        setIsBoothTransactionOpen(false);
+        setSelectedBooth('');
+        setTransactionStudentNumber('');
+        setFoundStudent(null);
+        
+        toast.success('Transaction completed successfully');
+        
+        // Refresh transactions
+        const allTransactions = getSACTransactions();
+        setTransactions(allTransactions);
+        setFilteredTransactions(allTransactions);
+        calculateStats(allTransactions);
+      }
+    } catch (error) {
+      console.error('Error processing transaction:', error);
+      toast.error('Failed to process transaction');
+    } finally {
+      setIsProcessingTransaction(false);
     }
   };
   
@@ -533,6 +671,159 @@ const SACDashboard: React.FC = () => {
       </Card>
       
       <div className="flex justify-end gap-2 mb-6">
+        <Dialog open={isBoothTransactionOpen} onOpenChange={setIsBoothTransactionOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Booth Transaction
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Make Transaction for Booth</DialogTitle>
+              <DialogDescription>
+                Process a transaction on behalf of a booth
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Select Booth</Label>
+                  <Select value={selectedBooth} onValueChange={setSelectedBooth}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a booth" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {booths.map(booth => (
+                        <SelectItem key={booth.id} value={booth.id}>
+                          {booth.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Find Student</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter student number..."
+                      value={transactionStudentNumber}
+                      onChange={(e) => setTransactionStudentNumber(e.target.value)}
+                    />
+                    <Button 
+                      variant="outline" 
+                      type="button"
+                      onClick={handleSearchStudentForTransaction}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              {foundStudent && (
+                <div className="bg-muted p-3 rounded-md">
+                  <div className="font-medium">Student: {foundStudent.name}</div>
+                  <div className="text-sm">Balance: ${foundStudent.balance.toFixed(2)}</div>
+                </div>
+              )}
+              
+              {selectedBooth && getBoothById(selectedBooth) && (
+                <div>
+                  <Label className="mb-2 block">Products</Label>
+                  <div className="border rounded-md divide-y">
+                    {getBoothById(selectedBooth)?.products.map((product) => (
+                      <div key={product.id} className="flex justify-between items-center p-3">
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-muted-foreground">${product.price.toFixed(2)}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const cartItem = cart.find(item => item.productId === product.id);
+                              if (cartItem) {
+                                decrementQuantity(product.id);
+                              }
+                            }}
+                            disabled={!cart.some(item => item.productId === product.id)}
+                          >
+                            -
+                          </Button>
+                          <span>
+                            {cart.find(item => item.productId === product.id)?.quantity || 0}
+                          </span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const cartItem = cart.find(item => item.productId === product.id);
+                              if (cartItem) {
+                                incrementQuantity(product.id);
+                              } else {
+                                addToCart(product);
+                              }
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {cart.length > 0 && (
+                <div>
+                  <Label className="mb-2 block">Cart</Label>
+                  <div className="border rounded-md divide-y">
+                    {cart.map((item) => (
+                      <div key={item.productId} className="flex justify-between items-center p-3">
+                        <div>
+                          <div className="font-medium">{item.product.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.quantity} × ${item.product.price.toFixed(2)} = ${(item.quantity * item.product.price).toFixed(2)}
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="p-3 bg-muted font-medium">
+                      Total: ${cart.reduce((sum, item) => sum + (item.quantity * item.product.price), 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                clearCart();
+                setIsBoothTransactionOpen(false);
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleBoothTransaction} 
+                disabled={isProcessingTransaction || !selectedBooth || !foundStudent || cart.length === 0}
+              >
+                {isProcessingTransaction ? 'Processing...' : 'Process Transaction'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
         <Dialog open={isCreateBoothOpen} onOpenChange={setIsCreateBoothOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -540,7 +831,7 @@ const SACDashboard: React.FC = () => {
               Create Booth
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Booth</DialogTitle>
               <DialogDescription>
@@ -571,10 +862,84 @@ const SACDashboard: React.FC = () => {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="customPin" className="text-right">
+                  Custom PIN (6 digits)
+                </Label>
+                <Input
+                  id="customPin"
+                  type="text"
+                  maxLength={6}
+                  pattern="[0-9]*"
+                  value={customPin}
+                  onChange={(e) => {
+                    // Only allow digits
+                    const value = e.target.value.replace(/\D/g, '');
+                    setCustomPin(value);
+                  }}
+                  className="col-span-3"
+                  placeholder="Leave empty for random PIN"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right pt-2">
+                  Products
+                </Label>
+                <div className="col-span-3 space-y-3">
+                  {initialProducts.map((product, index) => (
+                    <div key={index} className="flex gap-2 items-start">
+                      <Input
+                        placeholder="Product name"
+                        value={product.name}
+                        onChange={(e) => updateProductField(index, 'name', e.target.value)}
+                        className="flex-1"
+                      />
+                      <div className="relative w-24">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-muted-foreground">$</span>
+                        </div>
+                        <Input
+                          placeholder="0.00"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={product.price}
+                          onChange={(e) => updateProductField(index, 'price', e.target.value)}
+                          className="pl-7"
+                        />
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeProductField(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={addProductField}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Product
+                  </Button>
+                </div>
+              </div>
             </div>
             
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateBoothOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setIsCreateBoothOpen(false);
+                setBoothName('');
+                setBoothDescription('');
+                setCustomPin('');
+                setInitialProducts([]);
+              }}>
                 Cancel
               </Button>
               <Button onClick={handleCreateBooth} disabled={isBoothLoading}>

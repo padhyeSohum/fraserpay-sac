@@ -1,3 +1,4 @@
+
 import { Booth, Product } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -62,11 +63,17 @@ export const getBoothsByUserId = (booths: Booth[], userId: string): Booth[] => {
   return booths.filter(booth => booth.managers.includes(userId));
 };
 
-export const createBooth = async (name: string, description: string, userId: string): Promise<string | null> => {
+export const createBooth = async (
+  name: string, 
+  description: string, 
+  userId: string,
+  customPin?: string
+): Promise<string | null> => {
   try {
-    console.log("Creating booth:", { name, description, userId });
+    console.log("Creating booth:", { name, description, userId, customPin });
     
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a random PIN if one was not provided
+    const pin = customPin || Math.floor(100000 + Math.random() * 900000).toString();
     
     const { data, error } = await supabase
       .from('booths')
@@ -189,4 +196,32 @@ export const getLeaderboard = (booths: Booth[]) => {
   }));
   
   return boothEarnings.sort((a, b) => b.earnings - a.earnings);
+};
+
+export const findUserByStudentNumber = async (studentNumber: string): Promise<{ id: string; name: string; balance: number } | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, tickets')
+      .eq('student_number', studentNumber)
+      .single();
+    
+    if (error) {
+      console.error('Error finding user:', error);
+      return null;
+    }
+    
+    if (data) {
+      return {
+        id: data.id,
+        name: data.name,
+        balance: data.tickets / 100 // Convert from cents to dollars
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error finding user:', error);
+    return null;
+  }
 };

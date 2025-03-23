@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
@@ -8,6 +7,13 @@ import { useProductManagement } from './hooks/useProductManagement';
 import { useTransactionManagement } from './hooks/useTransactionManagement';
 import { useCartManagement } from './hooks/useCartManagement';
 import { usePaymentProcessing } from './hooks/usePaymentProcessing';
+import { 
+  fetchAllBooths, 
+  getBoothById, 
+  getBoothsByUserId, 
+  createBooth,
+  findUserByStudentNumber,
+} from './boothService';
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
@@ -69,7 +75,8 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         addFunds: paymentProcessing.addFunds,
         
         // Loading states
-        isLoading: boothManagement.isLoading || paymentProcessing.isLoading
+        isLoading: boothManagement.isLoading || paymentProcessing.isLoading,
+        findUserByStudentNumber
       }}
     >
       {children}

@@ -9,7 +9,7 @@ export interface TransactionContextType {
   loadStudentBooths: () => Booth[];
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
-  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
+  createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
   
   // Product management
   loadBoothProducts: (boothId: string) => Product[];
@@ -45,6 +45,9 @@ export interface TransactionContextType {
     boothName: string
   ) => Promise<{ success: boolean, transaction?: Transaction }>;
   addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean, updatedBalance?: number }>;
+  
+  // User management
+  findUserByStudentNumber: (studentNumber: string) => Promise<{ id: string; name: string; balance: number } | null>;
   
   // Loading states
   isLoading: boolean;
