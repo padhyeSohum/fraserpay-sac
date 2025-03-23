@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { QrCode, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { encodeUserData, generateQRCode } from '@/utils/qrCode';
+import { encodeUserData, generateQRCode, getUserFromQRData } from '@/utils/qrCode';
+import QRCodeScanner from '@/components/QRCodeScanner';
 
 interface StudentSearchProps {
   onStudentFound: (student: any, qrCodeUrl: string) => void;
@@ -82,13 +83,45 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
 
   const handleScanQRCode = () => {
     setIsScanning(true);
-    toast.info('QR Code scanning is not implemented in this preview');
+  };
+
+  const handleQRCodeScanned = async (decodedText: string) => {
+    console.log('QR code scanned with data:', decodedText);
+    setIsScanning(false);
     
-    // In a real app, you would open a scanner here
-    // For now, we just simulate a timeout and then turn off scanning
-    setTimeout(() => {
-      setIsScanning(false);
-    }, 1500);
+    try {
+      const userData = await getUserFromQRData(decodedText);
+      
+      if (userData) {
+        const foundStudent = {
+          id: userData.id,
+          name: userData.name,
+          studentNumber: userData.student_number,
+          email: userData.email,
+          balance: userData.tickets / 100,
+          qrCode: userData.qr_code || decodedText
+        };
+        
+        // Generate QR code SVG
+        let qrCodeSvg = generateQRCode(decodedText);
+        
+        // If user doesn't have a QR code saved, update it
+        if (!userData.qr_code) {
+          await supabase
+            .from('users')
+            .update({ qr_code: decodedText })
+            .eq('id', userData.id);
+        }
+        
+        toast.success(`Found student: ${userData.name}`);
+        onStudentFound(foundStudent, qrCodeSvg);
+      } else {
+        toast.error('Invalid QR code or student not found');
+      }
+    } catch (error) {
+      console.error('Error processing scanned QR code:', error);
+      toast.error('Error processing QR code');
+    }
   };
 
   return (
@@ -100,33 +133,40 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Input
-              placeholder="Search by student ID, name, or email..."
-              value={studentSearchTerm}
-              onChange={(e) => setStudentSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleStudentSearch()}
-            />
+        {isScanning ? (
+          <QRCodeScanner 
+            onScan={handleQRCodeScanned} 
+            onClose={() => setIsScanning(false)}
+          />
+        ) : (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="Search by student ID, name, or email..."
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleStudentSearch()}
+              />
+            </div>
+            <Button onClick={handleStudentSearch} disabled={isSearching}>
+              {isSearching ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning}>
+              <QrCode className="h-4 w-4 mr-2" />
+              Scan QR
+            </Button>
           </div>
-          <Button onClick={handleStudentSearch} disabled={isSearching}>
-            {isSearching ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </>
-            )}
-          </Button>
-          <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning}>
-            <QrCode className="h-4 w-4 mr-2" />
-            {isScanning ? 'Scanning...' : 'Scan QR'}
-          </Button>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

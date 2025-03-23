@@ -18,7 +18,7 @@ export const generateQRCode = (text: string): string => {
       })
     );
     
-    // Return the SVG directly, not as a data URL
+    // Return the SVG directly
     return qrCode;
   } catch (error) {
     console.error('Error generating QR code:', error);
@@ -83,6 +83,40 @@ export const getUserFromQRData = async (qrData: string): Promise<any | null> => 
     return userData;
   } catch (error) {
     console.error('Error getting user from QR data:', error);
+    return null;
+  }
+};
+
+// Find user by student number
+export const findUserByStudentNumber = async (studentNumber: string): Promise<any | null> => {
+  try {
+    if (!studentNumber.trim()) {
+      console.error('Empty student number provided');
+      return null;
+    }
+    
+    console.log('Searching for user with student number:', studentNumber);
+    
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('student_number', studentNumber)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching user by student number:', error);
+      return null;
+    }
+    
+    if (!userData) {
+      console.error('No user found with student number:', studentNumber);
+      return null;
+    }
+    
+    console.log('Found user by student number:', userData);
+    return userData;
+  } catch (error) {
+    console.error('Error finding user by student number:', error);
     return null;
   }
 };
