@@ -1,583 +1,316 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth';
-import { useTransactions } from '@/contexts/transactions';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
-import { encodeUserData, generateQRCode } from '@/utils/qrCode';
-import { supabase } from '@/integrations/supabase/client';
-
-// Import our new components
-import StatCards from './components/StatCards';
-import StudentSearch from './components/StudentSearch';
-import TransactionsTable from './components/TransactionsTable';
-import UsersTable from './components/UsersTable';
-import BoothLeaderboard from './components/BoothLeaderboard';
+import { Plus, Wallet, Store as StoreIcon, Users as UsersIcon, FileText as FileTextIcon, Settings as SettingsIcon, Home as HomeIcon } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import CreateBoothDialog from './components/CreateBoothDialog';
-import BoothTransactionDialog from './components/BoothTransactionDialog';
-import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
+import StudentDetailDialog from './components/StudentDetailDialog';
+import { useAuth } from '@/contexts/auth';
+import { toast } from 'sonner';
+import { api } from '@/utils/api';
+import { useQuery } from '@tanstack/react-query';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Search } from 'lucide-react';
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ExpandableTabs } from "@/components/ui/expandable-tabs";
+import { Settings } from 'lucide-react';
 
-const SACDashboard: React.FC = () => {
-  const navigate = useNavigate();
+const Dashboard = () => {
   const { user } = useAuth();
-  const { 
-    getSACTransactions, 
-    getLeaderboard, 
-    addFunds, 
-    booths, 
-    loadBooths,
-    fetchAllBooths,
-    createBooth,
-    getBoothById,
-    processPurchase,
-    cart,
-    addToCart,
-    removeFromCart,
-    clearCart,
-    incrementQuantity,
-    decrementQuantity,
-    addProductToBooth,
-    findUserByStudentNumber
-  } = useTransactions();
-  
-  // State definitions
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
-  const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const [createBoothOpen, setCreateBoothOpen] = useState(false);
+  const [fundsDialogOpen, setFundsDialogOpen] = useState(false);
+  const [studentDetailOpen, setStudentDetailOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchQuery, setSearchQuery] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
-  
-  const [foundStudent, setFoundStudent] = useState<any | null>(null);
-  const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  
-  const [isCreateBoothOpen, setIsCreateBoothOpen] = useState(false);
-  const [isBoothLoading, setIsBoothLoading] = useState(false);
-  
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [isUserLoading, setIsUserLoading] = useState(false);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
-  
-  const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalBooths: 0,
-    totalTransactions: 0,
-    totalRevenue: 0
+
+  const { data: students, refetch: refetchStudents } = useQuery({
+    queryKey: ['students'],
+    queryFn: () => api.get('/students')
+      .then(res => res.data)
+      .catch(err => {
+        toast.error('Failed to fetch students.');
+        return [];
+      })
   });
-  
-  // Load data on component mount
+
+  const { data: booths, refetch: refetchBooths } = useQuery({
+    queryKey: ['booths'],
+    queryFn: () => api.get('/booths')
+      .then(res => res.data)
+      .catch(err => {
+        toast.error('Failed to fetch booths.');
+        return [];
+      })
+  });
+
   useEffect(() => {
-    if (user && user.role === 'sac') {
-      console.log('SAC Dashboard: Initializing data');
-      loadData();
-    }
-  }, [user]);
-  
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      await loadBooths();
-      
-      // Safely get transactions
-      let allTransactions = [];
-      try {
-        allTransactions = getSACTransactions() || [];
-        console.log('SAC Dashboard: Loaded transactions', allTransactions.length);
-      } catch (error) {
-        console.error('Error loading transactions:', error);
-        allTransactions = [];
-      }
-      setTransactions(allTransactions);
-      setFilteredTransactions(allTransactions);
-      
-      // Safely get leaderboard
-      let boothLeaderboard = [];
-      try {
-        boothLeaderboard = getLeaderboard() || [];
-        console.log('SAC Dashboard: Loaded leaderboard', boothLeaderboard.length);
-      } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        boothLeaderboard = [];
-      }
-      setLeaderboard(boothLeaderboard);
-      
-      await loadUsers();
-      
-      calculateStats(allTransactions);
-    } catch (error) {
-      console.error('Error loading SAC dashboard data:', error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const calculateStats = (allTransactions: any[]) => {
-    const totalRevenue = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    
-    setStats({
-      totalUsers: usersList.length,
-      totalBooths: booths.length,
-      totalTransactions: allTransactions.length,
-      totalRevenue
-    });
-  };
-  
-  const loadUsers = async () => {
-    setIsUserLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      if (data) {
-        console.log('SAC Dashboard: Loaded users', data.length);
-        setUsersList(data);
-        setFilteredUsers(data);
-        
-        setStats(prev => ({
-          ...prev,
-          totalUsers: data.length
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-      toast.error('Failed to load users');
-      setUsersList([]);
-      setFilteredUsers([]);
-    } finally {
-      setIsUserLoading(false);
-    }
-  };
-  
-  // Update filtered data when search terms change
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredTransactions(transactions);
-    } else {
-      const filtered = transactions.filter(
-        transaction => 
-          (transaction.buyerName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (transaction.boothName && transaction.boothName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (transaction.id && transaction.id.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredTransactions(filtered);
-    }
-  }, [searchTerm, transactions]);
-  
-  useEffect(() => {
-    if (userSearchTerm.trim() === '') {
-      setFilteredUsers(usersList);
-    } else {
-      const filtered = usersList.filter(
-        user => 
-          (user.name && user.name.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
-          (user.email && user.email.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
-          (user.student_number && user.student_number.toLowerCase().includes(userSearchTerm.toLowerCase()))
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [userSearchTerm, usersList]);
-  
-  // Navigation and dialog handlers
-  const handleHomeClick = () => {
-    navigate('/dashboard');
+    refetchStudents();
+    refetchBooths();
+  }, []);
+
+  const handleAddFunds = async (studentId: string) => {
+    setFundsDialogOpen(true);
+    setSelectedStudent(students?.find(student => student.id === studentId) || null);
   };
 
-  const handleAddFunds = async (studentId: string, amount: number) => {
-    if (!user) {
-      toast.error('You must be logged in to add funds');
-      return;
-    }
-    
+  const handleRefund = async (studentId: string) => {
     try {
-      const result = await addFunds(studentId, amount, user.id);
-      
-      if (result.success) {
-        setIsAddFundsOpen(false);
-        setStudentId('');
-        toast.success(`Successfully added $${amount.toFixed(2)} to account`);
-        
-        // Refresh data
-        const allTransactions = getSACTransactions();
-        setTransactions(allTransactions);
-        setFilteredTransactions(allTransactions);
-        calculateStats(allTransactions);
-        
-        if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({
-            ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
-          });
-        }
-      }
+      await api.post(`/students/${studentId}/refund`, { amount: 10 });
+      toast.success('Refund processed successfully!');
+      refetchStudents();
     } catch (error) {
-      console.error('Error adding funds:', error);
-      toast.error('Failed to add funds');
+      toast.error('Failed to process refund.');
     }
   };
-  
-  const handleRefundFunds = async (studentId: string, amount: number) => {
-    if (!user) {
-      toast.error('You must be logged in to refund funds');
-      return;
-    }
-    
-    try {
-      const result = await addFunds(studentId, -amount, user.id);
-      
-      if (result.success) {
-        setIsRefundOpen(false);
-        setStudentId('');
-        toast.success(`Successfully refunded $${amount.toFixed(2)} from account`);
-        
-        // Refresh data
-        const allTransactions = getSACTransactions();
-        setTransactions(allTransactions);
-        setFilteredTransactions(allTransactions);
-        calculateStats(allTransactions);
-        
-        if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({
-            ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error refunding funds:', error);
-      toast.error('Failed to refund funds');
-    }
-  };
-  
-  const handleStudentFound = (student: any, qrUrl: string) => {
-    setFoundStudent(student);
-    setQrCodeUrl(qrUrl);
-    setIsStudentDetailOpen(true);
-  };
-  
-  const handleCreateBooth = async (
-    name: string, 
-    description: string, 
-    customPin: string, 
-    products: Array<{name: string, price: string}>
-  ) => {
-    if (!name.trim()) {
-      toast.error('Please enter a booth name');
-      return;
-    }
-    
-    if (customPin && (customPin.length !== 6 || !/^\d+$/.test(customPin))) {
-      toast.error('PIN must be a 6-digit number');
-      return;
-    }
-    
-    if (!user) {
-      toast.error('You must be logged in to create a booth');
-      return;
-    }
-    
-    setIsBoothLoading(true);
-    
-    try {
-      const boothId = await createBooth(name, description, user.id, customPin);
-      
-      if (boothId) {
-        const productPromises = products
-          .filter(p => p.name.trim() && p.price.trim() && !isNaN(parseFloat(p.price)))
-          .map(p => addProductToBooth(boothId, {
-            name: p.name,
-            price: parseFloat(p.price)
-          }));
-        
-        if (productPromises.length > 0) {
-          await Promise.all(productPromises);
-        }
-        
-        setIsCreateBoothOpen(false);
-        
-        toast.success('Booth created successfully');
-        
-        await loadBooths();
-        
-        setStats(prev => ({
-          ...prev,
-          totalBooths: booths.length + 1
-        }));
-      }
-    } catch (error) {
-      console.error('Error creating booth:', error);
-      toast.error('Failed to create booth');
-    } finally {
-      setIsBoothLoading(false);
-    }
-  };
-  
+
   const handlePrintQRCode = () => {
-    if (!qrCodeUrl) return;
-    
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Please allow popups to print the QR code');
-      return;
+    if (qrCodeUrl) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print QR Code</title>
+              <style>
+                body { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                img { max-width: 50%; max-height: 50%; }
+              </style>
+            </head>
+            <body>
+              <img src="${qrCodeUrl}" alt="QR Code"/>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.onload = () => {
+          printWindow.print();
+          printWindow.close();
+        };
+      } else {
+        toast.error('Failed to open print window. Please check your browser settings.');
+      }
+    } else {
+      toast.error('QR Code URL is not available.');
     }
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print QR Code</title>
-          <style>
-            body { 
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              margin: 0;
-              padding: 20px;
-              box-sizing: border-box;
-            }
-            .container {
-              text-align: center;
-            }
-            .qr-code {
-              width: 400px;
-              height: 400px;
-              margin: 20px auto;
-            }
-            h1 {
-              font-size: 24px;
-              margin-bottom: 5px;
-            }
-            p {
-              margin: 5px 0;
-              font-size: 16px;
-            }
-            @media print {
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>${foundStudent.name}</h1>
-            <p>Student ID: ${foundStudent.studentNumber || 'N/A'}</p>
-            <p>Balance: $${foundStudent.balance?.toFixed(2) || '0.00'}</p>
-            <div class="qr-code">
-              ${decodeURIComponent(qrCodeUrl.split(',')[1])}
-            </div>
-            <button onclick="window.print(); setTimeout(() => window.close(), 500);">
-              Print QR Code
-            </button>
-          </div>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
   };
-  
-  const handleUserSelected = (user: any) => {
-    const student = {
-      id: user.id,
-      name: user.name,
-      studentNumber: user.student_number,
-      email: user.email,
-      balance: user.tickets / 100,
-      qrCode: user.qr_code
-    };
-    
-    setFoundStudent(student);
-    
-    if (user.qr_code || user.id) {
-      const userData = user.qr_code || encodeUserData(user.id);
-      const qrUrl = generateQRCode(userData);
-      setQrCodeUrl(qrUrl);
+
+  const handleSearchStudent = async () => {
+    try {
+      const response = await api.get(`/students/${studentId}`);
+      const student = response.data;
+      setSelectedStudent(student);
+      setQrCodeUrl(student.qrCode);
+      setStudentDetailOpen(true);
+    } catch (error) {
+      toast.error('Failed to fetch student details.');
     }
-    
-    setIsStudentDetailOpen(true);
   };
-  
-  // Access denied if not SAC
-  if (!user || user.role !== 'sac') {
-    return (
-      <div className="container mx-auto py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>
-              You do not have permission to view this page.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-  
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-10">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">SAC Dashboard</h1>
-        </div>
-        <Card className="p-8">
-          <div className="flex flex-col items-center justify-center">
-            <p className="text-muted-foreground mb-2">Loading dashboard data...</p>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-  
+
+  const filteredStudents = students?.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const dashboardTabs = [
+    { title: "Overview", icon: HomeIcon },
+    { title: "Booths", icon: StoreIcon },
+    { type: "separator" },
+    { title: "Students", icon: UsersIcon },
+    { title: "Transactions", icon: FileTextIcon },
+    { title: "Settings", icon: SettingsIcon },
+  ];
+
+  const handleTabChange = (index: number | null) => {
+    if (index === null) return;
+    
+    switch(index) {
+      case 0:
+        setActiveTab("dashboard");
+        break;
+      case 1:
+        setActiveTab("booths");
+        break;
+      case 2:
+        break; // Separator
+      case 3:
+        setActiveTab("users");
+        break;
+      case 4:
+        setActiveTab("transactions");
+        break;
+      case 5:
+        setActiveTab("settings");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">SAC Dashboard</h1>
-        <Button 
-          variant="outline" 
-          size="icon"
-          onClick={handleHomeClick}
-          title="Home"
-        >
-          <Home className="h-5 w-5" />
-        </Button>
-      </div>
-      
-      {/* Stats Display */}
-      <StatCards stats={stats} />
-      
-      {/* Student Search */}
-      <StudentSearch onStudentFound={handleStudentFound} />
-      
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2 mb-6">
-        <BoothTransactionDialog 
-          isOpen={isBoothTransactionOpen}
-          onOpenChange={setIsBoothTransactionOpen}
-          booths={booths}
-          getBoothById={getBoothById}
-          cart={cart}
-          addToCart={addToCart}
-          removeFromCart={removeFromCart}
-          clearCart={clearCart}
-          incrementQuantity={incrementQuantity}
-          decrementQuantity={decrementQuantity}
-          findUserByStudentNumber={findUserByStudentNumber}
-          processPurchase={processPurchase}
-          userId={user?.id}
-          userName={user?.name}
+    <div className="container mx-auto py-4 animate-fade-in">
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <div className="flex space-x-2">
+            <ExpandableTabs 
+              tabs={dashboardTabs} 
+              className="border-brand-200 dark:border-brand-800" 
+              activeColor="text-brand-600"
+              onChange={handleTabChange}
+            />
+            <Button onClick={() => setCreateBoothOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Booth
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2">
+          <div className="flex flex-col space-y-4 pr-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="justify-start" 
+                  onClick={() => setCreateBoothOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Booth
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="justify-start" 
+                  onClick={() => setFundsDialogOpen(true)}
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Add Funds
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Student</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="studentId">Student ID</Label>
+                    <Input 
+                      id="studentId" 
+                      placeholder="Enter student ID" 
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleSearchStudent}>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="flex flex-col space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeTab === "dashboard" && (
+                  <p>Dashboard activity will be displayed here.</p>
+                )}
+                {activeTab === "booths" && (
+                  <p>Booth management activity will be displayed here.</p>
+                )}
+                 {activeTab === "users" && (
+                  <div className="space-y-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="search">Search students</Label>
+                      <Input
+                        id="search"
+                        placeholder="Search by name..."
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <Separator />
+                    <ScrollArea className="h-[400px] w-full rounded-md border">
+                      <Table>
+                        <TableCaption>A list of your students.</TableCaption>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[100px]">Name</TableHead>
+                            <TableHead>Balance</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredStudents?.map((student) => (
+                            <TableRow key={student.id}>
+                              <TableCell className="font-medium">{student.name}</TableCell>
+                              <TableCell>${student.balance.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleAddFunds(student.id)}>
+                                  Add Funds
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                )}
+                {activeTab === "transactions" && (
+                  <p>Transaction history will be displayed here.</p>
+                )}
+                {activeTab === "settings" && (
+                  <p>Settings and configurations will be displayed here.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <CreateBoothDialog open={createBoothOpen} onOpenChange={setCreateBoothOpen} refetchBooths={refetchBooths} />
+        <FundsDialog 
+          open={fundsDialogOpen} 
+          onOpenChange={setFundsDialogOpen} 
+          student={selectedStudent}
+          refetchStudents={refetchStudents}
         />
-        
-        <CreateBoothDialog
-          isOpen={isCreateBoothOpen}
-          onOpenChange={setIsCreateBoothOpen}
-          onCreateBooth={handleCreateBooth}
-          isLoading={isBoothLoading}
+        <StudentDetailDialog 
+          isOpen={studentDetailOpen}
+          onOpenChange={setStudentDetailOpen}
+          student={selectedStudent}
+          qrCodeUrl={qrCodeUrl}
+          onAddFunds={handleAddFunds}
+          onRefund={handleRefund}
+          onPrintQRCode={handlePrintQRCode}
         />
-        
-        <Button
-          onClick={() => {
-            setStudentId('');
-            setIsAddFundsOpen(true);
-          }}
-        >
-          Add Funds to Student
-        </Button>
       </div>
-      
-      {/* Dialogs */}
-      <StudentDetailDialog
-        isOpen={isStudentDetailOpen}
-        onOpenChange={setIsStudentDetailOpen}
-        student={foundStudent}
-        qrCodeUrl={qrCodeUrl}
-        onAddFunds={(id) => {
-          setStudentId(id);
-          setIsAddFundsOpen(true);
-        }}
-        onRefund={(id) => {
-          setStudentId(id);
-          setIsRefundOpen(true);
-        }}
-        onPrintQRCode={handlePrintQRCode}
-      />
-      
-      <FundsDialog
-        isOpen={isAddFundsOpen}
-        onOpenChange={setIsAddFundsOpen}
-        title="Add Funds to Student Account"
-        description="Enter the student ID and amount to add funds to their account."
-        confirmLabel="Add Funds"
-        studentId={studentId}
-        onSubmit={handleAddFunds}
-        readOnlyId={!!foundStudent}
-      />
-      
-      <FundsDialog
-        isOpen={isRefundOpen}
-        onOpenChange={setIsRefundOpen}
-        title="Refund Student Account"
-        description="Enter the student ID and amount to refund from their account."
-        confirmLabel="Refund"
-        confirmVariant="destructive"
-        studentId={studentId}
-        onSubmit={handleRefundFunds}
-        readOnlyId={!!foundStudent}
-      />
-      
-      {/* Tab content */}
-      <Tabs defaultValue="transactions" className="mb-6">
-        <TabsList className="grid grid-cols-2">
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="transactions">
-          <Card>
-            <CardHeader>
-              <TransactionsTable 
-                transactions={filteredTransactions}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-              />
-            </CardHeader>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <UsersTable 
-                users={filteredUsers}
-                isLoading={isUserLoading}
-                searchTerm={userSearchTerm}
-                onSearchChange={setUserSearchTerm}
-                onUserSelect={handleUserSelected}
-              />
-            </CardHeader>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      {/* Booth Leaderboard */}
-      <BoothLeaderboard leaderboard={leaderboard} />
     </div>
   );
 };
 
-export default SACDashboard;
+export default Dashboard;
