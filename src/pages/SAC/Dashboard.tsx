@@ -218,7 +218,7 @@ const Dashboard = () => {
     setIsStudentDetailOpen(true);
   };
   
-  const handleCreateBooth = async (boothData: { name: string; description: string }) => {
+  const handleCreateBooth = async (boothData: { name: string; description: string; }) => {
     setIsBoothLoading(true);
     try {
       const { data, error } = await supabase
@@ -227,9 +227,9 @@ const Dashboard = () => {
           { 
             name: boothData.name,
             description: boothData.description,
-            managers: [user?.id || ''],
-            organization_id: null,
-            is_active: true
+            members: [user?.id || ''],  // Changed from 'managers' to 'members' to match Supabase schema
+            pin: Math.floor(100000 + Math.random() * 900000).toString(), // Generate a random PIN
+            sales: 0
           }
         ])
         .select()
@@ -240,7 +240,7 @@ const Dashboard = () => {
       toast.success('Booth created successfully');
       loadBoothLeaderboard(); // Refresh booth data
       
-      return data;
+      // Return void as expected by the component props
     } catch (error) {
       console.error('Error creating booth:', error);
       toast.error('Failed to create booth');
