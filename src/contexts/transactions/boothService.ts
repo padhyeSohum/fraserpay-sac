@@ -63,11 +63,17 @@ export const getBoothsByUserId = (booths: Booth[], userId: string): Booth[] => {
   return booths.filter(booth => booth.managers.includes(userId));
 };
 
-export const createBooth = async (name: string, description: string, userId: string): Promise<string | null> => {
+export const createBooth = async (
+  name: string, 
+  description: string, 
+  userId: string, 
+  customPin?: string
+): Promise<string | null> => {
   try {
-    console.log("Creating booth:", { name, description, userId });
+    console.log("Creating booth:", { name, description, userId, customPin });
     
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a random 6-digit PIN if a custom one wasn't provided
+    const pin = customPin || Math.floor(100000 + Math.random() * 900000).toString();
     
     const { data, error } = await supabase
       .from('booths')

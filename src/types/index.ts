@@ -1,3 +1,4 @@
+
 export type UserRole = 'student' | 'booth' | 'sac';
 
 export interface User {
