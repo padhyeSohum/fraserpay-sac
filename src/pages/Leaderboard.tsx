@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
@@ -35,45 +36,37 @@ const Leaderboard = () => {
               }`}
             >
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold mr-3 ${
-                        index === 0 
-                          ? 'bg-yellow-300 text-yellow-800' 
-                          : index === 1 
-                            ? 'bg-gray-100 text-gray-800' 
-                            : index === 2 
-                              ? 'bg-amber-500 text-amber-900' 
-                              : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                    
-                    <div>
-                      <div className={`font-semibold ${index < 3 ? 'text-white' : ''}`}>
-                        {entry.boothName}
-                      </div>
-                      
-                      <div className={`text-sm ${
-                        index === 0 
-                          ? 'text-yellow-100' 
-                          : index === 1 
-                            ? 'text-gray-600' 
-                            : index === 2 
-                              ? 'text-amber-200' 
-                              : 'text-muted-foreground'
-                      }`}>
-                        Total Sales
-                      </div>
-                    </div>
+                <div className="flex items-center">
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold mr-3 ${
+                      index === 0 
+                        ? 'bg-yellow-300 text-yellow-800' 
+                        : index === 1 
+                          ? 'bg-gray-100 text-gray-800' 
+                          : index === 2 
+                            ? 'bg-amber-500 text-amber-900' 
+                            : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {index + 1}
                   </div>
                   
-                  <div className={`text-xl font-bold ${
-                    index < 3 ? 'text-white' : ''
-                  }`}>
-                    ${entry.earnings.toFixed(2)}
+                  <div>
+                    <div className={`font-semibold ${index < 3 ? 'text-white' : ''}`}>
+                      {entry.boothName}
+                    </div>
+                    
+                    <div className={`text-sm ${
+                      index === 0 
+                        ? 'text-yellow-100' 
+                        : index === 1 
+                          ? 'text-gray-600' 
+                          : index === 2 
+                            ? 'text-amber-200' 
+                            : 'text-muted-foreground'
+                    }`}>
+                      Ranking #{index + 1}
+                    </div>
                   </div>
                 </div>
               </CardContent>
