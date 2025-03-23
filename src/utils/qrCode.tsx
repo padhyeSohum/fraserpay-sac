@@ -41,6 +41,12 @@ export const validateQRCode = (qrData: string) => {
     return { isValid: true, userId: qrData, type: 'uuid' };
   }
   
+  // Try detecting a student number (numeric string)
+  if (/^\d+$/.test(qrData)) {
+    console.log('Found potential student number format:', qrData);
+    return { isValid: true, userId: qrData, type: 'student_number' };
+  }
+  
   console.error('Invalid QR code format:', qrData);
   // Default case - invalid QR code
   return { isValid: false, userId: null, type: 'unknown' };
@@ -59,40 +65,43 @@ export const getUserFromQRData = async (qrData: string) => {
   
   if (validation.isValid && validation.userId) {
     try {
-      console.log('Querying Supabase for user ID:', validation.userId);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', validation.userId)
-        .single();
+      let userData = null;
       
-      if (error) {
-        console.error('Supabase error:', error);
+      // First try looking up by ID if the format suggests it's a UUID
+      if (validation.type === 'user' || validation.type === 'uuid') {
+        console.log('Querying Supabase for user ID:', validation.userId);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', validation.userId)
+          .single();
         
-        // If the error is that no rows were returned, try an alternative lookup
-        if (error.code === 'PGRST116') {
-          console.log('No user found with ID, trying alternative lookup methods');
-          
-          // Try looking up by student number if it looks like a student number
-          if (/^\d+$/.test(validation.userId)) {
-            const { data: studentData, error: studentError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('student_number', validation.userId)
-              .single();
-              
-            if (!studentError && studentData) {
-              console.log('Found user by student number:', studentData);
-              return studentData;
-            }
-          }
+        if (!error && data) {
+          console.log('User found by ID:', data);
+          userData = data;
+        } else if (error) {
+          console.log('Error or no user found by ID:', error);
         }
-        
-        throw error;
       }
       
-      console.log('User data found:', data);
-      return data;
+      // If no user found and it looks like a student number, try that lookup
+      if (!userData && (validation.type === 'student_number' || /^\d+$/.test(validation.userId))) {
+        console.log('Looking up by student number:', validation.userId);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('student_number', validation.userId)
+          .single();
+          
+        if (!error && data) {
+          console.log('User found by student number:', data);
+          userData = data;
+        } else if (error) {
+          console.log('Error or no user found by student number:', error);
+        }
+      }
+      
+      return userData;
     } catch (error) {
       console.error('Error fetching user from QR data:', error);
       return null;
@@ -110,11 +119,11 @@ export const findUserByStudentNumber = async (studentNumber: string) => {
       .from('users')
       .select('*')
       .eq('student_number', studentNumber)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid errors
     
     if (error) {
       console.error('Error finding user by student number:', error);
-      throw error;
+      return null;
     }
     
     console.log('User found by student number:', data);

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
 import { TransactionContextType } from './types';
@@ -19,12 +19,29 @@ import {
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Use our custom hooks for each feature area
   const boothManagement = useBoothManagement();
   const productManagement = useProductManagement();
   const cartManagement = useCartManagement();
   const transactionManagement = useTransactionManagement(boothManagement.booths);
   const paymentProcessing = usePaymentProcessing();
+
+  // Initialize data on mount
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await boothManagement.fetchAllBooths();
+      } catch (error) {
+        console.error('Failed to initialize transaction data:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    initializeData();
+  }, []);
 
   // Function to update transactions list when a new transaction is created
   const updateTransactions = (transaction: Transaction) => {
@@ -74,9 +91,14 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     addFunds: paymentProcessing.addFunds,
     
     // Loading states
-    isLoading: boothManagement.isLoading || paymentProcessing.isLoading,
+    isLoading: boothManagement.isLoading || paymentProcessing.isLoading || !isInitialized,
     findUserByStudentNumber
   };
+
+  // Render a loading state if not initialized yet
+  if (!isInitialized) {
+    console.log('TransactionContext is still initializing...');
+  }
 
   return (
     <TransactionContext.Provider value={contextValue}>

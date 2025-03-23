@@ -16,19 +16,33 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const hasScannedRef = useRef<boolean>(false); // Ref to track scan status
+  const scannerDivRef = useRef<HTMLDivElement>(null); // Ref for the scanner div
   const scannerDivId = 'qr-scanner';
+  const isMountedRef = useRef<boolean>(true); // Track component mount state
 
   useEffect(() => {
     console.log('Initializing QR code scanner');
-    const scanner = new Html5Qrcode(scannerDivId);
-    scannerRef.current = scanner;
+    
+    // Set mounted ref to true
+    isMountedRef.current = true;
+    
+    // Only initialize the scanner if the DOM element exists
+    if (document.getElementById(scannerDivId)) {
+      const scanner = new Html5Qrcode(scannerDivId);
+      scannerRef.current = scanner;
+      startScanning(scanner);
+    } else {
+      console.error('Scanner DOM element not found');
+    }
 
-    startScanning(scanner);
-
+    // Clean up function
     return () => {
-      if (isScanning && scanner) {
+      // Set mounted ref to false to prevent state updates after unmount
+      isMountedRef.current = false;
+      
+      if (scannerRef.current && isScanning) {
         console.log('Cleaning up scanner');
-        scanner
+        scannerRef.current
           .stop()
           .catch((err) => console.error('Error stopping scanner:', err));
       }
@@ -36,6 +50,8 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   }, []);
 
   const startScanning = async (scanner: Html5Qrcode) => {
+    if (!isMountedRef.current) return;
+    
     setIsScanning(true);
     setError(null);
     setScanFeedback(null);
@@ -51,8 +67,8 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
           aspectRatio: 1.0
         },
         (decodedText) => {
-          // Only process the scan if we haven't already scanned
-          if (!hasScannedRef.current) {
+          // Only process the scan if the component is still mounted and we haven't already scanned
+          if (isMountedRef.current && !hasScannedRef.current) {
             hasScannedRef.current = true; // Mark as scanned
             console.log('QR code scanned successfully:', decodedText);
             setScanFeedback('QR code detected! Processing...');
@@ -70,24 +86,34 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
         }
       );
     } catch (err: any) {
-      console.error('Error starting scanner:', err);
-      setError(err.toString());
-      setIsScanning(false);
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        console.error('Error starting scanner:', err);
+        setError(err.toString());
+        setIsScanning(false);
+      }
     }
   };
 
   const stopScanning = () => {
-    if (scannerRef.current && isScanning) {
+    if (scannerRef.current && isScanning && isMountedRef.current) {
       console.log('Stopping QR code scanner');
       scannerRef.current
         .stop()
         .then(() => {
-          setIsScanning(false);
+          if (isMountedRef.current) {
+            setIsScanning(false);
+          }
         })
         .catch((err) => {
           console.error('Error stopping scanner:', err);
         });
     }
+  };
+
+  const handleClose = () => {
+    stopScanning();
+    onClose();
   };
 
   return (
@@ -97,10 +123,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
           size="icon"
           variant="outline"
           className="rounded-full bg-background"
-          onClick={() => {
-            stopScanning();
-            onClose();
-          }}
+          onClick={handleClose}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -109,6 +132,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
       <div className="flex flex-col items-center gap-4">
         <div 
           id={scannerDivId} 
+          ref={scannerDivRef}
           className="w-full h-[300px] bg-black relative rounded-md overflow-hidden"
           style={{ maxWidth: '400px' }}
         />

@@ -61,7 +61,7 @@ const App = () => {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, [isReady]);
+  }, []);
   
   // Only render the app once initialization is complete
   if (!isReady) {
