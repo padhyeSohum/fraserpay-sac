@@ -5,20 +5,25 @@ import ReactDOMServer from 'react-dom/server';
 
 // Generate a real QR code as SVG string
 export const generateQRCode = (text: string): string => {
-  const qrCode = ReactDOMServer.renderToString(
-    React.createElement(QRCodeSVG, {
-      value: text,
-      size: 250,
-      bgColor: "#ffffff",
-      fgColor: "#000000",
-      level: "H",
-      includeMargin: true
-    })
-  );
-  
-  // Convert SVG to data URL
-  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrCode)}`;
-  return dataUrl;
+  try {
+    const qrCode = ReactDOMServer.renderToString(
+      React.createElement(QRCodeSVG, {
+        value: text,
+        size: 250,
+        bgColor: "#ffffff",
+        fgColor: "#000000",
+        level: "H",
+        includeMargin: true
+      })
+    );
+    
+    // Convert SVG to data URL
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrCode)}`;
+    return dataUrl;
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    return '';
+  }
 };
 
 // Validate a QR code

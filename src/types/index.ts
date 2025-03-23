@@ -39,6 +39,7 @@ export interface Transaction {
   timestamp: number;
   buyerId: string;
   buyerName: string;
+  studentNumber?: string;
   sellerId?: string;
   sellerName?: string;
   boothId?: string;

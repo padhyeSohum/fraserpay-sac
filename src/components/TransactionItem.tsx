@@ -11,7 +11,7 @@ interface TransactionItemProps {
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupport = false }) => {
-  const { timestamp, buyerName, amount, type, products } = transaction;
+  const { timestamp, buyerName, studentNumber, amount, type, products } = transaction;
   
   const formattedTime = formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(timestamp).toLocaleString();
@@ -36,6 +36,11 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupp
       <div className="flex justify-between items-start">
         <div>
           <div className="font-medium">{buyerName}</div>
+          {studentNumber && (
+            <div className="text-xs text-muted-foreground">
+              Student #: {studentNumber}
+            </div>
+          )}
           <div className="text-xs text-muted-foreground" title={formattedDate}>
             {formattedTime}
           </div>

@@ -1,90 +1,143 @@
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import Index from '@/pages/Index';
+import Login from '@/pages/Auth/Login';
+import Register from '@/pages/Auth/Register';
+import Dashboard from '@/pages/Student/Dashboard';
+import QRCode from '@/pages/Student/QRCode';
+import StudentTransactions from '@/pages/Student/Transactions';
+import StudentSettings from '@/pages/Student/Settings';
+import Leaderboard from '@/pages/Leaderboard';
+import BoothJoin from '@/pages/Booth/Join';
+import BoothDashboard from '@/pages/Booth/Dashboard';
+import BoothSell from '@/pages/Booth/Sell';
+import BoothTransactions from '@/pages/Booth/Transactions';
+import BoothSettings from '@/pages/Booth/Settings';
+import SACDashboard from '@/pages/SAC/Dashboard';
+import AddFunds from '@/pages/SAC/AddFunds';
+import AdjustBalance from '@/pages/SAC/AdjustBalance';
+import NotFound from '@/pages/NotFound';
 
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
-import { toast } from 'sonner';
-
-const AppRoutes: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const location = useLocation();
-  
-  // Monitor for prolonged loading to detect potential freezes
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        setLoadingTimeout(true);
-      }, 10000); // Show timeout warning after 10 seconds
-      
-      return () => clearTimeout(timer);
-    } else {
-      setLoadingTimeout(false);
-    }
-  }, [isLoading]);
-  
-  // Reset timeout when route changes
-  useEffect(() => {
-    setLoadingTimeout(false);
-  }, [location.pathname]);
-  
-  // Show clear loading message while auth is being determined
-  if (isLoading) {
-    console.log("App is in loading state, auth status not determined yet");
-    return <LoadingScreen timeout={loadingTimeout} />;
-  }
-  
-  console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
+const AppRoutes = () => {
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
-      {routes.map((route, index) => {
-        // Handle routes that require authentication
-        if (route.protected) {
-          if (route.requiredRoles) {
-            return (
-              <Route 
-                key={index} 
-                path={route.path} 
-                element={
-                  <RoleProtectedRoute allowedRoles={route.requiredRoles}>
-                    {route.element}
-                  </RoleProtectedRoute>
-                } 
-              />
-            );
-          }
-          
-          return (
-            <Route 
-              key={index} 
-              path={route.path} 
-              element={
-                <ProtectedRoute>
-                  {route.element}
-                </ProtectedRoute>
-              } 
-            />
-          );
-        }
-        
-        // Regular routes without authentication
-        return <Route key={index} path={route.path} element={route.element} />;
-      })}
+      <Route path="/" element={<Index />} />
       
-      {/* Root route redirects based on auth status */}
-      <Route 
-        path="/" 
+      {/* Auth Routes */}
+      <Route
+        path="/login"
         element={
-          isAuthenticated ? (
-            user?.role === 'sac' ? 
-              <Navigate to="/sac/dashboard" replace /> : 
-              <Navigate to="/dashboard" replace />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />
+        }
+      />
+      
+      {/* Student Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/qr-code"
+        element={
+          isAuthenticated ? <QRCode /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/transactions"
+        element={
+          isAuthenticated ? <StudentTransactions /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          isAuthenticated ? <StudentSettings /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/leaderboard"
+        element={
+          isAuthenticated ? <Leaderboard /> : <Navigate to="/login" replace />
+        }
+      />
+      
+      {/* Booth Routes */}
+      <Route
+        path="/booth/join"
+        element={
+          isAuthenticated ? <BoothJoin /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/booth/:boothId"
+        element={
+          isAuthenticated ? <BoothDashboard /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/booth/:boothId/sell"
+        element={
+          isAuthenticated ? <BoothSell /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/booth/:boothId/transactions"
+        element={
+          isAuthenticated ? <BoothTransactions /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/booth/:boothId/settings"
+        element={
+          isAuthenticated ? <BoothSettings /> : <Navigate to="/login" replace />
+        }
+      />
+      
+      {/* SAC Routes */}
+      <Route
+        path="/sac/dashboard"
+        element={
+          isAuthenticated && user?.role === 'sac' ? (
+            <SACDashboard />
           ) : (
             <Navigate to="/login" replace />
           )
-        } 
+        }
       />
+      <Route
+        path="/sac/add-funds"
+        element={
+          isAuthenticated && user?.role === 'sac' ? (
+            <AddFunds />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
+        path="/sac/adjust-balance"
+        element={
+          isAuthenticated && user?.role === 'sac' ? (
+            <AdjustBalance />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      
+      {/* Not Found */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
