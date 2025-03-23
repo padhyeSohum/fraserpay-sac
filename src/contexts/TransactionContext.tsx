@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createSampleBooths } from '@/utils/seedData';
+import { transformDatabaseUser } from '@/utils/supabase';
 
 interface TransactionContextType {
   transactions: Transaction[];
@@ -154,9 +156,10 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       console.log("Adding funds:", { amount, studentId, paymentMethod, sacMemberId, sacMemberName });
       
+      // Fetch the current user data to get their existing balance
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('tickets, name')
+        .select('tickets, name, student_number')
         .eq('id', studentId)
         .single();
       
@@ -166,15 +169,19 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return false;
       }
       
+      // Convert dollars to cents for storage in database
       const amountInCents = Math.round(amount * 100);
       
+      // Calculate the new balance
       const newBalance = (userData.tickets || 0) + amountInCents;
       console.log("New balance calculation:", { 
         currentBalance: userData.tickets || 0, 
         amountToAdd: amountInCents, 
-        newBalance 
+        newBalance,
+        studentNumber: userData.student_number
       });
       
+      // Update the user's balance in Supabase
       const { error: updateError } = await supabase
         .from('users')
         .update({ tickets: newBalance })
@@ -186,6 +193,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return false;
       }
       
+      // Create a transaction record
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -204,6 +212,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return false;
       }
       
+      // Add the new transaction to the local state
       const newTransaction: Transaction = {
         id: transactionData.id,
         timestamp: new Date(transactionData.created_at).getTime(),
@@ -217,6 +226,23 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       };
       
       setTransactions(prev => [newTransaction, ...prev]);
+      
+      // Verify the update was successful by fetching the user again
+      const { data: updatedUser, error: verifyError } = await supabase
+        .from('users')
+        .select('tickets, name')
+        .eq('id', studentId)
+        .single();
+        
+      if (verifyError) {
+        console.error("Error verifying balance update:", verifyError);
+      } else {
+        console.log("Verified balance update:", {
+          previousBalance: userData.tickets || 0,
+          newBalance: updatedUser.tickets,
+          expectedBalance: newBalance
+        });
+      }
       
       toast.success(`Added $${amount.toFixed(2)} to ${userData.name}'s account`);
       console.log("Funds added successfully:", newTransaction);

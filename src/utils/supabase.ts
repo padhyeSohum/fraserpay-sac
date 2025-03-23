@@ -9,7 +9,7 @@ export const transformDatabaseUser = (dbUser: any): User => {
     name: dbUser.name,
     email: dbUser.email,
     role: dbUser.role,
-    balance: dbUser.tickets / 100, // Database stores in cents
+    balance: (dbUser.tickets || 0) / 100, // Database stores in cents
     favoriteProducts: [],
     booths: dbUser.booth_access || []
   };
