@@ -152,6 +152,8 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     sacMemberName: string
   ) => {
     try {
+      console.log("Adding funds:", { amount, studentId, paymentMethod, sacMemberId, sacMemberName });
+      
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('tickets, name')
@@ -159,11 +161,19 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .single();
       
       if (userError) {
-        throw userError;
+        console.error("Error fetching user:", userError);
+        toast.error('User not found');
+        return false;
       }
       
       const amountInCents = Math.round(amount * 100);
+      
       const newBalance = (userData.tickets || 0) + amountInCents;
+      console.log("New balance calculation:", { 
+        currentBalance: userData.tickets || 0, 
+        amountToAdd: amountInCents, 
+        newBalance 
+      });
       
       const { error: updateError } = await supabase
         .from('users')
@@ -171,7 +181,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .eq('id', studentId);
       
       if (updateError) {
-        throw updateError;
+        console.error("Error updating user balance:", updateError);
+        toast.error('Failed to update balance');
+        return false;
       }
       
       const { data: transactionData, error: transactionError } = await supabase
@@ -187,7 +199,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         .single();
       
       if (transactionError) {
-        throw transactionError;
+        console.error("Error creating transaction:", transactionError);
+        toast.error('Failed to record transaction');
+        return false;
       }
       
       const newTransaction: Transaction = {
@@ -204,10 +218,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       setTransactions(prev => [newTransaction, ...prev]);
       
+      toast.success(`Added $${amount.toFixed(2)} to ${userData.name}'s account`);
+      console.log("Funds added successfully:", newTransaction);
+      
       return true;
     } catch (error) {
       console.error('Error adding funds:', error);
-      toast.error('Failed to add funds');
+      toast.error('Failed to add funds: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return false;
     }
   };
@@ -362,10 +379,8 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       console.log("Creating booth:", { name, description, userId });
       
-      // Generate a 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Insert the new booth
       const { data, error } = await supabase
         .from('booths')
         .insert({
@@ -390,7 +405,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       console.log("Booth created:", data);
       
-      // Update user's booth access
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('booth_access')
@@ -414,7 +428,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw updateError;
       }
       
-      // Add the new booth to local state
       const newBooth: Booth = {
         id: data.id,
         name: data.name,
@@ -429,7 +442,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setBooths(prev => [...prev, newBooth]);
       console.log("Booth added to local state:", newBooth);
       
-      // Refresh booths from server to ensure we have the latest data
       fetchAllBooths();
       
       return data.id;
