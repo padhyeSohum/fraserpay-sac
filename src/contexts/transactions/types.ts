@@ -44,7 +44,7 @@ export interface TransactionContextType {
     cartItems: CartItem[],
     boothName: string
   ) => Promise<{ success: boolean, transaction?: Transaction }>;
-  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<number>;
+  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean, updatedBalance?: number }>;
   
   // Loading states
   isLoading: boolean;
