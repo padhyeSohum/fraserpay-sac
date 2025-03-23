@@ -10,12 +10,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTransactions } from '@/contexts/TransactionContext';
 import TransactionItem from '@/components/TransactionItem';
 import { Label } from '@/components/ui/label';
-import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Users, CreditCard, DollarSign, BarChart3, ArrowUp, ArrowDown, QrCode, Search } from 'lucide-react';
+import { Users, CreditCard, DollarSign, BarChart3, ArrowUp, ArrowDown, QrCode, Search, Store, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
-import { useForm } from 'react-hook-form';
 
 const SACDashboard = () => {
   const { user } = useAuth();
@@ -37,14 +35,6 @@ const SACDashboard = () => {
   });
   const [boothStats, setBoothStats] = useState<any[]>([]);
   const navigate = useNavigate();
-  
-  const form = useForm({
-    defaultValues: {
-      studentNumber: '',
-      amount: '',
-      operation: 'add',
-    }
-  });
   
   useEffect(() => {
     async function loadData() {
@@ -118,8 +108,8 @@ const SACDashboard = () => {
       const searchValue = searchStudentNumber.trim();
       
       const foundStudent = users.find((u: any) => {
-        // Normalize both student numbers for comparison
-        const userStudentNumber = u.studentNumber ? u.studentNumber.toString().trim() : '';
+        // Convert to string and trim to ensure consistent comparison
+        const userStudentNumber = u.studentNumber ? String(u.studentNumber).trim() : '';
         return userStudentNumber === searchValue;
       });
       
@@ -263,6 +253,15 @@ const SACDashboard = () => {
                 body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
                 .container { max-width: 500px; margin: 0 auto; }
                 img { max-width: 100%; height: auto; }
+                .print-button { 
+                  background: #4F46E5; 
+                  color: white; 
+                  border: none; 
+                  padding: 10px 20px; 
+                  border-radius: 4px;
+                  margin-top: 20px;
+                  cursor: pointer;
+                }
               </style>
             </head>
             <body>
@@ -270,9 +269,11 @@ const SACDashboard = () => {
                 <h1>Student QR Code</h1>
                 <h2>${searchedStudent.name}</h2>
                 <p>Student #: ${searchedStudent.studentNumber}</p>
-                <img src="${qrCodeDataUrl}" alt="QR Code">
-                <p>Balance: $${searchedStudent.balance.toFixed(2)}</p>
-                <button onclick="window.print()">Print QR Code</button>
+                <div id="qrcode">
+                  <img src="${qrCodeDataUrl}" alt="QR Code">
+                </div>
+                <p>Balance: $${searchedStudent.balance?.toFixed(2) || '0.00'}</p>
+                <button class="print-button" onclick="window.print()">Print QR Code</button>
               </div>
             </body>
           </html>
@@ -286,6 +287,14 @@ const SACDashboard = () => {
       toast.error('Failed to generate QR code');
     }
   };
+
+  const navigateToBooth = (boothId: string) => {
+    navigate(`/booth/settings?id=${boothId}`);
+  };
+  
+  const navigateToUsers = () => {
+    navigate('/sac/users');
+  };
   
   return (
     <Layout 
@@ -295,10 +304,18 @@ const SACDashboard = () => {
     >
       <div className="space-y-6">
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-5 mb-4">
             <TabsTrigger value="student-search">Student Management</TabsTrigger>
             <TabsTrigger value="transactions">Recent Transactions</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
+            <TabsTrigger value="booths" onClick={() => navigate('/sac/booths')}>
+              <Store className="h-4 w-4 mr-2" />
+              Booths
+            </TabsTrigger>
+            <TabsTrigger value="users" onClick={() => navigate('/sac/users')}>
+              <UserCog className="h-4 w-4 mr-2" />
+              Users
+            </TabsTrigger>
           </TabsList>
           
           {/* Student Search & Management Tab */}
@@ -328,7 +345,7 @@ const SACDashboard = () => {
                       <h3 className="font-semibold text-xl">{searchedStudent.name}</h3>
                       <div className="text-sm text-muted-foreground">Student #: {searchedStudent.studentNumber}</div>
                       <div className="mt-2 text-lg font-medium">
-                        Current Balance: <span className="text-green-600">${searchedStudent.balance.toFixed(2)}</span>
+                        Current Balance: <span className="text-green-600">${searchedStudent.balance?.toFixed(2) || '0.00'}</span>
                       </div>
                       <Button variant="outline" size="sm" className="mt-2" onClick={handlePrintQRCode}>
                         <QrCode className="h-4 w-4 mr-2" />

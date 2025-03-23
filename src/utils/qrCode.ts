@@ -6,13 +6,14 @@ import ReactDOMServer from 'react-dom/server';
 // Generate a real QR code as SVG string
 export const generateQRCode = (text: string): string => {
   try {
+    // Create a QR code SVG
     const qrCode = ReactDOMServer.renderToString(
       React.createElement(QRCodeSVG, {
         value: text,
         size: 250,
         bgColor: "#ffffff",
         fgColor: "#000000",
-        level: "H",
+        level: "H", // highest error correction
         includeMargin: true
       })
     );
@@ -22,6 +23,7 @@ export const generateQRCode = (text: string): string => {
     return dataUrl;
   } catch (error) {
     console.error('Error generating QR code:', error);
+    // Return a fallback empty string if there's an error
     return '';
   }
 };

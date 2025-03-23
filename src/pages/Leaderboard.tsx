@@ -51,10 +51,8 @@ const Leaderboard = () => {
                     {index + 1}
                   </div>
                   
-                  <div>
-                    <div className={`font-semibold ${index < 3 ? 'text-white' : ''}`}>
-                      {entry.boothName}
-                    </div>
+                  <div className={`font-semibold ${index < 3 ? 'text-white' : ''}`}>
+                    {entry.boothName}
                   </div>
                 </div>
               </CardContent>
