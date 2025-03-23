@@ -94,10 +94,8 @@ const SACDashboard: React.FC = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   
-  // New state for adding products to a new booth
   const [initialProducts, setInitialProducts] = useState<Array<{name: string, price: string}>>([]);
   
-  // New state for booth transactions
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
   const [selectedBooth, setSelectedBooth] = useState<string>('');
   const [transactionStudentNumber, setTransactionStudentNumber] = useState('');
@@ -378,11 +376,9 @@ const SACDashboard: React.FC = () => {
     setIsBoothLoading(true);
     
     try {
-      // Create the booth with optional custom PIN
       const boothId = await createBooth(boothName, boothDescription, user.id, customPin);
       
       if (boothId) {
-        // Add all products to the booth
         const productPromises = initialProducts
           .filter(p => p.name.trim() && p.price.trim() && !isNaN(parseFloat(p.price)))
           .map(p => addProductToBooth(boothId, {
@@ -394,7 +390,6 @@ const SACDashboard: React.FC = () => {
           await Promise.all(productPromises);
         }
         
-        // Reset form fields
         setIsCreateBoothOpen(false);
         setBoothName('');
         setBoothDescription('');
@@ -483,7 +478,6 @@ const SACDashboard: React.FC = () => {
         
         toast.success('Transaction completed successfully');
         
-        // Refresh transactions
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
@@ -872,7 +866,6 @@ const SACDashboard: React.FC = () => {
                   pattern="[0-9]*"
                   value={customPin}
                   onChange={(e) => {
-                    // Only allow digits
                     const value = e.target.value.replace(/\D/g, '');
                     setCustomPin(value);
                   }}
@@ -1001,3 +994,295 @@ const SACDashboard: React.FC = () => {
       
       <Dialog open={isStudentDetailOpen} onOpenChange={setIsStudentDetailOpen}>
         <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Student Details</DialogTitle>
+            <DialogDescription>
+              View and manage student account
+            </DialogDescription>
+          </DialogHeader>
+          
+          {foundStudent && (
+            <div className="grid gap-4 py-4">
+              <div className="text-center mb-4">
+                <div className="text-xl font-bold">{foundStudent.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {foundStudent.studentNumber ? `ID: ${foundStudent.studentNumber}` : 'No ID'}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {foundStudent.email || 'No email'}
+                </div>
+                <div className="mt-2 text-lg font-medium">
+                  Balance: ${foundStudent.balance?.toFixed(2) || '0.00'}
+                </div>
+              </div>
+              
+              {qrCodeUrl && (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="border p-3 rounded-md bg-white" dangerouslySetInnerHTML={{ __html: qrCodeUrl }} />
+                  <Button variant="outline" onClick={handlePrintQRCode}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print QR Code
+                  </Button>
+                </div>
+              )}
+              
+              <div className="flex gap-2 justify-center mt-4">
+                <Button 
+                  onClick={() => {
+                    setStudentId(foundStudent.id);
+                    setIsAddFundsOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Funds
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setStudentId(foundStudent.id);
+                    setIsRefundOpen(true);
+                  }}
+                >
+                  <Minus className="h-4 w-4 mr-2" />
+                  Refund
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refund Student Account</DialogTitle>
+            <DialogDescription>
+              Enter the student ID and amount to refund from their account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="refundStudentId" className="text-right">
+                Student ID
+              </Label>
+              <Input
+                id="refundStudentId"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                className="col-span-3"
+                readOnly={!!foundStudent}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="refundAmount" className="text-right">
+                Amount ($)
+              </Label>
+              <Input
+                id="refundAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRefundOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRefundFunds}>Refund</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Tabs defaultValue="transactions" className="mb-6">
+        <TabsList className="grid grid-cols-2">
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="transactions">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>All Transactions</CardTitle>
+                <div className="w-64">
+                  <Input
+                    placeholder="Search transactions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableCaption>All transactions in the system</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[140px]">Date</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Booth</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTransactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="font-medium">
+                          {formatDate(transaction.timestamp)}
+                        </TableCell>
+                        <TableCell>{transaction.buyerName || 'N/A'}</TableCell>
+                        <TableCell>{transaction.boothName || 'SAC Funds'}</TableCell>
+                        <TableCell>
+                          {transaction.type === 'funds' ? 'Add Funds' : 'Purchase'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={transaction.type === 'funds' ? 'text-green-600' : ''}>
+                            ${transaction.amount.toFixed(2)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>All Users</CardTitle>
+                <div className="w-64">
+                  <Input
+                    placeholder="Search users..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableCaption>All users in the system</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Student ID</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isUserLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <div className="flex justify-center">
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow 
+                        key={user.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => {
+                          setFoundStudent({
+                            id: user.id,
+                            name: user.name,
+                            studentNumber: user.student_number,
+                            email: user.email,
+                            balance: user.tickets / 100,
+                            qrCode: user.qr_code
+                          });
+                          
+                          if (user.qr_code || user.id) {
+                            const userData = user.qr_code || encodeUserData(user.id);
+                            const qrUrl = generateQRCode(userData);
+                            setQrCodeUrl(qrUrl);
+                          }
+                          
+                          setIsStudentDetailOpen(true);
+                        }}
+                      >
+                        <TableCell className="font-medium">{user.name || 'N/A'}</TableCell>
+                        <TableCell>{user.email || 'N/A'}</TableCell>
+                        <TableCell>{user.student_number || 'N/A'}</TableCell>
+                        <TableCell className="capitalize">{user.role || 'student'}</TableCell>
+                        <TableCell className="text-right">
+                          ${(user.tickets / 100).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      <h2 className="text-2xl font-bold mb-4">Booth Leaderboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {leaderboard.map((booth, index) => (
+          <Card key={booth.id}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{booth.name}</CardTitle>
+                  <CardDescription>
+                    Ranking {index + 1}
+                  </CardDescription>
+                </div>
+                <div className="bg-primary/10 text-primary font-medium px-2 py-1 rounded text-sm">
+                  ${booth.totalRevenue.toFixed(2)}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Orders</span>
+                  <span>{booth.totalTransactions}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Average Order</span>
+                  <span>
+                    ${booth.totalTransactions > 0 
+                      ? (booth.totalRevenue / booth.totalTransactions).toFixed(2) 
+                      : '0.00'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default SACDashboard;
