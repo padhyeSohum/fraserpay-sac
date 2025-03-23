@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -128,7 +127,6 @@ const Dashboard = () => {
         setUsersList(data);
         setFilteredUsers(data);
         
-        // Calculate total tickets (in cents)
         const totalTickets = data.reduce((sum, user) => sum + (user.tickets || 0), 0);
         
         setStats(prev => ({
@@ -161,13 +159,12 @@ const Dashboard = () => {
         console.log('SAC Dashboard: Loaded transactions', data.length);
         setTransactions(data);
         
-        // Calculate total revenue from transactions (in cents)
         const totalAmount = data.reduce((sum, tx) => sum + (tx.amount || 0), 0);
         
         setStats(prev => ({
           ...prev,
           totalTransactions: data.length,
-          totalRevenue: totalAmount / 100 // Convert cents to dollars
+          totalRevenue: totalAmount / 100
         }));
       }
     } catch (error) {
@@ -182,13 +179,11 @@ const Dashboard = () => {
   const loadBoothLeaderboard = async () => {
     setIsBoothLoading(true);
     try {
-      // Use context's fetchAllBooths to ensure consistency
       await fetchAllBooths();
       
       if (booths && booths.length > 0) {
         console.log('SAC Dashboard: Loaded booths', booths.length);
         
-        // Sort booths by earnings
         const sortedBooths = [...booths].sort((a, b) => b.totalEarnings - a.totalEarnings);
         setLeaderboard(sortedBooths);
         
@@ -207,7 +202,6 @@ const Dashboard = () => {
   };
   
   const handleStudentFound = async (student: any, qrUrl: string) => {
-    // Get the latest user data to ensure we have the current balance
     try {
       const { data: userData, error } = await supabase
         .from('users')
@@ -216,7 +210,6 @@ const Dashboard = () => {
         .single();
       
       if (!error && userData) {
-        // Update with the latest data from Supabase
         setFoundStudent({
           ...student,
           balance: userData.tickets / 100
@@ -234,7 +227,6 @@ const Dashboard = () => {
   };
   
   const handleUserSelected = async (user: any) => {
-    // Get the latest user data to ensure we have the current balance
     try {
       const { data: userData, error } = await supabase
         .from('users')
@@ -243,7 +235,6 @@ const Dashboard = () => {
         .single();
       
       if (!error && userData) {
-        // Use the latest data from Supabase
         user = userData;
       }
     } catch (error) {
@@ -261,14 +252,12 @@ const Dashboard = () => {
     
     setFoundStudent(student);
     
-    // Generate QR code URL
     if (user.qr_code) {
       setQrCodeUrl(generateQRCode(user.qr_code));
     } else if (user.id) {
       const userData = encodeUserData(user.id);
       setQrCodeUrl(generateQRCode(userData));
       
-      // Update the user's QR code if needed
       try {
         await supabase
           .from('users')
@@ -282,31 +271,44 @@ const Dashboard = () => {
     setIsStudentDetailOpen(true);
   };
   
-  const handleCreateBooth = async (boothData: { name: string; description: string; }) => {
+  const handleCreateBooth = async (boothData: { 
+    name: string; 
+    description: string; 
+    pin: string;
+    products: { name: string; price: number; image?: string }[];
+  }) => {
     setIsBoothLoading(true);
+    
     try {
-      const { data, error } = await supabase
-        .from('booths')
-        .insert([
-          { 
-            name: boothData.name,
-            description: boothData.description,
-            members: [user?.id || ''],
-            pin: Math.floor(100000 + Math.random() * 900000).toString(),
-            sales: 0
-          }
-        ])
-        .select()
-        .single();
+      if (!user) {
+        throw new Error("You must be logged in to create a booth");
+      }
       
-      if (error) throw error;
+      const boothId = await createBooth(
+        boothData.name,
+        boothData.description || '',
+        user.id,
+        boothData.pin
+      );
+      
+      if (!boothId) {
+        throw new Error("Failed to create booth");
+      }
+      
+      if (boothData.products.length > 0) {
+        console.log("Adding products to booth:", boothData.products);
+        
+        for (const product of boothData.products) {
+          await addProductToBooth(boothId, product);
+        }
+      }
       
       toast.success('Booth created successfully');
       await loadBoothLeaderboard();
       
     } catch (error) {
       console.error('Error creating booth:', error);
-      toast.error('Failed to create booth');
+      toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
       throw error;
     } finally {
       setIsBoothLoading(false);
@@ -330,7 +332,6 @@ const Dashboard = () => {
     }
     
     try {
-      // Convert dollars to cents for the backend
       const amountInCents = Math.round(amount * 100);
       
       const result = await addFunds(studentId, amount, user.id);
@@ -338,7 +339,6 @@ const Dashboard = () => {
       if (result.success) {
         toast.success(`Successfully added $${amount.toFixed(2)} to account`);
         
-        // Refresh the student data to show updated balance
         const { data: updatedUserData, error } = await supabase
           .from('users')
           .select('*')
@@ -352,7 +352,6 @@ const Dashboard = () => {
           });
         }
         
-        // Refresh transactions
         loadTransactions();
       } else {
         toast.error('Failed to add funds');
@@ -372,7 +371,6 @@ const Dashboard = () => {
     }
     
     try {
-      // Negate the amount for refund (negative amount = refund)
       const negativeAmount = -amount;
       
       const result = await addFunds(studentId, negativeAmount, user.id);
@@ -380,7 +378,6 @@ const Dashboard = () => {
       if (result.success) {
         toast.success(`Successfully refunded $${amount.toFixed(2)}`);
         
-        // Refresh the student data to show updated balance
         const { data: updatedUserData, error } = await supabase
           .from('users')
           .select('*')
@@ -394,7 +391,6 @@ const Dashboard = () => {
           });
         }
         
-        // Refresh transactions
         loadTransactions();
       } else {
         toast.error('Failed to process refund');
@@ -408,8 +404,6 @@ const Dashboard = () => {
   };
   
   const handlePrintQRCode = () => {
-    // Implement printing functionality
-    // For now, just show a toast
     toast.info('Printing QR code - This would open a print dialog in a production environment');
   };
   

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -7,7 +6,8 @@ import {
   fetchAllBooths, 
   getBoothById, 
   getBoothsByUserId, 
-  createBooth 
+  createBooth,
+  addProductToBooth
 } from '../boothService';
 
 export interface UseBoothManagementReturn {
@@ -18,6 +18,7 @@ export interface UseBoothManagementReturn {
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
+  addProductToBooth: (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -26,7 +27,6 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize booths on component mount
   useEffect(() => {
     if (user) {
       loadBooths();
@@ -77,7 +77,6 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       const boothId = await createBooth(name, description, userId, customPin);
       
       if (boothId) {
-        // Refresh the booths list to include the new booth
         await loadBooths();
       }
       
@@ -85,6 +84,24 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     } catch (error) {
       console.error('Error in useBoothManagement.createBooth:', error);
       return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addProductToBoothImpl = async (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => {
+    setIsLoading(true);
+    try {
+      const result = await addProductToBooth(boothId, product);
+      
+      if (result) {
+        await loadBooths();
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error in useBoothManagement.addProductToBooth:', error);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +115,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     getBoothsByUserId: getBoothsByUserIdImpl,
     fetchAllBooths: fetchAllBoothsImpl,
     createBooth: createBoothImpl,
+    addProductToBooth: addProductToBoothImpl,
     isLoading
   };
 };
