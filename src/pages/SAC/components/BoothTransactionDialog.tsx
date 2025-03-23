@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,13 +10,19 @@ import { MinusCircle, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { processPurchase } from '@/contexts/transactions/transactionService';
-import { CartItem } from '@/types';
+import { CartItem, Product } from '@/types';
 
 interface BoothTransactionDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   booths: any[];
   getBoothById: (id: string) => any;
+}
+
+interface LocalCartItem {
+  product: Product;
+  quantity: number;
+  productId: string;
 }
 
 const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
@@ -33,11 +38,10 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
   const [selectedBooth, setSelectedBooth] = useState('');
   const [transactionStudentNumber, setTransactionStudentNumber] = useState('');
   const [foundStudent, setFoundStudent] = useState<any | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<LocalCartItem[]>([]);
   const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   
-  // Reset state when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
       setSelectedBooth('');
@@ -52,7 +56,6 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
   const handleBoothChange = (value: string) => {
     setSelectedBooth(value);
     
-    // Reset cart when booth changes
     setCart([]);
   };
   
@@ -96,22 +99,20 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
     }
   };
   
-  const handleAddToCart = (product: any) => {
-    // Check if product is already in cart
+  const handleAddToCart = (product: Product) => {
     const existingItem = cart.find(item => item.product.id === product.id);
     
     if (existingItem) {
-      // Update quantity
       setCart(cart.map(item => 
         item.product.id === product.id 
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
-      // Add new item
       setCart([...cart, { 
         product: product,
-        quantity: 1
+        quantity: 1,
+        productId: product.id
       }]);
     }
   };
@@ -161,19 +162,23 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
     setIsProcessingTransaction(true);
     
     try {
+      const cartItems: CartItem[] = cart.map(item => ({
+        productId: item.product.id,
+        product: item.product,
+        quantity: item.quantity
+      }));
+      
       const result = await processPurchase(
         booth.id,
         foundStudent.id,
         foundStudent.name,
         userId || '',
         userName || '',
-        cart,
+        cartItems,
         booth.name
       );
       
       if (result.success) {
-        // Ensure the UI refreshes with the updated balance
-        // Fetch the latest user data directly from Supabase
         const { data: updatedUser, error } = await supabase
           .from('users')
           .select('*')

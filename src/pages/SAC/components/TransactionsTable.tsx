@@ -15,12 +15,14 @@ export interface TransactionsTableProps {
   transactions: any[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  isLoading?: boolean;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({ 
   transactions = [],
   searchTerm = "",
-  onSearchChange = () => {}
+  onSearchChange = () => {},
+  isLoading = false
 }) => {
   // Format date helper that handles strings or Date objects
   const formatDate = (dateValue: string | Date | null | undefined) => {
@@ -58,7 +60,12 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
         </div>
       </div>
       
-      {!transactions || transactions.length === 0 ? (
+      {isLoading ? (
+        <div className="py-8 text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading transactions...</p>
+        </div>
+      ) : !transactions || transactions.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
           No transactions found
         </div>

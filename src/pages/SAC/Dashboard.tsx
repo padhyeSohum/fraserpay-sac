@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import StatCards from './components/StatCards';
 import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
@@ -463,7 +464,6 @@ const Dashboard = () => {
             />
             <TransactionsTable 
               transactions={transactions} 
-              isLoading={isTransactionLoading}
               searchTerm={transactionSearchTerm}
               onSearchChange={setTransactionSearchTerm}
             />
