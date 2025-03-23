@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -27,7 +26,6 @@ const AppRoutes: React.FC = () => {
     setLoadingTimeout(false);
   }, [location.pathname]);
   
-  // Add effect to handle page refresh
   useEffect(() => {
     const handleBeforeUnload = () => {
       sessionStorage.setItem('wasRefreshed', 'true');
@@ -35,11 +33,18 @@ const AppRoutes: React.FC = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     
-    // Check if page was refreshed
     const wasRefreshed = sessionStorage.getItem('wasRefreshed') === 'true';
     if (wasRefreshed && isAuthenticated && location.pathname !== '/dashboard') {
       navigate('/dashboard');
       sessionStorage.removeItem('wasRefreshed');
+    }
+    
+    if (!document.referrer && isAuthenticated && location.pathname !== '/login' && location.pathname !== '/register') {
+      console.log("Direct URL access detected, ensuring proper routing");
+      
+      if (location.pathname === '/' || location.pathname === '') {
+        navigate('/dashboard');
+      }
     }
     
     return () => {
@@ -98,6 +103,8 @@ const AppRoutes: React.FC = () => {
           )
         } 
       />
+      
+      <Route path="*" element={<Navigate to="/not-found" replace />} />
     </Routes>
   );
 };

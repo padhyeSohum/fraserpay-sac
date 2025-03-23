@@ -95,8 +95,8 @@ export const routes = [
     protected: true 
   },
   
-  // Catch-all 404 route
-  { path: "*", element: <NotFound /> }
+  // Explicit 404 route
+  { path: "/not-found", element: <NotFound /> },
 ];
 
 // Enhanced Loading component with timeout detection

@@ -3,10 +3,12 @@ import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     console.error(
@@ -16,7 +18,11 @@ const NotFound = () => {
   }, [location.pathname]);
 
   const handleGoHome = () => {
-    navigate("/dashboard");
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
   };
 
   return (
@@ -28,7 +34,7 @@ const NotFound = () => {
           The page you're looking for doesn't exist or has been moved.
         </p>
         <Button onClick={handleGoHome} className="w-full">
-          Return to Dashboard
+          Return to {isAuthenticated ? "Dashboard" : "Login"}
         </Button>
       </div>
     </div>
