@@ -5,7 +5,7 @@ import { AuthProvider } from '@/contexts/auth';
 import { TransactionProvider } from '@/contexts/transactions';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { QueryProvider } from './QueryProvider';
+import QueryProvider from './QueryProvider';
 
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
