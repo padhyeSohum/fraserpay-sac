@@ -20,6 +20,7 @@ import CreateBoothDialog from './components/CreateBoothDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
+import { DashboardFeatures } from '@/components/sac/DashboardFeatures';
 
 const SACDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,8 @@ const SACDashboard: React.FC = () => {
     totalTransactions: 0,
     totalRevenue: 0
   });
+
+  const [activeTab, setActiveTab] = useState('overview');
   
   // Load data on component mount
   useEffect(() => {
@@ -541,41 +544,70 @@ const SACDashboard: React.FC = () => {
       />
       
       {/* Tab content */}
-      <Tabs defaultValue="transactions" className="mb-6">
-        <TabsList className="grid grid-cols-2">
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
+      <Tabs 
+        defaultValue="overview" 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="mb-6"
+      >
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="transactions">
-          <Card>
-            <CardHeader>
-              <TransactionsTable 
-                transactions={filteredTransactions}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-              />
+        <TabsContent value="overview" className="space-y-6">
+          <Card className="p-6">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle>Dashboard Overview</CardTitle>
+              <CardDescription>
+                Quick access to key features and functionality
+              </CardDescription>
             </CardHeader>
+            
+            <div className="mt-4">
+              <DashboardFeatures />
+            </div>
           </Card>
+          
+          {/* Booth Leaderboard */}
+          <BoothLeaderboard leaderboard={leaderboard} />
         </TabsContent>
         
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <UsersTable 
-                users={filteredUsers}
-                isLoading={isUserLoading}
-                searchTerm={userSearchTerm}
-                onSearchChange={setUserSearchTerm}
-                onUserSelect={handleUserSelected}
-              />
-            </CardHeader>
-          </Card>
+        <TabsContent value="data">
+          <Tabs defaultValue="transactions" className="mb-6">
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="transactions">Transactions</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="transactions">
+              <Card>
+                <CardHeader>
+                  <TransactionsTable 
+                    transactions={filteredTransactions}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                  />
+                </CardHeader>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <Card>
+                <CardHeader>
+                  <UsersTable 
+                    users={filteredUsers}
+                    isLoading={isUserLoading}
+                    searchTerm={userSearchTerm}
+                    onSearchChange={setUserSearchTerm}
+                    onUserSelect={handleUserSelected}
+                  />
+                </CardHeader>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
-      
-      {/* Booth Leaderboard */}
-      <BoothLeaderboard leaderboard={leaderboard} />
     </div>
   );
 };
