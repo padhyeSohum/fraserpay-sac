@@ -148,8 +148,8 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
         
-        {/* Always show Navigation for authenticated users unless explicitly hidden */}
-        {user && !isLoading && !hideNavigation && (
+        {/* Always show Navigation for authenticated users regardless of the page */}
+        {user && !isLoading && (
           <Navigation />
         )}
       </header>
