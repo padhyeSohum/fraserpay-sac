@@ -49,6 +49,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     // Reset student info when dialog opens/closes
     if (!isOpen) {
       setStudentNumber('');
+      setAmount('');
       setFoundStudent(null);
     }
   }, [studentId, isOpen]);
@@ -89,6 +90,27 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       toast.error('Error finding student');
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (localStudentId && amount) {
+      try {
+        await onSubmit(localStudentId, parseFloat(amount));
+        
+        // Clear form fields after successful submission
+        setAmount('');
+        
+        // If this was a new student search (not pre-filled), reset the student info
+        if (!readOnlyId) {
+          setStudentNumber('');
+          setFoundStudent(null);
+          setLocalStudentId('');
+        }
+        
+      } catch (error) {
+        console.error('Error submitting transaction:', error);
+      }
     }
   };
 
@@ -172,11 +194,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           </Button>
           <Button 
             variant={confirmVariant} 
-            onClick={() => {
-              if (localStudentId && amount) {
-                onSubmit(localStudentId, parseFloat(amount));
-              }
-            }}
+            onClick={handleSubmit}
             disabled={!localStudentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
           >
             {confirmLabel}

@@ -81,10 +81,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
               <div className="flex flex-col items-center gap-4">
                 <div 
                   className="border p-3 rounded-md bg-white"
-                  dangerouslySetInnerHTML={{ __html: qrCodeUrl.includes('data:') ? 
-                    decodeURIComponent(qrCodeUrl.split(',')[1]) : 
-                    qrCodeUrl 
-                  }} 
+                  dangerouslySetInnerHTML={{ __html: qrCodeUrl }} 
                 />
                 <Button variant="outline" onClick={onPrintQRCode}>
                   <Printer className="h-4 w-4 mr-2" />
