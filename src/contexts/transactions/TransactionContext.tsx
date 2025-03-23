@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction, Booth, Product, CartItem } from '@/types';
 import { toast } from 'sonner';
@@ -14,7 +13,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, updateUserData } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -64,6 +63,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     if (result.success && result.transaction) {
       setTransactions(prev => [result.transaction!, ...prev]);
+      
+      if (user && studentId === user.id && result.updatedBalance !== undefined) {
+        updateUserData({
+          ...user,
+          balance: result.updatedBalance
+        });
+      }
     }
     
     return result.success;
@@ -108,6 +114,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           return booth;
         })
       );
+      
+      if (user && buyerId === user.id) {
+        updateUserData({
+          ...user,
+          balance: user.balance - totalAmount
+        });
+      }
     }
     
     return result.success;
@@ -125,7 +138,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const boothId = await BoothService.createBooth(name, description, userId);
     
     if (boothId) {
-      await fetchAllBooths(); // Refresh booths after creating a new one
+      await fetchAllBooths();
     }
     
     return boothId;
@@ -135,7 +148,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const success = await BoothService.addProductToBooth(boothId, product);
     
     if (success) {
-      await fetchAllBooths(); // Refresh booths after adding a product
+      await fetchAllBooths();
     }
     
     return success;

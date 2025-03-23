@@ -64,9 +64,9 @@ export const addFunds = async (
   paymentMethod: 'cash' | 'card',
   sacMemberId: string,
   sacMemberName: string
-): Promise<{ success: boolean, transaction?: Transaction }> => {
+): Promise<{ success: boolean, transaction?: Transaction, updatedBalance?: number }> => {
   try {
-    console.log("Adding funds:", { amount, studentId, paymentMethod, sacMemberId, sacMemberName });
+    console.log("Starting addFunds process:", { amount, studentId, paymentMethod, sacMemberId, sacMemberName });
     
     // Fetch the current user data to get their existing balance
     const { data: userData, error: userError } = await supabase
@@ -81,31 +81,21 @@ export const addFunds = async (
       return { success: false };
     }
     
+    console.log("User data fetched:", userData);
+    
     // Convert dollars to cents for storage in database
     const amountInCents = Math.round(amount * 100);
     
     // Calculate the new balance
     const newBalance = (userData.tickets || 0) + amountInCents;
-    console.log("New balance calculation:", { 
+    console.log("Balance calculation:", { 
       currentBalance: userData.tickets || 0, 
       amountToAdd: amountInCents, 
       newBalance,
       studentNumber: userData.student_number
     });
     
-    // Update the user's balance in Supabase
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ tickets: newBalance })
-      .eq('id', studentId);
-    
-    if (updateError) {
-      console.error("Error updating user balance:", updateError);
-      toast.error('Failed to update balance');
-      return { success: false };
-    }
-    
-    // Create a transaction record
+    // Create a transaction record first to ensure it's created even if the balance update fails
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
@@ -121,6 +111,20 @@ export const addFunds = async (
     if (transactionError) {
       console.error("Error creating transaction:", transactionError);
       toast.error('Failed to record transaction');
+      return { success: false };
+    }
+    
+    console.log("Transaction record created:", transactionData);
+    
+    // Now update the user's balance in Supabase
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ tickets: newBalance })
+      .eq('id', studentId);
+    
+    if (updateError) {
+      console.error("Error updating user balance:", updateError);
+      toast.error('Failed to update balance');
       return { success: false };
     }
     
@@ -146,18 +150,31 @@ export const addFunds = async (
       
     if (verifyError) {
       console.error("Error verifying balance update:", verifyError);
+      toast.error('Balance updated but verification failed');
     } else {
-      console.log("Verified balance update:", {
+      console.log("Balance update verified:", {
         previousBalance: userData.tickets || 0,
         newBalance: updatedUser.tickets,
         expectedBalance: newBalance
       });
+      
+      if (updatedUser.tickets !== newBalance) {
+        console.error("Balance mismatch after update!", {
+          expected: newBalance,
+          actual: updatedUser.tickets
+        });
+        toast.error('Balance may not have updated correctly');
+      }
     }
     
     toast.success(`Added $${amount.toFixed(2)} to ${userData.name}'s account`);
     console.log("Funds added successfully:", newTransaction);
     
-    return { success: true, transaction: newTransaction };
+    return { 
+      success: true, 
+      transaction: newTransaction, 
+      updatedBalance: newBalance / 100 // Convert back to dollars for UI
+    };
   } catch (error) {
     console.error('Error adding funds:', error);
     toast.error('Failed to add funds: ' + (error instanceof Error ? error.message : 'Unknown error'));
