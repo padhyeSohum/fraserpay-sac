@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
-import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import StatCards from './components/StatCards';
 import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
@@ -14,6 +13,7 @@ import CreateBoothDialog from './components/CreateBoothDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
+import { QRCodeSVG } from 'qrcode.react';
 
 export interface StatsData {
   totalUsers: number;
@@ -48,17 +48,22 @@ const Dashboard = () => {
   const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
   
   useEffect(() => {
-    loadUsers();
-    loadTransactions();
-    loadBoothLeaderboard();
+    try {
+      loadUsers();
+      loadTransactions();
+      loadBoothLeaderboard();
+    } catch (error) {
+      console.error("Error initializing dashboard:", error);
+      toast.error("There was an error loading data");
+    }
   }, []);
   
   useEffect(() => {
     if (userSearchTerm) {
       const filtered = usersList.filter(user => 
-        user.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-        user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-        user.student_number?.toLowerCase().includes(userSearchTerm.toLowerCase())
+        (user.name?.toLowerCase() || "").includes(userSearchTerm.toLowerCase()) || 
+        (user.email?.toLowerCase() || "").includes(userSearchTerm.toLowerCase()) || 
+        (user.student_number?.toLowerCase() || "").includes(userSearchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     } else {
@@ -135,7 +140,7 @@ const Dashboard = () => {
         // Simulate leaderboard data since we don't have real sales data
         const leaderboardData = data.map(booth => ({
           ...booth,
-          sales: Math.floor(Math.random() * 50),
+          sales: booth.sales || Math.floor(Math.random() * 50),
           revenue: Math.random() * 1000
         })).sort((a, b) => b.revenue - a.revenue);
         
@@ -210,9 +215,15 @@ const Dashboard = () => {
     setFoundStudent(student);
     
     if (user.qr_code || user.id) {
-      const userData = user.qr_code || encodeUserData(user.id);
-      const qrUrl = generateQRCode(userData);
-      setQrCodeUrl(qrUrl);
+      // Create a QR code data
+      const userData = user.qr_code || user.id;
+      // Generate QR code URL
+      try {
+        setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(userData)}`);
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+        setQrCodeUrl('');
+      }
     }
     
     setIsStudentDetailOpen(true);
@@ -299,15 +310,17 @@ const Dashboard = () => {
           isLoading={isBoothLoading}
         />
         
-        <StudentDetailDialog 
-          student={foundStudent}
-          qrCodeUrl={qrCodeUrl}
-          isOpen={isStudentDetailOpen}
-          onOpenChange={setIsStudentDetailOpen}
-          onAddFunds={handleAddFunds}
-          onRefund={handleRefund}
-          onPrintQRCode={handlePrintQRCode}
-        />
+        {foundStudent && (
+          <StudentDetailDialog 
+            student={foundStudent}
+            qrCodeUrl={qrCodeUrl}
+            isOpen={isStudentDetailOpen}
+            onOpenChange={setIsStudentDetailOpen}
+            onAddFunds={handleAddFunds}
+            onRefund={handleRefund}
+            onPrintQRCode={handlePrintQRCode}
+          />
+        )}
       </div>
     </Layout>
   );
