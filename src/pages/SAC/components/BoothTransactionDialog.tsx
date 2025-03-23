@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
   const [selectedBooth, setSelectedBooth] = useState<string | undefined>(undefined);
   const [studentNumber, setStudentNumber] = useState('');
   const [foundStudent, setFoundStudent] = useState<Student | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<{product: Product; quantity: number}[]>([]);
   const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
   const [isStudentLoading, setIsStudentLoading] = useState(false);
   const { user } = useAuth();
@@ -85,7 +86,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
           name: data.name,
           studentNumber: data.student_number,
           email: data.email,
-          balance: data.tickets / 100
+          balance: data.tickets / 100 // Fix for issue #2 - convert to dollars
         });
       } else {
         toast.error('Student not found');
@@ -109,7 +110,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
       );
       setCart(updatedCart);
     } else {
-      setCart([...cart, { productId: product.id, product, quantity: 1 }]);
+      setCart([...cart, { product, quantity: 1 }]);
     }
   };
 
@@ -147,6 +148,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
     setIsProcessingTransaction(true);
     
     try {
+      // Convert our cart format to the expected CartItem format with productId property
       const cartItems: CartItem[] = cart.map(item => ({
         productId: item.product.id,
         product: item.product,
@@ -173,7 +175,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
         if (!error && updatedUser) {
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUser.tickets / 100
+            balance: updatedUser.tickets / 100 // Fix for issue #2 - convert to dollars
           });
         }
         

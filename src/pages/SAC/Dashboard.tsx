@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
+import { formatCurrency } from '@/utils/format';
 
 export interface StatsData {
   totalUsers: number;
@@ -68,6 +70,50 @@ const Dashboard = () => {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
+  
+  // Initialize Supabase real-time subscriptions
+  useEffect(() => {
+    const usersChannel = supabase
+      .channel('dashboard-users-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'users' }, 
+        (payload) => {
+          console.log('Users change detected:', payload);
+          loadUsers();
+        }
+      )
+      .subscribe();
+      
+    const transactionsChannel = supabase
+      .channel('dashboard-transactions-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'transactions' }, 
+        (payload) => {
+          console.log('Transactions change detected:', payload);
+          loadTransactions();
+          // Also refresh booth data when transactions change
+          loadBoothLeaderboard();
+        }
+      )
+      .subscribe();
+      
+    const boothsChannel = supabase
+      .channel('dashboard-booths-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'booths' }, 
+        (payload) => {
+          console.log('Booths change detected:', payload);
+          loadBoothLeaderboard();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(usersChannel);
+      supabase.removeChannel(transactionsChannel);
+      supabase.removeChannel(boothsChannel);
+    };
+  }, []);
   
   useEffect(() => {
     let isMounted = true;
@@ -134,7 +180,8 @@ const Dashboard = () => {
         setUsersList(data);
         setFilteredUsers(data);
         
-        const totalTickets = data.reduce((sum, user) => sum + (user.tickets || 0), 0);
+        // Fix for issue #2 - convert tickets from cents to dollars for display
+        const totalTickets = data.reduce((sum, user) => sum + (user.tickets || 0), 0) / 100;
         
         setStats(prev => ({
           ...prev,
@@ -166,12 +213,13 @@ const Dashboard = () => {
         console.log('SAC Dashboard: Loaded transactions', data.length);
         setTransactions(data);
         
+        // Fix for issue #2 - convert amount from cents to dollars for display
         const totalAmount = data.reduce((sum, tx) => sum + (tx.amount || 0), 0);
         
         setStats(prev => ({
           ...prev,
           totalTransactions: data.length,
-          totalRevenue: totalAmount / 100
+          totalRevenue: totalAmount / 100 // Convert cents to dollars
         }));
       }
     } catch (error) {
@@ -219,7 +267,7 @@ const Dashboard = () => {
       if (!error && userData) {
         setFoundStudent({
           ...student,
-          balance: userData.tickets / 100
+          balance: userData.tickets / 100 // Fix for issue #2 - convert to dollars
         });
       } else {
         setFoundStudent(student);
@@ -253,7 +301,7 @@ const Dashboard = () => {
       name: user.name,
       studentNumber: user.student_number,
       email: user.email,
-      balance: user.tickets / 100,
+      balance: user.tickets / 100, // Fix for issue #2 - convert to dollars
       qrCode: user.qr_code
     };
     
@@ -355,11 +403,11 @@ const Dashboard = () => {
         if (!error && updatedUserData && foundStudent) {
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100
+            balance: updatedUserData.tickets / 100 // Fix for issue #2 - convert to dollars
           });
         }
         
-        loadTransactions();
+        // This will trigger real-time update for transactions list
       } else {
         toast.error('Failed to add funds');
       }
@@ -394,11 +442,11 @@ const Dashboard = () => {
         if (!error && updatedUserData && foundStudent) {
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100
+            balance: updatedUserData.tickets / 100 // Fix for issue #2 - convert to dollars
           });
         }
         
-        loadTransactions();
+        // This will trigger real-time update for transactions list
       } else {
         toast.error('Failed to process refund');
       }
@@ -467,6 +515,7 @@ const Dashboard = () => {
               transactions={transactions} 
               searchTerm={transactionSearchTerm}
               onSearchChange={setTransactionSearchTerm}
+              isLoading={isTransactionLoading}
             />
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/format';
 
 export interface TransactionsTableProps {
   transactions: any[];
@@ -87,15 +88,16 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   <TableCell className="font-medium">
                     {formatDate(transaction.created_at)}
                   </TableCell>
-                  <TableCell>{transaction.buyerName || 'N/A'}</TableCell>
-                  <TableCell>{transaction.boothName || 'System'}</TableCell>
+                  <TableCell>{transaction.student_name || 'N/A'}</TableCell>
+                  <TableCell>{transaction.booth_name || 'System'}</TableCell>
                   <TableCell>
-                    {transaction.type === 'booth_purchase' ? 'Purchase' : 
-                     transaction.type === 'add_funds' ? 'Add Funds' : 
+                    {transaction.type === 'purchase' ? 'Purchase' : 
+                     transaction.type === 'fund' ? 'Add Funds' : 
+                     transaction.type === 'refund' ? 'Refund' :
                      transaction.type}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ${transaction.amount?.toFixed(2) || '0.00'}
+                    ${(transaction.amount / 100).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

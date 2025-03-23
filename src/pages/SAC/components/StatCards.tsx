@@ -7,6 +7,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
+import { formatCurrency } from '@/utils/format';
 
 interface StatsData {
   totalUsers: number;
