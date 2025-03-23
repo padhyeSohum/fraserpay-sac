@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
 import { toast } from 'sonner';
@@ -8,6 +9,7 @@ const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   useEffect(() => {
     if (isLoading) {
@@ -24,6 +26,26 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     setLoadingTimeout(false);
   }, [location.pathname]);
+  
+  // Add effect to handle page refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem('wasRefreshed', 'true');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Check if page was refreshed
+    const wasRefreshed = sessionStorage.getItem('wasRefreshed') === 'true';
+    if (wasRefreshed && isAuthenticated && location.pathname !== '/dashboard') {
+      navigate('/dashboard');
+      sessionStorage.removeItem('wasRefreshed');
+    }
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isAuthenticated, navigate, location.pathname]);
   
   if (isLoading) {
     console.log("App is in loading state, auth status not determined yet");
