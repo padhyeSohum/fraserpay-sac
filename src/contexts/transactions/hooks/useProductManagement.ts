@@ -16,8 +16,11 @@ export const useProductManagement = (): UseProductManagementReturn => {
   };
 
   const addProductToBoothImpl = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
+    console.log('Adding product to booth:', { boothId, product });
     try {
-      return await addProductToBoothService(boothId, product);
+      const result = await addProductToBoothService(boothId, product);
+      console.log('Product add result:', result);
+      return result;
     } catch (error) {
       console.error('Error adding product:', error);
       return false;
@@ -25,8 +28,11 @@ export const useProductManagement = (): UseProductManagementReturn => {
   };
 
   const removeProductFromBoothImpl = async (boothId: string, productId: string) => {
+    console.log('Removing product from booth:', { boothId, productId });
     try {
-      return await removeProductFromBoothService(boothId, productId);
+      const result = await removeProductFromBoothService(boothId, productId);
+      console.log('Product remove result:', result);
+      return result;
     } catch (error) {
       console.error('Error removing product:', error);
       return false;

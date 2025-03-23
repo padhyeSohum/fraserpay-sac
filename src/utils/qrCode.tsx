@@ -3,7 +3,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Encode user data to QR code format
+// Encode user data to QR code format - ensure consistent formatting
 export const encodeUserData = (userId: string) => {
   return `USER:${userId}`;
 };
@@ -18,9 +18,14 @@ export const QRCodeComponent = ({ value, size = 200 }: { value: string, size?: n
   return <QRCodeSVG value={value} size={size} />;
 };
 
-// Validate QR code data
+// Validate QR code data with improved detection and logging
 export const validateQRCode = (qrData: string) => {
-  console.log('Validating QR code:', qrData);
+  console.log('Validating QR code data:', qrData);
+  
+  if (!qrData || typeof qrData !== 'string') {
+    console.error('Invalid QR code: empty or not a string');
+    return { isValid: false, userId: null, type: 'unknown' };
+  }
   
   // Check if it's a user QR code (case-insensitive)
   if (qrData.toUpperCase().startsWith('USER:')) {
@@ -36,14 +41,20 @@ export const validateQRCode = (qrData: string) => {
     return { isValid: true, userId: qrData, type: 'uuid' };
   }
   
-  console.log('Invalid QR code format:', qrData);
+  console.error('Invalid QR code format:', qrData);
   // Default case - invalid QR code
   return { isValid: false, userId: null, type: 'unknown' };
 };
 
-// Get user data from QR code data
+// Get user data from QR code data with better error handling
 export const getUserFromQRData = async (qrData: string) => {
   console.log('Getting user from QR data:', qrData);
+  
+  if (!qrData) {
+    console.error('Empty QR data provided');
+    return null;
+  }
+  
   const validation = validateQRCode(qrData);
   
   if (validation.isValid && validation.userId) {
@@ -57,6 +68,26 @@ export const getUserFromQRData = async (qrData: string) => {
       
       if (error) {
         console.error('Supabase error:', error);
+        
+        // If the error is that no rows were returned, try an alternative lookup
+        if (error.code === 'PGRST116') {
+          console.log('No user found with ID, trying alternative lookup methods');
+          
+          // Try looking up by student number if it looks like a student number
+          if (/^\d+$/.test(validation.userId)) {
+            const { data: studentData, error: studentError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('student_number', validation.userId)
+              .single();
+              
+            if (!studentError && studentData) {
+              console.log('Found user by student number:', studentData);
+              return studentData;
+            }
+          }
+        }
+        
         throw error;
       }
       
@@ -73,6 +104,7 @@ export const getUserFromQRData = async (qrData: string) => {
 
 // Find user by student number
 export const findUserByStudentNumber = async (studentNumber: string) => {
+  console.log('Looking up user by student number:', studentNumber);
   try {
     const { data, error } = await supabase
       .from('users')
@@ -80,7 +112,12 @@ export const findUserByStudentNumber = async (studentNumber: string) => {
       .eq('student_number', studentNumber)
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error finding user by student number:', error);
+      throw error;
+    }
+    
+    console.log('User found by student number:', data);
     return data;
   } catch (error) {
     console.error('Error finding user by student number:', error);

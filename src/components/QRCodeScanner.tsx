@@ -19,6 +19,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const scannerDivId = 'qr-scanner';
 
   useEffect(() => {
+    console.log('Initializing QR code scanner');
     const scanner = new Html5Qrcode(scannerDivId);
     scannerRef.current = scanner;
 
@@ -26,6 +27,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
 
     return () => {
       if (isScanning && scanner) {
+        console.log('Cleaning up scanner');
         scanner
           .stop()
           .catch((err) => console.error('Error stopping scanner:', err));
@@ -40,6 +42,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
     hasScannedRef.current = false; // Reset scan status
 
     try {
+      console.log('Starting QR code scanner');
       await scanner.start(
         { facingMode: 'environment' },
         {
@@ -54,12 +57,15 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
             console.log('QR code scanned successfully:', decodedText);
             setScanFeedback('QR code detected! Processing...');
             stopScanning();
-            onScan(decodedText);
+            
+            // Ensure we're passing a clean string to the handler
+            const cleanText = decodedText.trim();
+            console.log('Passing decoded text to handler:', cleanText);
+            onScan(cleanText);
           }
         },
         (errorMessage) => {
           // This is called frequently while scanning for QR codes
-          // console.log('QR scanning in progress:', errorMessage);
           // Don't set error here to avoid excessive error messages
         }
       );
@@ -72,6 +78,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
 
   const stopScanning = () => {
     if (scannerRef.current && isScanning) {
+      console.log('Stopping QR code scanner');
       scannerRef.current
         .stop()
         .then(() => {

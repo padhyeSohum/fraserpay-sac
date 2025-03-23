@@ -91,7 +91,7 @@ const BoothSell = () => {
   };
 
   const handleQRCodeScanned = async (decodedText: string) => {
-    console.log('QR code scanned:', decodedText);
+    console.log('QR code scanned in Booth Sell page:', decodedText);
     
     if (isProcessingQR) {
       console.log('Already processing a QR code, ignoring duplicate scan');
@@ -104,6 +104,7 @@ const BoothSell = () => {
     try {
       console.log('Processing QR code:', decodedText);
       const validation = validateQRCode(decodedText);
+      console.log('QR code validation result:', validation);
       
       if (!validation.isValid || !validation.userId) {
         console.error('Invalid QR code validation result:', validation);
@@ -111,8 +112,9 @@ const BoothSell = () => {
         return;
       }
       
-      console.log('QR code validated, getting user data');
+      console.log('QR code validated, getting user data for ID:', validation.userId);
       const userData = await getUserFromQRData(decodedText);
+      console.log('User data returned from getUserFromQRData:', userData);
       
       if (userData) {
         console.log('User data found:', userData);
