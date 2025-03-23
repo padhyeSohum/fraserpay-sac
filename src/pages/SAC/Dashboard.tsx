@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -71,7 +70,6 @@ const Dashboard = () => {
   
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
   
-  // Initialize Supabase real-time subscriptions
   useEffect(() => {
     const usersChannel = supabase
       .channel('dashboard-users-changes')
@@ -91,7 +89,6 @@ const Dashboard = () => {
         (payload) => {
           console.log('Transactions change detected:', payload);
           loadTransactions();
-          // Also refresh booth data when transactions change
           loadBoothLeaderboard();
         }
       )
@@ -180,7 +177,6 @@ const Dashboard = () => {
         setUsersList(data);
         setFilteredUsers(data);
         
-        // Fix for issue #2 - convert tickets from cents to dollars for display
         const totalTickets = data.reduce((sum, user) => sum + (user.tickets || 0), 0) / 100;
         
         setStats(prev => ({
@@ -213,13 +209,12 @@ const Dashboard = () => {
         console.log('SAC Dashboard: Loaded transactions', data.length);
         setTransactions(data);
         
-        // Fix for issue #2 - convert amount from cents to dollars for display
         const totalAmount = data.reduce((sum, tx) => sum + (tx.amount || 0), 0);
         
         setStats(prev => ({
           ...prev,
           totalTransactions: data.length,
-          totalRevenue: totalAmount / 100 // Convert cents to dollars
+          totalRevenue: totalAmount / 100
         }));
       }
     } catch (error) {
@@ -267,7 +262,7 @@ const Dashboard = () => {
       if (!error && userData) {
         setFoundStudent({
           ...student,
-          balance: userData.tickets / 100 // Fix for issue #2 - convert to dollars
+          balance: userData.tickets / 100
         });
       } else {
         setFoundStudent(student);
@@ -301,7 +296,7 @@ const Dashboard = () => {
       name: user.name,
       studentNumber: user.student_number,
       email: user.email,
-      balance: user.tickets / 100, // Fix for issue #2 - convert to dollars
+      balance: user.tickets / 100,
       qrCode: user.qr_code
     };
     
@@ -403,11 +398,10 @@ const Dashboard = () => {
         if (!error && updatedUserData && foundStudent) {
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100 // Fix for issue #2 - convert to dollars
+            balance: updatedUserData.tickets / 100
           });
         }
         
-        // This will trigger real-time update for transactions list
       } else {
         toast.error('Failed to add funds');
       }
@@ -442,11 +436,9 @@ const Dashboard = () => {
         if (!error && updatedUserData && foundStudent) {
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100 // Fix for issue #2 - convert to dollars
+            balance: updatedUserData.tickets / 100
           });
         }
-        
-        // This will trigger real-time update for transactions list
       } else {
         toast.error('Failed to process refund');
       }
@@ -471,7 +463,10 @@ const Dashboard = () => {
   };
   
   return (
-    <Layout title="SAC Dashboard">
+    <Layout 
+      title="SAC Dashboard" 
+      showBack={true}
+    >
       <div className="space-y-6">
         <StatCards 
           stats={stats} 
