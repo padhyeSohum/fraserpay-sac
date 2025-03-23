@@ -83,8 +83,43 @@ const SACDashboard: React.FC = () => {
     if (user && user.role === 'sac') {
       console.log('SAC Dashboard: Initializing data');
       loadData();
+      
+      // Get URL parameters to set initial active tab
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const subtabParam = urlParams.get('subtab');
+      
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      
+      // Set subtabs if present
+      if (subtabParam === 'transactions' && tabParam === 'data') {
+        // Set transactions tab active after a short delay to ensure the parent tab is loaded
+        setTimeout(() => {
+          const transactionsTab = document.querySelector('[value="transactions"]');
+          if (transactionsTab) {
+            (transactionsTab as HTMLElement).click();
+          }
+        }, 100);
+      } else if (subtabParam === 'users' && tabParam === 'data') {
+        // Set users tab active
+        setTimeout(() => {
+          const usersTab = document.querySelector('[value="users"]');
+          if (usersTab) {
+            (usersTab as HTMLElement).click();
+          }
+        }, 100);
+      }
     }
   }, [user]);
+  
+  // Update URL when tab changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', activeTab);
+    window.history.replaceState({}, '', url.toString());
+  }, [activeTab]);
   
   const loadData = async () => {
     setIsLoading(true);
@@ -492,6 +527,13 @@ const SACDashboard: React.FC = () => {
           onCreateBooth={handleCreateBooth}
           isLoading={isBoothLoading}
         />
+        
+        <Button
+          id="create-booth-button"
+          onClick={() => setIsCreateBoothOpen(true)}
+        >
+          Create Booth
+        </Button>
         
         <Button
           onClick={() => {
