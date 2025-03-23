@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -10,7 +9,6 @@ const AppRoutes: React.FC = () => {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
   
-  // Monitor for prolonged loading to detect potential freezes
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
@@ -23,12 +21,10 @@ const AppRoutes: React.FC = () => {
     }
   }, [isLoading]);
   
-  // Reset timeout when route changes
   useEffect(() => {
     setLoadingTimeout(false);
   }, [location.pathname]);
   
-  // Show clear loading message while auth is being determined
   if (isLoading) {
     console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen timeout={loadingTimeout} />;
@@ -39,7 +35,6 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {routes.map((route, index) => {
-        // Handle routes that require authentication
         if (route.protected) {
           if (route.requiredRoles) {
             return (
@@ -68,18 +63,14 @@ const AppRoutes: React.FC = () => {
           );
         }
         
-        // Regular routes without authentication
         return <Route key={index} path={route.path} element={route.element} />;
       })}
       
-      {/* Root route redirects based on auth status */}
       <Route 
         path="/" 
         element={
           isAuthenticated ? (
-            user?.role === 'sac' ? 
-              <Navigate to="/sac/dashboard" replace /> : 
-              <Navigate to="/dashboard" replace />
+            <Navigate to="/dashboard" replace />
           ) : (
             <Navigate to="/login" replace />
           )

@@ -183,7 +183,7 @@ const SACDashboard: React.FC = () => {
   }, [userSearchTerm, usersList]);
   
   const handleHomeClick = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const handleAddFunds = async () => {
