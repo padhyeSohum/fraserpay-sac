@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -66,7 +65,6 @@ const SACDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   
-  // Student search functionality
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [foundStudent, setFoundStudent] = useState<any | null>(null);
   const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
@@ -113,13 +111,7 @@ const SACDashboard: React.FC = () => {
     }
     
     try {
-      const result = await addFunds(
-        amountValue, 
-        studentId, 
-        'cash',
-        user.id,
-        user.name
-      );
+      const result = await addFunds(studentId, amountValue, user.id);
       
       if (result.success) {
         setIsAddFundsOpen(false);
@@ -127,16 +119,14 @@ const SACDashboard: React.FC = () => {
         setAmount('');
         toast.success(`Successfully added $${amountValue.toFixed(2)} to account`);
         
-        // Refresh transactions
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
         
-        // If this was for the found student, update the balance
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
             ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
+            balance: (result.updatedBalance || foundStudent.balance) / 100
           });
         }
       }
@@ -160,14 +150,7 @@ const SACDashboard: React.FC = () => {
     }
     
     try {
-      // Process a negative amount for a refund
-      const result = await addFunds(
-        -amountValue, 
-        studentId, 
-        'cash',
-        user.id,
-        user.name
-      );
+      const result = await addFunds(studentId, -amountValue, user.id);
       
       if (result.success) {
         setIsRefundOpen(false);
@@ -175,16 +158,14 @@ const SACDashboard: React.FC = () => {
         setAmount('');
         toast.success(`Successfully refunded $${amountValue.toFixed(2)} from account`);
         
-        // Refresh transactions
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
         
-        // If this was for the found student, update the balance
         if (foundStudent && foundStudent.id === studentId) {
           setFoundStudent({
             ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
+            balance: (result.updatedBalance || foundStudent.balance) / 100
           });
         }
       }
@@ -203,7 +184,6 @@ const SACDashboard: React.FC = () => {
     setIsSearching(true);
     
     try {
-      // First try to find the student in Supabase
       let { data: userData, error } = await supabase
         .from('users')
         .select('*')
@@ -218,7 +198,6 @@ const SACDashboard: React.FC = () => {
       }
       
       if (userData && userData.length > 0) {
-        // Transform the user data to our app's User type
         const student = userData[0];
         
         setFoundStudent({
@@ -226,20 +205,18 @@ const SACDashboard: React.FC = () => {
           name: student.name,
           studentNumber: student.student_number,
           email: student.email,
-          balance: student.tickets / 100, // Convert cents to dollars
+          balance: student.tickets / 100,
           qrCode: student.qr_code
         });
         
         setIsStudentDetailOpen(true);
         
-        // Generate QR code for the student using their existing QR code or ID
         if (student.qr_code || student.id) {
           const userData = student.qr_code || encodeUserData(student.id);
           const qrUrl = generateQRCode(userData);
           setQrCodeUrl(qrUrl);
         }
       } else {
-        // No student found in Supabase
         toast.error('No student found with that ID, name, or email');
       }
     } catch (error) {
@@ -253,14 +230,12 @@ const SACDashboard: React.FC = () => {
   const handlePrintQRCode = () => {
     if (!qrCodeUrl) return;
     
-    // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast.error('Please allow popups to print the QR code');
       return;
     }
     
-    // Write the QR code to the new window and print it
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -468,7 +443,6 @@ const SACDashboard: React.FC = () => {
         </Dialog>
       </div>
       
-      {/* Student Detail Dialog */}
       <Dialog open={isStudentDetailOpen} onOpenChange={setIsStudentDetailOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -554,7 +528,6 @@ const SACDashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Refund Dialog */}
       <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
         <DialogContent>
           <DialogHeader>

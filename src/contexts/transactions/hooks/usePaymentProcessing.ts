@@ -16,7 +16,7 @@ export interface UsePaymentProcessingReturn {
     cartItems: CartItem[],
     boothName: string
   ) => Promise<{ success: boolean, transaction?: Transaction }>;
-  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<number>;
+  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean, updatedBalance?: number }>;
   isLoading: boolean;
 }
 
@@ -95,10 +95,10 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
     }
   };
   
-  const addFundsImpl = async (userId: string, amount: number, sacMemberId: string): Promise<number> => {
+  const addFundsImpl = async (userId: string, amount: number, sacMemberId: string): Promise<{ success: boolean, updatedBalance?: number }> => {
     if (!user) {
       toast.error('You must be logged in to add funds');
-      return 0;
+      return { success: false };
     }
     
     setIsLoading(true);
@@ -117,20 +117,20 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
         if (userId === user.id) {
           updateUserData({
             ...user,
-            balance: result.updatedBalance
+            balance: result.updatedBalance / 100
           });
         }
         
         toast.success(`Successfully added $${amount.toFixed(2)} to account`);
-        return result.updatedBalance;
+        return { success: true, updatedBalance: result.updatedBalance };
       } else {
         toast.error('Failed to add funds');
-        return 0;
+        return { success: false };
       }
     } catch (error) {
       console.error('Error adding funds:', error);
       toast.error('Failed to add funds');
-      return 0;
+      return { success: false };
     } finally {
       setIsLoading(false);
     }

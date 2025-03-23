@@ -21,3 +21,8 @@ export const formatDate = (date: Date): string => {
 export const formatStudentNumber = (studentNumber: string): string => {
   return studentNumber || 'N/A';
 };
+
+// Format percentage (e.g. 75%)
+export const formatPercentage = (value: number): string => {
+  return `${Math.round(value)}%`;
+};
