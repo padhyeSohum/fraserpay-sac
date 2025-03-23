@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
@@ -65,15 +66,9 @@ const Leaderboard = () => {
                               ? 'text-amber-200' 
                               : 'text-muted-foreground'
                       }`}>
-                        Total Sales
+                        Ranking: #{index + 1}
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className={`text-xl font-bold ${
-                    index < 3 ? 'text-white' : ''
-                  }`}>
-                    ${entry.earnings.toFixed(2)}
                   </div>
                 </div>
               </CardContent>
