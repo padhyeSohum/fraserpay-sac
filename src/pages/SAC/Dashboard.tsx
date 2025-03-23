@@ -44,7 +44,6 @@ const SACDashboard: React.FC = () => {
     findUserByStudentNumber
   } = useTransactions();
   
-  // State definitions
   const [transactions, setTransactions] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
@@ -75,7 +74,6 @@ const SACDashboard: React.FC = () => {
     totalRevenue: 0
   });
   
-  // Load data on component mount
   useEffect(() => {
     if (user && user.role === 'sac') {
       console.log('SAC Dashboard: Initializing data');
@@ -88,7 +86,6 @@ const SACDashboard: React.FC = () => {
     try {
       await loadBooths();
       
-      // Safely get transactions
       let allTransactions = [];
       try {
         allTransactions = getSACTransactions() || [];
@@ -100,7 +97,6 @@ const SACDashboard: React.FC = () => {
       setTransactions(allTransactions);
       setFilteredTransactions(allTransactions);
       
-      // Safely get leaderboard
       let boothLeaderboard = [];
       try {
         boothLeaderboard = getLeaderboard() || [];
@@ -163,7 +159,6 @@ const SACDashboard: React.FC = () => {
     }
   };
   
-  // Update filtered data when search terms change
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredTransactions(transactions);
@@ -192,7 +187,6 @@ const SACDashboard: React.FC = () => {
     }
   }, [userSearchTerm, usersList]);
   
-  // Navigation and dialog handlers
   const handleHomeClick = () => {
     navigate('/dashboard');
   };
@@ -211,18 +205,32 @@ const SACDashboard: React.FC = () => {
         setStudentId('');
         toast.success(`Successfully added $${amount.toFixed(2)} to account`);
         
-        // Refresh data
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
         calculateStats(allTransactions);
         
         if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({
-            ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
-          });
+          const { data: updatedUser } = await supabase
+            .from('users')
+            .select('tickets')
+            .eq('id', studentId)
+            .single();
+            
+          if (updatedUser) {
+            setFoundStudent({
+              ...foundStudent, 
+              balance: updatedUser.tickets / 100
+            });
+          } else {
+            setFoundStudent({
+              ...foundStudent, 
+              balance: (result.updatedBalance || foundStudent.balance)
+            });
+          }
         }
+        
+        await loadUsers();
       }
     } catch (error) {
       console.error('Error adding funds:', error);
@@ -244,18 +252,32 @@ const SACDashboard: React.FC = () => {
         setStudentId('');
         toast.success(`Successfully refunded $${amount.toFixed(2)} from account`);
         
-        // Refresh data
         const allTransactions = getSACTransactions();
         setTransactions(allTransactions);
         setFilteredTransactions(allTransactions);
         calculateStats(allTransactions);
         
         if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({
-            ...foundStudent, 
-            balance: (result.updatedBalance || foundStudent.balance)
-          });
+          const { data: updatedUser } = await supabase
+            .from('users')
+            .select('tickets')
+            .eq('id', studentId)
+            .single();
+            
+          if (updatedUser) {
+            setFoundStudent({
+              ...foundStudent, 
+              balance: updatedUser.tickets / 100
+            });
+          } else {
+            setFoundStudent({
+              ...foundStudent, 
+              balance: (result.updatedBalance || foundStudent.balance)
+            });
+          }
         }
+        
+        await loadUsers();
       }
     } catch (error) {
       console.error('Error refunding funds:', error);
@@ -378,7 +400,7 @@ const SACDashboard: React.FC = () => {
             <p>Student ID: ${foundStudent.studentNumber || 'N/A'}</p>
             <p>Balance: $${foundStudent.balance?.toFixed(2) || '0.00'}</p>
             <div class="qr-code">
-              ${decodeURIComponent(qrCodeUrl.split(',')[1])}
+              <img src="${qrCodeUrl}" alt="QR Code" style="width: 100%; height: 100%;" />
             </div>
             <button onclick="window.print(); setTimeout(() => window.close(), 500);">
               Print QR Code
@@ -412,7 +434,6 @@ const SACDashboard: React.FC = () => {
     setIsStudentDetailOpen(true);
   };
   
-  // Access denied if not SAC
   if (!user || user.role !== 'sac') {
     return (
       <div className="container mx-auto py-10">
@@ -428,7 +449,6 @@ const SACDashboard: React.FC = () => {
     );
   }
   
-  // Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto py-10">
@@ -458,13 +478,10 @@ const SACDashboard: React.FC = () => {
         </Button>
       </div>
       
-      {/* Stats Display */}
       <StatCards stats={stats} />
       
-      {/* Student Search */}
       <StudentSearch onStudentFound={handleStudentFound} />
       
-      {/* Action Buttons */}
       <div className="flex justify-end gap-2 mb-6">
         <BoothTransactionDialog 
           isOpen={isBoothTransactionOpen}
@@ -500,7 +517,6 @@ const SACDashboard: React.FC = () => {
         </Button>
       </div>
       
-      {/* Dialogs */}
       <StudentDetailDialog
         isOpen={isStudentDetailOpen}
         onOpenChange={setIsStudentDetailOpen}
@@ -540,7 +556,6 @@ const SACDashboard: React.FC = () => {
         readOnlyId={!!foundStudent}
       />
       
-      {/* Tab content */}
       <Tabs defaultValue="transactions" className="mb-6">
         <TabsList className="grid grid-cols-2">
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -574,7 +589,6 @@ const SACDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Booth Leaderboard */}
       <BoothLeaderboard leaderboard={leaderboard} />
     </div>
   );

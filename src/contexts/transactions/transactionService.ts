@@ -92,7 +92,19 @@ export const addFunds = async (
       studentNumber: userData.student_number
     });
     
-    // Create a transaction record first to ensure it's created even if the balance update fails
+    // Update the user's balance in Supabase first to ensure it's updated
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ tickets: newBalance })
+      .eq('id', userId);
+    
+    if (updateError) {
+      console.error("Error updating user balance:", updateError);
+      toast.error('Failed to update balance');
+      return { success: false };
+    }
+    
+    // Now create the transaction record
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
@@ -112,31 +124,6 @@ export const addFunds = async (
     }
     
     console.log("Transaction record created:", transactionData);
-    
-    // Now update the user's balance in Supabase
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ tickets: newBalance })
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error("Error updating user balance:", updateError);
-      toast.error('Failed to update balance');
-      return { success: false };
-    }
-    
-    // Add the new transaction to the local state
-    const newTransaction: Transaction = {
-      id: transactionData.id,
-      timestamp: new Date(transactionData.created_at).getTime(),
-      buyerId: userId,
-      buyerName: userData.name,
-      amount: Math.abs(amount),
-      type: amount >= 0 ? 'fund' : 'refund',
-      paymentMethod: 'cash',
-      sacMemberId,
-      sacMemberName: undefined
-    };
     
     // Verify the update was successful by fetching the user again
     const { data: updatedUser, error: verifyError } = await supabase
@@ -164,13 +151,26 @@ export const addFunds = async (
       }
     }
     
+    // Add the new transaction to the local state
+    const newTransaction: Transaction = {
+      id: transactionData.id,
+      timestamp: new Date(transactionData.created_at).getTime(),
+      buyerId: userId,
+      buyerName: userData.name,
+      amount: Math.abs(amount),
+      type: amount >= 0 ? 'fund' : 'refund',
+      paymentMethod: 'cash',
+      sacMemberId,
+      sacMemberName: undefined
+    };
+    
     toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
     console.log("Funds processed successfully:", newTransaction);
     
     return { 
       success: true, 
       transaction: newTransaction, 
-      updatedBalance: newBalance / 100 // Convert back to dollars for UI
+      updatedBalance: updatedUser ? updatedUser.tickets / 100 : newBalance / 100 // Convert back to dollars for UI
     };
   } catch (error) {
     console.error('Error processing funds:', error);

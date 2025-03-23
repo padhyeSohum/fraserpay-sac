@@ -1,23 +1,25 @@
+
 import { QRCodeSVG } from 'qrcode.react';
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate a real QR code as SVG string
+// Generate a real QR code as SVG string and data URL
 export const generateQRCode = (text: string): string => {
   try {
-    const qrCode = ReactDOMServer.renderToString(
-      React.createElement(QRCodeSVG, {
-        value: text,
-        size: 250,
-        bgColor: "#ffffff",
-        fgColor: "#000000",
-        level: "H",
-        includeMargin: true
-      })
-    );
-    
-    return qrCode;
+    // Use data URL format instead of SVG string for better compatibility
+    return `data:image/svg+xml,${encodeURIComponent(
+      ReactDOMServer.renderToString(
+        React.createElement(QRCodeSVG, {
+          value: text,
+          size: 250,
+          bgColor: "#ffffff",
+          fgColor: "#000000",
+          level: "H",
+          includeMargin: true
+        })
+      )
+    )}`;
   } catch (error) {
     console.error('Error generating QR code:', error);
     return '';
