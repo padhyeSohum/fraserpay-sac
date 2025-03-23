@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface QRCodeScannerProps {
   onScan: (data: string) => void;
@@ -11,6 +12,7 @@ interface QRCodeScannerProps {
 
 const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const [error, setError] = useState<string | null>(null);
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const hasScannedRef = useRef<boolean>(false); // Ref to track scan status
@@ -34,6 +36,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const startScanning = async (scanner: Html5Qrcode) => {
     setIsScanning(true);
     setError(null);
+    setScanFeedback(null);
     hasScannedRef.current = false; // Reset scan status
 
     try {
@@ -48,13 +51,15 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
           // Only process the scan if we haven't already scanned
           if (!hasScannedRef.current) {
             hasScannedRef.current = true; // Mark as scanned
-            console.log('QR code scanned successfully, stopping scanner');
+            console.log('QR code scanned successfully:', decodedText);
+            setScanFeedback('QR code detected! Processing...');
             stopScanning();
             onScan(decodedText);
           }
         },
         (errorMessage) => {
-          console.log('QR scanning in progress:', errorMessage);
+          // This is called frequently while scanning for QR codes
+          // console.log('QR scanning in progress:', errorMessage);
           // Don't set error here to avoid excessive error messages
         }
       );
@@ -102,11 +107,19 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
         />
         
         {error && (
-          <div className="text-sm text-red-500 mt-2">
-            {error === 'NotAllowedError: Permission denied'
-              ? 'Camera access was denied. Please allow camera access to scan QR codes.'
-              : error}
-          </div>
+          <Alert variant="destructive" className="mt-2">
+            <AlertDescription>
+              {error === 'NotAllowedError: Permission denied'
+                ? 'Camera access was denied. Please allow camera access to scan QR codes.'
+                : error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {scanFeedback && (
+          <Alert className="mt-2 bg-muted">
+            <AlertDescription>{scanFeedback}</AlertDescription>
+          </Alert>
         )}
         
         <p className="text-sm text-muted-foreground text-center">

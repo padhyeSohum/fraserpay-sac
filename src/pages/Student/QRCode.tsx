@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
-import { encodeUserData, generateQRCode } from '@/utils/qrCode';
+import { encodeUserData } from '@/utils/qrCode';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,8 +40,22 @@ const QRCode = () => {
           });
         }
         
-        // Return the updated QR code from the database
-        return freshUserData.qr_code || encodeUserData(user.id);
+        // Use the stored QR code or generate a new one
+        let qrCode = freshUserData.qr_code;
+        
+        // If no QR code exists, generate a new one using the standardized format
+        if (!qrCode) {
+          qrCode = encodeUserData(user.id);
+          
+          // Store the new QR code in the database
+          console.log("Storing new QR code in database:", qrCode);
+          await supabase
+            .from('users')
+            .update({ qr_code: qrCode })
+            .eq('id', user.id);
+        }
+        
+        return qrCode;
       }
       
       // Default fallback - use the user ID to create QR data
@@ -96,14 +110,18 @@ const QRCode = () => {
     setIsRefreshing(true);
     
     try {
-      // Refresh user data first
-      const qrData = await refreshUserData();
+      // Generate a new QR code
+      const newQrCode = encodeUserData(user.id);
+      
+      // Update the QR code in the database
+      await supabase
+        .from('users')
+        .update({ qr_code: newQrCode })
+        .eq('id', user.id);
       
       // Add a small delay for UI feedback
       setTimeout(() => {
-        if (qrData) {
-          setQrCodeData(qrData);
-        }
+        setQrCodeData(newQrCode);
         setIsRefreshing(false);
       }, 600);
     } catch (error) {

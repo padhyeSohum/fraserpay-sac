@@ -99,6 +99,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     setIsScanning(false);
     
     try {
+      // Case insensitive handling of QR code format
       const userData = await getUserFromQRData(decodedText);
       
       if (userData) {
@@ -116,9 +117,10 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
         
         // If user doesn't have a QR code saved, update it
         if (!userData.qr_code) {
+          const standardQrCode = encodeUserData(userData.id);
           await supabase
             .from('users')
-            .update({ qr_code: decodedText })
+            .update({ qr_code: standardQrCode })
             .eq('id', userData.id);
         }
         

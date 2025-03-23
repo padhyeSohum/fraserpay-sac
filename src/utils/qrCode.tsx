@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Encode user data to QR code format
 export const encodeUserData = (userId: string) => {
-  return `user:${userId}`;
+  return `USER:${userId}`;
 };
 
 // Generate QR code URL for a given data string
@@ -20,35 +20,47 @@ export const QRCodeComponent = ({ value, size = 200 }: { value: string, size?: n
 
 // Validate QR code data
 export const validateQRCode = (qrData: string) => {
-  // Check if it's a user QR code
-  if (qrData.startsWith('user:')) {
-    const userId = qrData.slice(5); // Remove 'user:' prefix
+  console.log('Validating QR code:', qrData);
+  
+  // Check if it's a user QR code (case-insensitive)
+  if (qrData.toUpperCase().startsWith('USER:')) {
+    const userId = qrData.slice(5); // Remove 'USER:' prefix
+    console.log('Found USER: format QR code with ID:', userId);
     return { isValid: true, userId, type: 'user' };
   }
   
   // If QR code data is a UUID, treat it as a user ID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(qrData)) {
+    console.log('Found UUID format QR code:', qrData);
     return { isValid: true, userId: qrData, type: 'uuid' };
   }
   
+  console.log('Invalid QR code format:', qrData);
   // Default case - invalid QR code
   return { isValid: false, userId: null, type: 'unknown' };
 };
 
 // Get user data from QR code data
 export const getUserFromQRData = async (qrData: string) => {
+  console.log('Getting user from QR data:', qrData);
   const validation = validateQRCode(qrData);
   
   if (validation.isValid && validation.userId) {
     try {
+      console.log('Querying Supabase for user ID:', validation.userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', validation.userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('User data found:', data);
       return data;
     } catch (error) {
       console.error('Error fetching user from QR data:', error);
