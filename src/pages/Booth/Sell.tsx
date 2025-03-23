@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -12,7 +13,6 @@ import { Scan, X, Check, User, Search } from 'lucide-react';
 import { validateQRCode, getUserFromQRData, findUserByStudentNumber } from '@/utils/qrCode';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import QRCodeScanner from '@/components/QRCodeScanner';
 
 const BoothSell = () => {
@@ -368,43 +368,45 @@ const BoothSell = () => {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <h3 className="font-medium">Select Products</h3>
-                
-                {booth.products.map(product => (
-                  <ProductItem
-                    key={product.id}
-                    product={product}
-                    quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
-                    onIncrement={() => handleProductSelect(product)}
-                    onDecrement={() => handleDecrement(product.id)}
-                    selectable
-                  />
-                ))}
-              </div>
-              
-              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
-                <div className="flex justify-between items-center mb-2 max-w-md mx-auto">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total Items</div>
-                    <div className="font-medium">{totalItems} items</div>
-                  </div>
+              <>
+                <div className="space-y-3">
+                  <h3 className="font-medium">Select Products</h3>
                   
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">Total Amount</div>
-                    <div className="text-xl font-bold">${totalAmount.toFixed(2)}</div>
-                  </div>
+                  {booth.products.map(product => (
+                    <ProductItem
+                      key={product.id}
+                      product={product}
+                      quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
+                      onIncrement={() => handleProductSelect(product)}
+                      onDecrement={() => handleDecrement(product.id)}
+                      selectable
+                    />
+                  ))}
                 </div>
                 
-                <Button
-                  onClick={handleConfirmPurchase}
-                  disabled={cart.length === 0}
-                  className="w-full max-w-md mx-auto bg-green-500 hover:bg-green-600 text-white"
-                >
-                  <Check className="h-5 w-5 mr-2" />
-                  Confirm Purchase
-                </Button>
-              </div>
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
+                  <div className="flex justify-between items-center mb-2 max-w-md mx-auto">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Total Items</div>
+                      <div className="font-medium">{totalItems} items</div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">Total Amount</div>
+                      <div className="text-xl font-bold">${totalAmount.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={handleConfirmPurchase}
+                    disabled={cart.length === 0}
+                    className="w-full max-w-md mx-auto bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    <Check className="h-5 w-5 mr-2" />
+                    Confirm Purchase
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </TabsContent>
