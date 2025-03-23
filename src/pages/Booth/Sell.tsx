@@ -9,10 +9,11 @@ import Layout from '@/components/Layout';
 import ProductItem from '@/components/ProductItem';
 import { CartItem, Product } from '@/types';
 import { Scan, X, Check, User, Search } from 'lucide-react';
-import { validateQRCode, getUserFromQRData } from '@/utils/qrCode';
+import { validateQRCode, getUserFromQRData, findUserByStudentNumber } from '@/utils/qrCode';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import QRCodeScanner from '@/components/QRCodeScanner';
 
 const BoothSell = () => {
   const { boothId } = useParams<{ boothId: string }>();
@@ -37,7 +38,6 @@ const BoothSell = () => {
   }, [boothId, getBoothById]);
 
   useEffect(() => {
-    // Check if user has access to this booth
     if (user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
@@ -45,11 +45,9 @@ const BoothSell = () => {
   }, [user, booth, navigate]);
 
   const handleProductSelect = (product: Product) => {
-    // Check if product is already in cart
     const existingItem = cart.find(item => item.productId === product.id);
     
     if (existingItem) {
-      // Increment quantity
       const updatedCart = cart.map(item => 
         item.productId === product.id 
           ? { ...item, quantity: item.quantity + 1 } 
@@ -57,7 +55,6 @@ const BoothSell = () => {
       );
       setCart(updatedCart);
     } else {
-      // Add new item to cart
       setCart([...cart, { productId: product.id, product, quantity: 1 }]);
     }
   };
@@ -66,7 +63,6 @@ const BoothSell = () => {
     const existingItem = cart.find(item => item.productId === productId);
     
     if (existingItem && existingItem.quantity > 1) {
-      // Decrement quantity
       const updatedCart = cart.map(item => 
         item.productId === productId 
           ? { ...item, quantity: item.quantity - 1 } 
@@ -74,7 +70,6 @@ const BoothSell = () => {
       );
       setCart(updatedCart);
     } else {
-      // Remove item from cart
       const updatedCart = cart.filter(item => item.productId !== productId);
       setCart(updatedCart);
     }
@@ -84,7 +79,6 @@ const BoothSell = () => {
     const existingItem = cart.find(item => item.productId === productId);
     
     if (existingItem) {
-      // Increment quantity
       const updatedCart = cart.map(item => 
         item.productId === productId 
           ? { ...item, quantity: item.quantity + 1 } 
@@ -94,33 +88,38 @@ const BoothSell = () => {
     }
   };
 
-  const handleScanQR = () => {
-    setScanning(true);
+  const handleQRCodeScanned = async (decodedText: string) => {
+    console.log('QR code scanned:', decodedText);
+    setScanning(false);
     
-    // For demo purposes, we'll simulate scanning a QR code
-    setTimeout(() => {
-      // Get a random user from localStorage
-      const usersStr = localStorage.getItem('users');
-      const users = usersStr ? JSON.parse(usersStr) : [];
-      
-      if (users.length > 0) {
-        const randomUser = users[Math.floor(Math.random() * users.length)];
-        setCustomer({
-          id: randomUser.id,
-          name: randomUser.name,
-          balance: randomUser.balance
-        });
-      } else {
-        // Create a demo customer if no users found
-        setCustomer({
-          id: 'demo123',
-          name: 'Demo Customer',
-          balance: 50.0
-        });
+    try {
+      const validation = validateQRCode(decodedText);
+      if (!validation.isValid || !validation.userId) {
+        toast.error('Invalid QR code');
+        return;
       }
       
-      setScanning(false);
-    }, 1500);
+      const userData = await getUserFromQRData(decodedText);
+      
+      if (userData) {
+        setCustomer({
+          id: userData.id,
+          name: userData.name,
+          balance: userData.tickets / 100  // Convert cents to dollars
+        });
+        
+        toast.success(`Found customer: ${userData.name}`);
+      } else {
+        toast.error('Customer not found');
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      toast.error('Failed to process QR code');
+    }
+  };
+
+  const handleScanQR = () => {
+    setScanning(true);
   };
 
   const handleStudentLookup = async () => {
@@ -132,36 +131,18 @@ const BoothSell = () => {
     setIsLoadingStudent(true);
     
     try {
-      // Try to find the user in Supabase
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('student_number', studentNumber)
-        .single();
+      const userData = await findUserByStudentNumber(studentNumber);
       
-      if (error || !data) {
-        // Fallback to local storage
-        const usersStr = localStorage.getItem('users');
-        const users = usersStr ? JSON.parse(usersStr) : [];
-        const foundUser = users.find((u: any) => u.studentNumber === studentNumber);
-        
-        if (foundUser) {
-          setCustomer({
-            id: foundUser.id,
-            name: foundUser.name,
-            balance: foundUser.balance
-          });
-        } else {
-          toast.error('Student not found');
-          setCustomer(null);
-        }
-      } else {
-        // User found in Supabase
+      if (userData) {
         setCustomer({
-          id: data.id,
-          name: data.name,
-          balance: data.tickets / 100  // Convert cents to dollars
+          id: userData.id,
+          name: userData.name,
+          balance: userData.tickets / 100  // Convert cents to dollars
         });
+        toast.success(`Found customer: ${userData.name}`);
+      } else {
+        toast.error('Student not found');
+        setCustomer(null);
       }
     } catch (error) {
       console.error('Error looking up student:', error);
@@ -182,7 +163,6 @@ const BoothSell = () => {
       return;
     }
     
-    // Calculate total
     const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
     
     if (customer.balance < total) {
@@ -202,10 +182,8 @@ const BoothSell = () => {
       );
       
       if (success) {
-        // Clear cart and customer after successful purchase
         setCart([]);
         
-        // Add a delay before clearing customer to allow them to see the success message
         setTimeout(() => {
           setCustomer(null);
           setStudentNumber('');
@@ -220,7 +198,6 @@ const BoothSell = () => {
   };
 
   const handleCancelSale = () => {
-    // Clear cart and customer
     setCart([]);
     setCustomer(null);
     setStudentNumber('');
@@ -244,7 +221,6 @@ const BoothSell = () => {
     setStudentNumber('');
   };
 
-  // Calculate total
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
@@ -281,7 +257,6 @@ const BoothSell = () => {
         
         <TabsContent value="sell" className="animate-fade-in mt-6">
           <div className="space-y-6">
-            {/* Customer Info (after scanning) */}
             {customer && (
               <Card className="border-border/50 shadow-sm bg-white overflow-hidden">
                 <CardContent className="p-4">
@@ -309,7 +284,6 @@ const BoothSell = () => {
               </Card>
             )}
             
-            {/* Products List or Scan QR code */}
             {!customer ? (
               <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-border rounded-lg bg-muted/20">
                 <div className="flex justify-center space-x-4 mb-6">
@@ -332,23 +306,29 @@ const BoothSell = () => {
                 </div>
                 
                 {lookupMode === 'scan' ? (
-                  <>
-                    <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                      <Scan className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    
-                    <p className="text-muted-foreground mb-6">
-                      {scanning ? "Scanning..." : "Scan customer's QR code to begin"}
-                    </p>
-                    
-                    <Button 
-                      onClick={handleScanQR} 
-                      disabled={scanning}
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      {scanning ? "Scanning..." : "Simulate Scan"}
-                    </Button>
-                  </>
+                  scanning ? (
+                    <QRCodeScanner 
+                      onScan={handleQRCodeScanned} 
+                      onClose={() => setScanning(false)}
+                    />
+                  ) : (
+                    <>
+                      <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                        <Scan className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      
+                      <p className="text-muted-foreground mb-6">
+                        Scan customer's QR code to begin
+                      </p>
+                      
+                      <Button 
+                        onClick={handleScanQR}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        Start Scanner
+                      </Button>
+                    </>
+                  )
                 ) : (
                   <div className="w-full max-w-md">
                     <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-4 mx-auto">
@@ -388,47 +368,43 @@ const BoothSell = () => {
                 )}
               </div>
             ) : (
-              <>
-                {/* Product List */}
-                <div className="space-y-3">
-                  <h3 className="font-medium">Select Products</h3>
-                  
-                  {booth.products.map(product => (
-                    <ProductItem
-                      key={product.id}
-                      product={product}
-                      quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
-                      onIncrement={() => handleProductSelect(product)}
-                      onDecrement={() => handleDecrement(product.id)}
-                      selectable
-                    />
-                  ))}
-                </div>
+              <div className="space-y-3">
+                <h3 className="font-medium">Select Products</h3>
                 
-                {/* Cart Summary */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
-                  <div className="flex justify-between items-center mb-2 max-w-md mx-auto">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Total Items</div>
-                      <div className="font-medium">{totalItems} items</div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">Total Amount</div>
-                      <div className="text-xl font-bold">${totalAmount.toFixed(2)}</div>
-                    </div>
+                {booth.products.map(product => (
+                  <ProductItem
+                    key={product.id}
+                    product={product}
+                    quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
+                    onIncrement={() => handleProductSelect(product)}
+                    onDecrement={() => handleDecrement(product.id)}
+                    selectable
+                  />
+                ))}
+              </div>
+              
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
+                <div className="flex justify-between items-center mb-2 max-w-md mx-auto">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Total Items</div>
+                    <div className="font-medium">{totalItems} items</div>
                   </div>
                   
-                  <Button
-                    onClick={handleConfirmPurchase}
-                    disabled={cart.length === 0}
-                    className="w-full max-w-md mx-auto bg-green-500 hover:bg-green-600 text-white"
-                  >
-                    <Check className="h-5 w-5 mr-2" />
-                    Confirm Purchase
-                  </Button>
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">Total Amount</div>
+                    <div className="text-xl font-bold">${totalAmount.toFixed(2)}</div>
+                  </div>
                 </div>
-              </>
+                
+                <Button
+                  onClick={handleConfirmPurchase}
+                  disabled={cart.length === 0}
+                  className="w-full max-w-md mx-auto bg-green-500 hover:bg-green-600 text-white"
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  Confirm Purchase
+                </Button>
+              </div>
             )}
           </div>
         </TabsContent>
