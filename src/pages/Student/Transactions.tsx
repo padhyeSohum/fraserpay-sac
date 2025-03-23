@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import { DateRange } from '@/types';
-import DateRangeFilter from '@/components/DataRangeFilter';
+import { DataRangeFilter } from '@/components/DataRangeFilter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 
@@ -58,12 +58,17 @@ const StudentTransactions = () => {
   const sortedTransactions = [...typeFilteredTransactions].sort(
     (a, b) => b.timestamp - a.timestamp
   );
+
+  // Handle date range changes from the DataRangeFilter component
+  const handleDateRangeChange = (startDate: Date | undefined, endDate: Date | undefined) => {
+    setDateRange({ startDate, endDate });
+  };
   
   return (
     <Layout title="Transaction History">
       <div className="container px-4 py-6 mx-auto max-w-3xl">
         <div className="mb-6">
-          <DateRangeFilter onChange={setDateRange} />
+          <DataRangeFilter onDateRangeChange={handleDateRangeChange} />
         </div>
         
         <Tabs defaultValue="all" onValueChange={setActiveTab} className="w-full">
