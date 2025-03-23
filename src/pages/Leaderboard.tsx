@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTransactions } from '@/contexts/TransactionContext';
+import { useTransactions } from '@/contexts/transactions';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 

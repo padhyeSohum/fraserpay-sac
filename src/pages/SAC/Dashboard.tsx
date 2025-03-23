@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTransactions } from '@/contexts/TransactionContext';
+import { useTransactions } from '@/contexts/transactions';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -1696,3 +1696,4 @@ const SACDashboard = () => {
 };
 
 export default SACDashboard;
+
