@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -18,48 +18,83 @@ const Dashboard = () => {
   const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
   const [userBooths, setUserBooths] = useState<ReturnType<typeof getBoothsByUserId>>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataInitialized, setDataInitialized] = useState(false);
+
+  const refreshUserData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: freshUserData, error: userError } = await supabase
+        .from('users')
+        .select('tickets')
+        .eq('id', user.id)
+        .single();
+        
+      if (!userError && freshUserData && user) {
+        console.log("Dashboard - refreshed user data:", freshUserData);
+        
+        if (freshUserData.tickets / 100 !== user.balance) {
+          updateUserData({
+            ...user,
+            balance: freshUserData.tickets / 100
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  }, [user, updateUserData]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadData() {
-      if (user) {
-        try {
-          setIsLoading(true);
-          
-          // Refresh user data to get the latest balance
-          const { data: freshUserData, error: userError } = await supabase
-            .from('users')
-            .select('tickets')
-            .eq('id', user.id)
-            .single();
-            
-          if (!userError && freshUserData && user) {
-            console.log("Dashboard - refreshed user data:", freshUserData);
-            // Update user context with fresh balance
-            updateUserData({
-              ...user,
-              balance: freshUserData.tickets / 100
-            });
-          }
-          
-          // Refresh data
-          await fetchAllBooths();
-          // Load user's transactions
-          const transactions = loadUserTransactions(user.id);
-          setUserTransactions(transactions.slice(0, 3)); // Show only 3 most recent
-          
-          // Load user's booths
-          const booths = getBoothsByUserId(user.id);
+      if (!user || dataInitialized) return;
+      
+      try {
+        setIsLoading(true);
+        
+        await refreshUserData();
+        
+        if (!isMounted) return;
+        
+        await fetchAllBooths();
+        
+        if (!isMounted) return;
+        
+        const transactions = loadUserTransactions(user.id);
+        if (isMounted) {
+          setUserTransactions(transactions.slice(0, 3));
+        }
+        
+        const booths = getBoothsByUserId(user.id);
+        if (isMounted) {
           setUserBooths(booths);
-        } catch (error) {
-          console.error('Error loading dashboard data:', error);
-        } finally {
+          setDataInitialized(true);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        if (isMounted) {
           setIsLoading(false);
         }
       }
     }
     
     loadData();
-  }, [user, loadUserTransactions, getBoothsByUserId, fetchAllBooths, updateUserData]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refreshUserData();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshUserData]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');
@@ -97,7 +132,6 @@ const Dashboard = () => {
   return (
     <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">
-        {/* Balance Card */}
         <div className="balance-card rounded-xl overflow-hidden">
           <div className="flex flex-col">
             <span className="text-white/80 mb-1">Your Balance</span>
@@ -109,7 +143,6 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-3">
           <Button
             variant="outline"
@@ -139,7 +172,6 @@ const Dashboard = () => {
           </Button>
         </div>
         
-        {/* User's Booths Section */}
         <div>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Your Booths</h2>
@@ -188,7 +220,6 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Recent Transactions */}
         <div>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Recent Transactions</h2>

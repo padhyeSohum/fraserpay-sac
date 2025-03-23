@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
@@ -13,70 +13,104 @@ const QRCode = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [qrData, setQrData] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      if (user) {
-        // Refresh user data to get the latest balance
-        const { data: freshUserData, error: userError } = await supabase
-          .from('users')
-          .select('tickets')
-          .eq('id', user.id)
-          .single();
-          
-        if (!userError && freshUserData && user) {
-          console.log("QR Code - refreshed user data:", freshUserData);
+  // Separate the user data refresh logic to make it reusable
+  const refreshUserData = useCallback(async () => {
+    if (!user) return false;
+    
+    try {
+      // Refresh user data to get the latest balance
+      const { data: freshUserData, error: userError } = await supabase
+        .from('users')
+        .select('tickets')
+        .eq('id', user.id)
+        .single();
+        
+      if (!userError && freshUserData) {
+        console.log("QR Code - refreshed user data:", freshUserData);
+        
+        // Only update if the balance changed
+        if (freshUserData.tickets / 100 !== user.balance) {
           // Update user context with fresh balance
           updateUserData({
             ...user,
             balance: freshUserData.tickets / 100
           });
         }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+      return false;
+    }
+  }, [user, updateUserData]);
+
+  // Generate QR code function
+  const generateQRForUser = useCallback(() => {
+    if (!user) return;
+    
+    try {
+      // Generate QR code data
+      const userData = encodeUserData(user.id);
+      setQrData(userData);
+      
+      // Generate QR code image
+      const qrUrl = generateQRCode(userData);
+      setQrCodeUrl(qrUrl);
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+    }
+  }, [user]);
+
+  // Initial load effect
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function loadData() {
+      setIsLoading(true);
+      
+      if (user) {
+        // First refresh user data
+        await refreshUserData();
         
-        // Generate QR code data
-        const userData = encodeUserData(user.id);
-        setQrData(userData);
+        // Only proceed if component is still mounted
+        if (!isMounted) return;
         
-        // Generate QR code image
-        const qrUrl = generateQRCode(userData);
-        setQrCodeUrl(qrUrl);
+        // Generate QR code
+        generateQRForUser();
+      }
+      
+      if (isMounted) {
+        setIsLoading(false);
       }
     }
     
     loadData();
-  }, [user, updateUserData]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, refreshUserData, generateQRForUser]);
 
   const regenerateQR = async () => {
-    if (user) {
-      setIsRefreshing(true);
+    if (!user) return;
+    
+    setIsRefreshing(true);
+    
+    try {
+      // Refresh user data first
+      await refreshUserData();
       
-      try {
-        // Refresh user data first
-        const { data: freshUserData, error: userError } = await supabase
-          .from('users')
-          .select('tickets')
-          .eq('id', user.id)
-          .single();
-          
-        if (!userError && freshUserData && user) {
-          console.log("QR Code refresh - updated user data:", freshUserData);
-          // Update user context with fresh balance
-          updateUserData({
-            ...user,
-            balance: freshUserData.tickets / 100
-          });
-        }
-        
-        // Generate a new QR code with the same data
-        setTimeout(() => {
-          const qrUrl = generateQRCode(qrData);
-          setQrCodeUrl(qrUrl);
-          setIsRefreshing(false);
-        }, 800);
-      } catch (error) {
-        console.error("Error refreshing QR code:", error);
+      // Add a small delay for UI feedback
+      setTimeout(() => {
+        generateQRForUser();
         setIsRefreshing(false);
-      }
+      }, 600);
+    } catch (error) {
+      console.error("Error refreshing QR code:", error);
+      setIsRefreshing(false);
     }
   };
 
@@ -89,9 +123,9 @@ const QRCode = () => {
               <h2 className="text-xl font-semibold mb-4">Show this QR code to make purchases</h2>
               
               <div 
-                className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
+                className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing || isLoading ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
               >
-                {qrCodeUrl ? (
+                {qrCodeUrl && !isLoading ? (
                   <img src={qrCodeUrl} alt="QR Code" className="w-full h-full" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -103,7 +137,7 @@ const QRCode = () => {
               <Button
                 variant="outline"
                 onClick={regenerateQR}
-                disabled={isRefreshing}
+                disabled={isRefreshing || isLoading}
                 className="mb-4"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
