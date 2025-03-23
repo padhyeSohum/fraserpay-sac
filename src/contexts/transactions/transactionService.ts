@@ -57,18 +57,18 @@ export const loadUserTransactions = (transactions: Transaction[], userId: string
 };
 
 export const addFunds = async (
-  studentId: string, 
+  userId: string, 
   amount: number, 
   sacMemberId: string
 ): Promise<{ success: boolean, transaction?: Transaction, updatedBalance?: number }> => {
   try {
-    console.log("Starting addFunds process:", { amount, studentId, sacMemberId });
+    console.log("Starting addFunds process:", { amount, userId, sacMemberId });
     
     // Fetch the current user data to get their existing balance
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('tickets, name, student_number')
-      .eq('id', studentId)
+      .eq('id', userId)
       .single();
     
     if (userError) {
@@ -95,7 +95,7 @@ export const addFunds = async (
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
-        student_id: studentId,
+        student_id: userId,
         student_name: userData.name,
         amount: amountInCents,
         type: amount >= 0 ? 'fund' : 'refund',
@@ -116,7 +116,7 @@ export const addFunds = async (
     const { error: updateError } = await supabase
       .from('users')
       .update({ tickets: newBalance })
-      .eq('id', studentId);
+      .eq('id', userId);
     
     if (updateError) {
       console.error("Error updating user balance:", updateError);
@@ -128,7 +128,7 @@ export const addFunds = async (
     const newTransaction: Transaction = {
       id: transactionData.id,
       timestamp: new Date(transactionData.created_at).getTime(),
-      buyerId: studentId,
+      buyerId: userId,
       buyerName: userData.name,
       amount: Math.abs(amount),
       type: amount >= 0 ? 'fund' : 'refund',
@@ -141,7 +141,7 @@ export const addFunds = async (
     const { data: updatedUser, error: verifyError } = await supabase
       .from('users')
       .select('tickets, name')
-      .eq('id', studentId)
+      .eq('id', userId)
       .single();
       
     if (verifyError) {

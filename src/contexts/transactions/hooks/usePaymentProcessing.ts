@@ -105,11 +105,9 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
     try {
       // amount is in dollars, but we need cents for the backend
       const result = await addFunds(
-        amount,
         userId,
-        'cash', // Default to cash
-        sacMemberId,
-        'SAC Member' // Generic name
+        amount,
+        sacMemberId
       );
       
       if (result.success && result.updatedBalance !== undefined) {
