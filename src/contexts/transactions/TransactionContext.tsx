@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { transformDatabaseBooth, transformDatabaseTransaction, transformDatabaseProduct } from '@/utils/supabase';
 import { Booth, Product, Transaction, TransactionStats, CartItem, DateRange } from '@/types';
-import { seedBooths } from '@/utils/seedData';
 import { toast } from 'sonner';
 import { 
   loadUserTransactions,
@@ -21,39 +20,7 @@ import {
   removeProductFromBooth,
   getLeaderboard
 } from './boothService';
-
-// Only retain necessary context types
-type TransactionContextType = {
-  // Booth management
-  booths: Booth[];
-  getBoothById: (id: string) => Booth | undefined;
-  loadBooths: () => void;
-  loadStudentBooths: () => Booth[];
-  
-  // Product management
-  loadBoothProducts: (boothId: string) => Product[];
-  
-  // Transaction management
-  loadBoothTransactions: (boothId: string) => Transaction[];
-  loadUserFundsTransactions: () => Transaction[];
-  getSACTransactions: () => Transaction[];
-  getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
-  
-  // Cart management
-  cart: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  clearCart: () => void;
-  incrementQuantity: (productId: string) => void;
-  decrementQuantity: (productId: string) => void;
-  
-  // Payment processing
-  processPayment: (boothId: string) => Promise<Transaction | null>;
-  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<number>;
-  
-  // Loading states
-  isLoading: boolean;
-};
+import { TransactionContextType } from './types';
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
@@ -63,8 +30,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isLoading, setIsLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
-  // Initialize bootsh on component mount
+  // Initialize booths on component mount
   useEffect(() => {
     if (user) {
       loadBooths();
@@ -102,6 +70,14 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return booths.find(booth => booth.id === id);
   };
   
+  const getBoothsByUserIdImpl = (userId: string) => {
+    return booths.filter(booth => booth.managers.includes(userId));
+  };
+
+  const fetchAllBoothsImpl = async () => {
+    return await fetchAllBooths();
+  };
+  
   // Product management
   const loadBoothProducts = (boothId: string) => {
     const booth = getBoothByIdImpl(boothId);
@@ -117,6 +93,11 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadUserFundsTransactions = () => {
     // Filter transactions for fund-type transactions belonging to the current user
     return transactions.filter(t => t.type === 'fund' && t.buyerId === user?.id);
+  };
+
+  const loadUserTransactionsImpl = (userId: string) => {
+    // Filter transactions for the specific user
+    return transactions.filter(t => t.buyerId === userId);
   };
 
   const getSACTransactions = () => {
@@ -168,6 +149,10 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       topProducts,
       totalSales
     };
+  };
+
+  const getLeaderboardImpl = () => {
+    return getLeaderboard(booths);
   };
   
   // Cart management
@@ -288,7 +273,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
-  const addFundsImpl = async (userId: string, amount: number, sacMemberId: string) => {
+  const addFundsImpl = async (userId: string, amount: number, sacMemberId: string): Promise<number> => {
     if (!user) {
       toast.error('You must be logged in to add funds');
       return 0;
@@ -340,6 +325,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const fetchTransactionsData = async () => {
         const allTransactions = await fetchAllTransactions();
         setTransactions(allTransactions);
+        
+        // Set recent transactions
+        if (user && allTransactions.length > 0) {
+          const userTxs = allTransactions.filter(t => t.buyerId === user.id);
+          setRecentTransactions(userTxs.slice(0, 5)); // Most recent 5 transactions
+        }
       };
       
       fetchTransactionsData();
@@ -354,15 +345,23 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         getBoothById: getBoothByIdImpl,
         loadBooths,
         loadStudentBooths,
+        getBoothsByUserId: getBoothsByUserIdImpl,
+        fetchAllBooths: fetchAllBoothsImpl,
+        createBooth,
         
         // Product management
         loadBoothProducts,
+        addProductToBooth,
+        removeProductFromBooth,
         
         // Transaction management
         loadBoothTransactions,
         loadUserFundsTransactions,
+        loadUserTransactions: loadUserTransactionsImpl,
         getSACTransactions,
         getTransactionStats,
+        getLeaderboard: getLeaderboardImpl,
+        recentTransactions,
         
         // Cart management
         cart,
@@ -374,6 +373,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         
         // Payment processing
         processPayment,
+        processPurchase,
         addFunds: addFundsImpl,
         
         // Loading states

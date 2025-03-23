@@ -7,15 +7,23 @@ export interface TransactionContextType {
   getBoothById: (id: string) => Booth | undefined;
   loadBooths: () => void;
   loadStudentBooths: () => Booth[];
+  getBoothsByUserId: (userId: string) => Booth[];
+  fetchAllBooths: () => Promise<Booth[]>;
+  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
   
   // Product management
   loadBoothProducts: (boothId: string) => Product[];
+  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
+  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   
   // Transaction management
   loadBoothTransactions: (boothId: string) => Transaction[];
   loadUserFundsTransactions: () => Transaction[];
+  loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
   getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
+  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
+  recentTransactions: Transaction[];
   
   // Cart management
   cart: CartItem[];
@@ -27,6 +35,15 @@ export interface TransactionContextType {
   
   // Payment processing
   processPayment: (boothId: string) => Promise<Transaction | null>;
+  processPurchase: (
+    boothId: string,
+    buyerId: string,
+    buyerName: string,
+    sellerId: string,
+    sellerName: string,
+    cartItems: CartItem[],
+    boothName: string
+  ) => Promise<{ success: boolean, transaction?: Transaction }>;
   addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<number>;
   
   // Loading states
