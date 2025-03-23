@@ -8,9 +8,10 @@ import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, updateUserData } = useAuth();
   const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
@@ -22,6 +23,24 @@ const Dashboard = () => {
     async function loadData() {
       if (user) {
         try {
+          setIsLoading(true);
+          
+          // Refresh user data to get the latest balance
+          const { data: freshUserData, error: userError } = await supabase
+            .from('users')
+            .select('tickets')
+            .eq('id', user.id)
+            .single();
+            
+          if (!userError && freshUserData && user) {
+            console.log("Dashboard - refreshed user data:", freshUserData);
+            // Update user context with fresh balance
+            updateUserData({
+              ...user,
+              balance: freshUserData.tickets / 100
+            });
+          }
+          
           // Refresh data
           await fetchAllBooths();
           // Load user's transactions
@@ -40,7 +59,7 @@ const Dashboard = () => {
     }
     
     loadData();
-  }, [user, loadUserTransactions, getBoothsByUserId, fetchAllBooths]);
+  }, [user, loadUserTransactions, getBoothsByUserId, fetchAllBooths, updateUserData]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');

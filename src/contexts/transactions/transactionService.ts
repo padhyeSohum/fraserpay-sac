@@ -93,6 +93,7 @@ export const addFunds = async (
     });
     
     // Use the security definer function to update user balance
+    console.log("Calling update_user_balance RPC with:", { user_id: userId, new_balance: newBalance });
     const { data: updateResult, error: updateError } = await supabase
       .rpc('update_user_balance', {
         user_id: userId,
@@ -105,6 +106,7 @@ export const addFunds = async (
       return { success: false };
     }
     
+    console.log("User balance updated, RPC result:", updateResult);
     console.log("User balance updated to:", newBalance);
     
     // Now create the transaction record
@@ -162,6 +164,18 @@ export const addFunds = async (
           expected: newBalance,
           actual: updatedUser.tickets
         });
+        
+        // Try one more time to ensure the balance is correct
+        console.log("Trying one more time to update balance");
+        const { error: retryError } = await supabase
+          .rpc('update_user_balance', {
+            user_id: userId,
+            new_balance: newBalance
+          });
+          
+        if (retryError) {
+          console.error("Error in retry update:", retryError);
+        }
       }
     }
     
@@ -249,8 +263,14 @@ export const processPurchase = async (
     }
     
     const newBalance = userData.tickets - totalAmountInCents;
+    console.log('Calculated new balance:', newBalance / 100);
     
     // Use security definer function to update user balance
+    console.log('Calling update_user_balance RPC with:', { 
+      user_id: buyerId, 
+      new_balance: newBalance 
+    });
+    
     const { data: updateResult, error: updateError } = await supabase
       .rpc('update_user_balance', {
         user_id: buyerId,
@@ -263,6 +283,7 @@ export const processPurchase = async (
       return { success: false };
     }
     
+    console.log('User balance updated, RPC result:', updateResult);
     console.log('User balance updated to:', newBalance / 100);
     
     // Verify the user balance was updated correctly
@@ -282,6 +303,7 @@ export const processPurchase = async (
       });
       
       // If verification failed, try one more time to update the balance using the RPC function
+      console.log('Trying one more time to update balance');
       const { error: retryError } = await supabase
         .rpc('update_user_balance', {
           user_id: buyerId,
@@ -317,6 +339,7 @@ export const processPurchase = async (
       toast.error('Failed to record transaction');
       // Critical error: funds were deducted but transaction not recorded
       // We should attempt to refund the user
+      console.log('Attempting to restore original balance:', userData.tickets / 100);
       await supabase
         .rpc('update_user_balance', {
           user_id: buyerId,
@@ -387,6 +410,7 @@ export const processPurchase = async (
         actual: finalCheck.tickets / 100
       });
       // Make one last attempt to ensure the balance is correct
+      console.log('Making final attempt to ensure correct balance');
       await supabase
         .rpc('update_user_balance', {
           user_id: buyerId,

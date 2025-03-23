@@ -50,6 +50,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
         return null;
       }
 
+      console.log("Processing payment with user:", user.id);
       const result = await processPurchase(
         boothId,
         user.id,
@@ -63,6 +64,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
       if (result.success && result.transaction) {
         // Update user balance after successful payment
         if (user) {
+          console.log("Payment successful, updating user data");
           // The new balance was already calculated in the backend
           // We need to fetch the fresh user data to get the correct balance
           const { data: userData, error } = await supabase
@@ -72,13 +74,16 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
             .single();
             
           if (!error && userData) {
+            console.log("Fresh user data fetched:", userData);
             const newBalance = userData.tickets / 100; // Convert cents to dollars
             
+            console.log("Updating user context with new balance:", newBalance);
             updateUserData({
               ...user,
               balance: newBalance
             });
           } else {
+            console.error("Error fetching updated user data:", error);
             // Fallback: calculate locally as before
             const totalAmount = cart.reduce(
               (sum, item) => sum + (item.product.price * item.quantity),
@@ -86,6 +91,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
             );
             const newBalance = user.balance - totalAmount;
             
+            console.log("Using fallback calculation for balance:", newBalance);
             updateUserData({
               ...user,
               balance: newBalance
@@ -122,6 +128,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
     setIsLoading(true);
     
     try {
+      console.log("Adding funds for user:", userId);
       // amount is in dollars, but we need cents for the backend
       const result = await addFunds(
         userId,
@@ -132,6 +139,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
       if (result.success && result.updatedBalance !== undefined) {
         // Update user balance if adding funds to self
         if (userId === user.id) {
+          console.log("Updating user context with new balance:", result.updatedBalance);
           updateUserData({
             ...user,
             balance: result.updatedBalance

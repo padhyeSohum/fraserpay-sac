@@ -6,34 +6,77 @@ import Layout from '@/components/Layout';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const QRCode = () => {
-  const { user } = useAuth();
+  const { user, updateUserData } = useAuth();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [qrData, setQrData] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      // Generate QR code data
-      const userData = encodeUserData(user.id);
-      setQrData(userData);
-      
-      // Generate QR code image
-      const qrUrl = generateQRCode(userData);
-      setQrCodeUrl(qrUrl);
+    async function loadData() {
+      if (user) {
+        // Refresh user data to get the latest balance
+        const { data: freshUserData, error: userError } = await supabase
+          .from('users')
+          .select('tickets')
+          .eq('id', user.id)
+          .single();
+          
+        if (!userError && freshUserData && user) {
+          console.log("QR Code - refreshed user data:", freshUserData);
+          // Update user context with fresh balance
+          updateUserData({
+            ...user,
+            balance: freshUserData.tickets / 100
+          });
+        }
+        
+        // Generate QR code data
+        const userData = encodeUserData(user.id);
+        setQrData(userData);
+        
+        // Generate QR code image
+        const qrUrl = generateQRCode(userData);
+        setQrCodeUrl(qrUrl);
+      }
     }
-  }, [user]);
+    
+    loadData();
+  }, [user, updateUserData]);
 
-  const regenerateQR = () => {
+  const regenerateQR = async () => {
     if (user) {
       setIsRefreshing(true);
-      // Generate a new QR code with the same data
-      setTimeout(() => {
-        const qrUrl = generateQRCode(qrData);
-        setQrCodeUrl(qrUrl);
+      
+      try {
+        // Refresh user data first
+        const { data: freshUserData, error: userError } = await supabase
+          .from('users')
+          .select('tickets')
+          .eq('id', user.id)
+          .single();
+          
+        if (!userError && freshUserData && user) {
+          console.log("QR Code refresh - updated user data:", freshUserData);
+          // Update user context with fresh balance
+          updateUserData({
+            ...user,
+            balance: freshUserData.tickets / 100
+          });
+        }
+        
+        // Generate a new QR code with the same data
+        setTimeout(() => {
+          const qrUrl = generateQRCode(qrData);
+          setQrCodeUrl(qrUrl);
+          setIsRefreshing(false);
+        }, 800);
+      } catch (error) {
+        console.error("Error refreshing QR code:", error);
         setIsRefreshing(false);
-      }, 800);
+      }
     }
   };
 
