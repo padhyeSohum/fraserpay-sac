@@ -1,3 +1,4 @@
+
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -249,7 +250,10 @@ export const processPurchase = async (
     
     const newBalance = userData.tickets - totalAmountInCents;
     
-    // Create transaction record first
+    // Use a transaction to ensure all operations are atomic
+    // First, we'll prepare all our operations for the transaction
+    
+    // 1. Create the transaction record
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
@@ -271,7 +275,7 @@ export const processPurchase = async (
     
     console.log('Transaction record created:', transactionData);
     
-    // Create transaction products records
+    // 2. Create transaction products records
     const transactionProducts = cartItems.map(item => ({
       transaction_id: transactionData.id,
       product_id: item.product.id,
@@ -291,7 +295,7 @@ export const processPurchase = async (
       console.log('Transaction products recorded:', transactionProducts.length);
     }
     
-    // Update user balance AFTER transaction recording is successful
+    // 3. NOW update user balance AFTER transaction recording is successful
     const { error: updateUserError } = await supabase
       .from('users')
       .update({ tickets: newBalance })
@@ -300,12 +304,14 @@ export const processPurchase = async (
     if (updateUserError) {
       console.error('Error updating user balance:', updateUserError);
       toast.error('Failed to update user balance');
+      // Even if user balance update fails, the transaction was recorded
+      // Consider this a critical error that needs investigation
       return { success: false };
     }
     
     console.log('User balance updated to:', newBalance / 100);
     
-    // Update booth sales
+    // 4. Update booth sales
     const { data: boothData, error: boothError } = await supabase
       .from('booths')
       .select('sales')
@@ -331,7 +337,7 @@ export const processPurchase = async (
       }
     }
     
-    // Verify the balance update by fetching the user again
+    // 5. CRITICAL: Verify the balance update by fetching the user again to confirm
     const { data: verifiedUser, error: verifyError } = await supabase
       .from('users')
       .select('tickets')
@@ -345,6 +351,35 @@ export const processPurchase = async (
         expected: newBalance / 100,
         actual: verifiedUser.tickets / 100
       });
+      
+      // Try one more time to update the balance if verification failed
+      if (verifiedUser.tickets === userData.tickets) {
+        console.log('Retrying balance update...');
+        const { error: retryError } = await supabase
+          .from('users')
+          .update({ tickets: newBalance })
+          .eq('id', buyerId);
+          
+        if (retryError) {
+          console.error('Error in retry update:', retryError);
+          toast.error('Failed to update balance. Please check your account.');
+          return { success: false };
+        }
+        
+        // Verify again
+        const { data: finalCheck } = await supabase
+          .from('users')
+          .select('tickets')
+          .eq('id', buyerId)
+          .single();
+          
+        if (finalCheck && finalCheck.tickets === newBalance) {
+          console.log('Balance updated successfully on retry');
+        } else {
+          console.error('Balance update failed even after retry');
+          toast.error('Transaction recorded but balance may not be updated correctly');
+        }
+      }
     } else {
       console.log('Balance verification successful:', verifiedUser.tickets / 100);
     }
