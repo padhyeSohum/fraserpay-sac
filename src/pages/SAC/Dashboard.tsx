@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Wallet, Store as StoreIcon, Users as UsersIcon, FileText as FileTextIcon, Settings as SettingsIcon, Home as HomeIcon } from 'lucide-react';
@@ -25,7 +26,22 @@ import { Search } from 'lucide-react';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ExpandableTabs } from "@/components/ui/expandable-tabs";
-import { Settings } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+
+// Define a proper type for the custom tab object
+interface DashboardTab {
+  title: string;
+  icon: LucideIcon;
+  type?: undefined;
+}
+
+interface DashboardSeparator {
+  type: "separator";
+  title?: undefined;
+  icon?: undefined;
+}
+
+type DashboardTabItem = DashboardTab | DashboardSeparator;
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -126,7 +142,7 @@ const Dashboard = () => {
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const dashboardTabs = [
+  const dashboardTabs: DashboardTabItem[] = [
     { title: "Overview", icon: HomeIcon },
     { title: "Booths", icon: StoreIcon },
     { type: "separator" },
@@ -292,9 +308,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <CreateBoothDialog open={createBoothOpen} onOpenChange={setCreateBoothOpen} refetchBooths={refetchBooths} />
+        <CreateBoothDialog isOpen={createBoothOpen} onOpenChange={setCreateBoothOpen} refetchBooths={refetchBooths} />
         <FundsDialog 
-          open={fundsDialogOpen} 
+          isOpen={fundsDialogOpen} 
           onOpenChange={setFundsDialogOpen} 
           student={selectedStudent}
           refetchStudents={refetchStudents}
