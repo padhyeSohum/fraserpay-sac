@@ -1,3 +1,4 @@
+
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,7 +36,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
           quantity: p.quantity,
           price: p.price / 100
         })) || [],
-        amount: t.amount / 100,
+        amount: t.amount / 100,  // Convert cents to dollars
         type: t.type as 'purchase' | 'fund' | 'refund',
         paymentMethod: t.type === 'fund' ? 'cash' : undefined,
         sacMemberId: t.sac_member || undefined,

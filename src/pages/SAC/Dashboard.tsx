@@ -492,7 +492,7 @@ const SACDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">
-              ${(stats.totalRevenue).toFixed(2)}
+              ${stats.totalRevenue.toFixed(2)}
             </p>
           </CardContent>
         </Card>
