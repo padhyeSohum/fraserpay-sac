@@ -1,4 +1,3 @@
-
 import { Booth, Product } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -40,7 +39,8 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
           })),
           managers: b.members || [],
           totalEarnings: b.sales / 100,
-          transactions: []
+          transactions: [],
+          createdAt: b.created_at
         };
       });
 
