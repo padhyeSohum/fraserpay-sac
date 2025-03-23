@@ -43,6 +43,8 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, Minus, Search, Printer } from 'lucide-react';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
+import { supabase } from '@/integrations/supabase/client';
+import { transformUserData } from '@/contexts/auth/authUtils';
 
 const SACDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -50,7 +52,6 @@ const SACDashboard: React.FC = () => {
   const { 
     getSACTransactions, 
     getLeaderboard, 
-    processPayment, 
     addFunds, 
     booths, 
     loadBooths 
@@ -70,6 +71,7 @@ const SACDashboard: React.FC = () => {
   const [foundStudent, setFoundStudent] = useState<any | null>(null);
   const [isStudentDetailOpen, setIsStudentDetailOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isSearching, setIsSearching] = useState(false);
   
   useEffect(() => {
     if (user && user.role === 'sac') {
@@ -111,9 +113,15 @@ const SACDashboard: React.FC = () => {
     }
     
     try {
-      const newBalance = await addFunds(studentId, amountValue, user.id);
+      const result = await addFunds(
+        amountValue, 
+        studentId, 
+        'cash',
+        user.id,
+        user.name
+      );
       
-      if (newBalance > 0) {
+      if (result.success) {
         setIsAddFundsOpen(false);
         setStudentId('');
         setAmount('');
@@ -126,7 +134,10 @@ const SACDashboard: React.FC = () => {
         
         // If this was for the found student, update the balance
         if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({...foundStudent, balance: newBalance});
+          setFoundStudent({
+            ...foundStudent, 
+            balance: (result.updatedBalance || foundStudent.balance)
+          });
         }
       }
     } catch (error) {
@@ -150,9 +161,15 @@ const SACDashboard: React.FC = () => {
     
     try {
       // Process a negative amount for a refund
-      const newBalance = await addFunds(studentId, -amountValue, user.id);
+      const result = await addFunds(
+        -amountValue, 
+        studentId, 
+        'cash',
+        user.id,
+        user.name
+      );
       
-      if (newBalance >= 0) {
+      if (result.success) {
         setIsRefundOpen(false);
         setStudentId('');
         setAmount('');
@@ -165,7 +182,10 @@ const SACDashboard: React.FC = () => {
         
         // If this was for the found student, update the balance
         if (foundStudent && foundStudent.id === studentId) {
-          setFoundStudent({...foundStudent, balance: newBalance});
+          setFoundStudent({
+            ...foundStudent, 
+            balance: (result.updatedBalance || foundStudent.balance)
+          });
         }
       }
     } catch (error) {
@@ -174,36 +194,59 @@ const SACDashboard: React.FC = () => {
     }
   };
   
-  const handleStudentSearch = () => {
+  const handleStudentSearch = async () => {
     if (!studentSearchTerm.trim()) {
       toast.error('Please enter a student ID or name to search');
       return;
     }
     
-    // Get users from localStorage
-    const usersStr = localStorage.getItem('users');
-    const users = usersStr ? JSON.parse(usersStr) : [];
+    setIsSearching(true);
     
-    // Search for student by ID, name, or email
-    const student = users.find((u: any) => 
-      u.id.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-      u.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-      (u.email && u.email.toLowerCase().includes(studentSearchTerm.toLowerCase())) ||
-      (u.student_number && u.student_number.toLowerCase().includes(studentSearchTerm.toLowerCase()))
-    );
-    
-    if (student) {
-      setFoundStudent(student);
-      setIsStudentDetailOpen(true);
+    try {
+      // First try to find the student in Supabase
+      let { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .or(`student_number.ilike.%${studentSearchTerm}%,name.ilike.%${studentSearchTerm}%,email.ilike.%${studentSearchTerm}%`)
+        .limit(1);
       
-      // Generate QR code for the student
-      if (student.id) {
-        const userData = encodeUserData(student.id);
-        const qrUrl = generateQRCode(userData);
-        setQrCodeUrl(qrUrl);
+      if (error) {
+        console.error('Error searching for student:', error);
+        toast.error('Error searching for student');
+        setIsSearching(false);
+        return;
       }
-    } else {
-      toast.error('No student found with that ID or name');
+      
+      if (userData && userData.length > 0) {
+        // Transform the user data to our app's User type
+        const student = userData[0];
+        
+        setFoundStudent({
+          id: student.id,
+          name: student.name,
+          studentNumber: student.student_number,
+          email: student.email,
+          balance: student.tickets / 100, // Convert cents to dollars
+          qrCode: student.qr_code
+        });
+        
+        setIsStudentDetailOpen(true);
+        
+        // Generate QR code for the student using their existing QR code or ID
+        if (student.qr_code || student.id) {
+          const userData = student.qr_code || encodeUserData(student.id);
+          const qrUrl = generateQRCode(userData);
+          setQrCodeUrl(qrUrl);
+        }
+      } else {
+        // No student found in Supabase
+        toast.error('No student found with that ID, name, or email');
+      }
+    } catch (error) {
+      console.error('Error in student search:', error);
+      toast.error('Failed to search for student');
+    } finally {
+      setIsSearching(false);
     }
   };
   
@@ -258,6 +301,7 @@ const SACDashboard: React.FC = () => {
         <body>
           <div class="container">
             <h1>${foundStudent.name}</h1>
+            <p>Student ID: ${foundStudent.studentNumber || 'N/A'}</p>
             <p>Balance: $${foundStudent.balance?.toFixed(2) || '0.00'}</p>
             <div class="qr-code">
               ${decodeURIComponent(qrCodeUrl.split(',')[1])}
@@ -355,9 +399,18 @@ const SACDashboard: React.FC = () => {
                 onKeyDown={(e) => e.key === 'Enter' && handleStudentSearch()}
               />
             </div>
-            <Button onClick={handleStudentSearch}>
-              <Search className="h-4 w-4 mr-2" />
-              Search
+            <Button onClick={handleStudentSearch} disabled={isSearching}>
+              {isSearching ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -386,6 +439,7 @@ const SACDashboard: React.FC = () => {
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   className="col-span-3"
+                  readOnly={!!foundStudent}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -444,13 +498,20 @@ const SACDashboard: React.FC = () => {
                 
                 <div className="grid grid-cols-3 items-center gap-2">
                   <Label className="text-right font-medium">Student ID:</Label>
-                  <span className="col-span-2">{foundStudent.student_number || foundStudent.id}</span>
+                  <span className="col-span-2">{foundStudent.studentNumber || foundStudent.id}</span>
                 </div>
                 
                 <div className="grid grid-cols-3 items-center gap-2">
                   <Label className="text-right font-medium">Balance:</Label>
                   <span className="col-span-2 font-semibold">${foundStudent.balance?.toFixed(2) || '0.00'}</span>
                 </div>
+                
+                {foundStudent.email && (
+                  <div className="grid grid-cols-3 items-center gap-2">
+                    <Label className="text-right font-medium">Email:</Label>
+                    <span className="col-span-2">{foundStudent.email}</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-center gap-2 mt-6">

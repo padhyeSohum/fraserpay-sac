@@ -16,3 +16,8 @@ export const formatDate = (date: Date): string => {
     year: 'numeric'
   }).format(date);
 };
+
+// Format student number for display
+export const formatStudentNumber = (studentNumber: string): string => {
+  return studentNumber || 'N/A';
+};
