@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -17,6 +16,7 @@ interface AuthContextType {
   verifyBoothPin: (pin: string) => Promise<boolean>;
   joinBooth: (boothId: string) => void;
   session: Session | null;
+  updateUserData: (userData: User) => void;
 }
 
 // Mock SAC PIN for demo purposes
@@ -396,6 +396,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserData = (userData: User) => {
+    setUser(userData);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -408,7 +412,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifySACPin,
         verifyBoothPin,
         joinBooth,
-        session
+        session,
+        updateUserData
       }}
     >
       {children}
