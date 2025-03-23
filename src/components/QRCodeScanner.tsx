@@ -13,6 +13,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hasScannedRef = useRef<boolean>(false); // Ref to track scan status
   const scannerDivId = 'qr-scanner';
 
   useEffect(() => {
@@ -33,6 +34,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const startScanning = async (scanner: Html5Qrcode) => {
     setIsScanning(true);
     setError(null);
+    hasScannedRef.current = false; // Reset scan status
 
     try {
       await scanner.start(
@@ -43,8 +45,13 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
           aspectRatio: 1.0
         },
         (decodedText) => {
-          onScan(decodedText);
-          stopScanning();
+          // Only process the scan if we haven't already scanned
+          if (!hasScannedRef.current) {
+            hasScannedRef.current = true; // Mark as scanned
+            console.log('QR code scanned successfully, stopping scanner');
+            stopScanning();
+            onScan(decodedText);
+          }
         },
         (errorMessage) => {
           console.log('QR scanning in progress:', errorMessage);

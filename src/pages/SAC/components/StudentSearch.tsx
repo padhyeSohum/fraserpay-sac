@@ -17,6 +17,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Add state to prevent duplicate processing
 
   const handleStudentSearch = async () => {
     if (!studentSearchTerm.trim()) {
@@ -87,6 +88,14 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
 
   const handleQRCodeScanned = async (decodedText: string) => {
     console.log('QR code scanned with data:', decodedText);
+    
+    // Prevent duplicate processing
+    if (isProcessing) {
+      console.log('Already processing a QR code, ignoring duplicate scan');
+      return;
+    }
+    
+    setIsProcessing(true);
     setIsScanning(false);
     
     try {
@@ -121,6 +130,11 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     } catch (error) {
       console.error('Error processing scanned QR code:', error);
       toast.error('Error processing QR code');
+    } finally {
+      // Reset processing state after a short delay
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 1000);
     }
   };
 
@@ -161,7 +175,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
                 </>
               )}
             </Button>
-            <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning}>
+            <Button variant="outline" onClick={handleScanQRCode} disabled={isScanning || isProcessing}>
               <QrCode className="h-4 w-4 mr-2" />
               Scan QR
             </Button>

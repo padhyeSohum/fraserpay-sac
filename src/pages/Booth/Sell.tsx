@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -29,7 +28,8 @@ const BoothSell = () => {
   const [lookupMode, setLookupMode] = useState<'scan' | 'manual'>('scan');
   const [studentNumber, setStudentNumber] = useState('');
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
-  
+  const [isProcessingQR, setIsProcessingQR] = useState(false);
+
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
@@ -90,6 +90,13 @@ const BoothSell = () => {
 
   const handleQRCodeScanned = async (decodedText: string) => {
     console.log('QR code scanned:', decodedText);
+    
+    if (isProcessingQR) {
+      console.log('Already processing a QR code, ignoring duplicate scan');
+      return;
+    }
+    
+    setIsProcessingQR(true);
     setScanning(false);
     
     try {
@@ -115,6 +122,10 @@ const BoothSell = () => {
     } catch (error) {
       console.error('Error processing QR code:', error);
       toast.error('Failed to process QR code');
+    } finally {
+      setTimeout(() => {
+        setIsProcessingQR(false);
+      }, 1000);
     }
   };
 
@@ -243,7 +254,7 @@ const BoothSell = () => {
 
   return (
     <Layout 
-      title={booth.name} 
+      title={booth?.name || "Booth"} 
       subtitle="Booth Management" 
       showBack
     >
@@ -323,9 +334,10 @@ const BoothSell = () => {
                       
                       <Button 
                         onClick={handleScanQR}
+                        disabled={isProcessingQR}
                         className="bg-indigo-600 hover:bg-indigo-700"
                       >
-                        Start Scanner
+                        {isProcessingQR ? 'Processing...' : 'Start Scanner'}
                       </Button>
                     </>
                   )
