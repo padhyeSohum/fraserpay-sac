@@ -87,7 +87,7 @@ const StatCards: React.FC<StatCardsProps> = ({
             <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
           ) : (
             <p className="text-3xl font-bold">
-              ${safeStats.totalRevenue.toFixed(2)}
+              ${formatCurrency(safeStats.totalRevenue)}
             </p>
           )}
         </CardContent>

@@ -97,7 +97,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                      transaction.type}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ${(transaction.amount / 100).toFixed(2)}
+                    ${formatCurrency(transaction.amount / 100)}
                   </TableCell>
                 </TableRow>
               ))}
