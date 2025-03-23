@@ -20,7 +20,6 @@ import CreateBoothDialog from './components/CreateBoothDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
-import { DashboardFeatures } from '@/components/sac/DashboardFeatures';
 
 const SACDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -75,51 +74,14 @@ const SACDashboard: React.FC = () => {
     totalTransactions: 0,
     totalRevenue: 0
   });
-
-  const [activeTab, setActiveTab] = useState('overview');
   
   // Load data on component mount
   useEffect(() => {
     if (user && user.role === 'sac') {
       console.log('SAC Dashboard: Initializing data');
       loadData();
-      
-      // Get URL parameters to set initial active tab
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get('tab');
-      const subtabParam = urlParams.get('subtab');
-      
-      if (tabParam) {
-        setActiveTab(tabParam);
-      }
-      
-      // Set subtabs if present
-      if (subtabParam === 'transactions' && tabParam === 'data') {
-        // Set transactions tab active after a short delay to ensure the parent tab is loaded
-        setTimeout(() => {
-          const transactionsTab = document.querySelector('[value="transactions"]');
-          if (transactionsTab) {
-            (transactionsTab as HTMLElement).click();
-          }
-        }, 100);
-      } else if (subtabParam === 'users' && tabParam === 'data') {
-        // Set users tab active
-        setTimeout(() => {
-          const usersTab = document.querySelector('[value="users"]');
-          if (usersTab) {
-            (usersTab as HTMLElement).click();
-          }
-        }, 100);
-      }
     }
   }, [user]);
-  
-  // Update URL when tab changes
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', activeTab);
-    window.history.replaceState({}, '', url.toString());
-  }, [activeTab]);
   
   const loadData = async () => {
     setIsLoading(true);
@@ -529,13 +491,6 @@ const SACDashboard: React.FC = () => {
         />
         
         <Button
-          id="create-booth-button"
-          onClick={() => setIsCreateBoothOpen(true)}
-        >
-          Create Booth
-        </Button>
-        
-        <Button
           onClick={() => {
             setStudentId('');
             setIsAddFundsOpen(true);
@@ -586,70 +541,41 @@ const SACDashboard: React.FC = () => {
       />
       
       {/* Tab content */}
-      <Tabs 
-        defaultValue="overview" 
-        value={activeTab} 
-        onValueChange={setActiveTab} 
-        className="mb-6"
-      >
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
+      <Tabs defaultValue="transactions" className="mb-6">
+        <TabsList className="grid grid-cols-2">
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="overview" className="space-y-6">
-          <Card className="p-6">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle>Dashboard Overview</CardTitle>
-              <CardDescription>
-                Quick access to key features and functionality
-              </CardDescription>
+        <TabsContent value="transactions">
+          <Card>
+            <CardHeader>
+              <TransactionsTable 
+                transactions={filteredTransactions}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+              />
             </CardHeader>
-            
-            <div className="mt-4">
-              <DashboardFeatures />
-            </div>
           </Card>
-          
-          {/* Booth Leaderboard */}
-          <BoothLeaderboard leaderboard={leaderboard} />
         </TabsContent>
         
-        <TabsContent value="data">
-          <Tabs defaultValue="transactions" className="mb-6">
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="transactions">
-              <Card>
-                <CardHeader>
-                  <TransactionsTable 
-                    transactions={filteredTransactions}
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                  />
-                </CardHeader>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <Card>
-                <CardHeader>
-                  <UsersTable 
-                    users={filteredUsers}
-                    isLoading={isUserLoading}
-                    searchTerm={userSearchTerm}
-                    onSearchChange={setUserSearchTerm}
-                    onUserSelect={handleUserSelected}
-                  />
-                </CardHeader>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <UsersTable 
+                users={filteredUsers}
+                isLoading={isUserLoading}
+                searchTerm={userSearchTerm}
+                onSearchChange={setUserSearchTerm}
+                onUserSelect={handleUserSelected}
+              />
+            </CardHeader>
+          </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Booth Leaderboard */}
+      <BoothLeaderboard leaderboard={leaderboard} />
     </div>
   );
 };
