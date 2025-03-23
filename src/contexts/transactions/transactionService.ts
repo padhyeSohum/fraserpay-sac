@@ -1,5 +1,5 @@
 
-import { Transaction, CartItem } from '@/types';
+import { Transaction, CartItem, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -52,10 +52,6 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
 
 export const loadUserTransactions = (transactions: Transaction[], userId: string): Transaction[] => {
   return transactions.filter(t => t.buyerId === userId);
-};
-
-export const loadBoothTransactions = (transactions: Transaction[], boothId: string): Transaction[] => {
-  return transactions.filter(t => t.boothId === boothId);
 };
 
 export const addFunds = async (

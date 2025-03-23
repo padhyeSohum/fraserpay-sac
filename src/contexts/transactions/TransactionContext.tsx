@@ -4,21 +4,22 @@ import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { transformDatabaseBooth, transformDatabaseTransaction, transformDatabaseProduct } from '@/utils/supabase';
 import { Booth, Product, Transaction, TransactionStats, CartItem, DateRange } from '@/types';
-import seedBooths from '@/utils/seedData';
+import { seedBooths } from '@/utils/seedData';
 import { toast } from 'sonner';
 import { 
-  loadUserFundsTransactions,
-  getSACTransactions,
-  getTransactionStats,
-  processPayment,
-  addFunds
+  loadUserTransactions,
+  fetchAllTransactions,
+  addFunds,
+  processPurchase
 } from './transactionService';
 import {
-  loadBooths,
-  loadStudentBooths,
+  fetchAllBooths,
   getBoothById,
-  loadBoothProducts,
-  loadBoothTransactions
+  getBoothsByUserId,
+  createBooth,
+  addProductToBooth,
+  removeProductFromBooth,
+  getLeaderboard
 } from './boothService';
 
 // Only retain necessary context types
@@ -61,6 +62,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // Initialize bootsh on component mount
   useEffect(() => {
@@ -70,40 +72,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [user]);
 
   // Booths management
-  const loadBoothsImpl = async () => {
+  const loadBooths = async () => {
     setIsLoading(true);
     
     try {
-      // Get booths from Supabase
-      const { data: boothsData, error } = await supabase
-        .from('booths')
-        .select('*');
-      
-      if (error) {
-        console.error('Error loading booths:', error);
-        toast.error('Failed to load booths');
-        return;
-      }
-      
-      // Get products for each booth
-      const boothsWithProducts: Booth[] = await Promise.all(
-        boothsData.map(async (booth) => {
-          const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('booth_id', booth.id);
-          
-          if (productsError) {
-            console.error(`Error loading products for booth ${booth.id}:`, productsError);
-            return transformDatabaseBooth(booth);
-          }
-          
-          return transformDatabaseBooth(booth, productsData || []);
-        })
-      );
-      
-      setBooths(boothsWithProducts);
-      
+      const fetchedBooths = await fetchAllBooths();
+      setBooths(fetchedBooths);
     } catch (error) {
       console.error('Unexpected error loading booths:', error);
       toast.error('Failed to load booths');
@@ -112,7 +86,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
-  const loadStudentBoothsImpl = () => {
+  const loadStudentBooths = () => {
     if (!user || !user.booths || user.booths.length === 0) {
       return [];
     }
@@ -129,15 +103,71 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Product management
-  const loadBoothProductsImpl = (boothId: string) => {
+  const loadBoothProducts = (boothId: string) => {
     const booth = getBoothByIdImpl(boothId);
     return booth ? booth.products : [];
   };
   
   // Transaction management
-  const loadBoothTransactionsImpl = (boothId: string) => {
+  const loadBoothTransactions = (boothId: string) => {
     const booth = getBoothByIdImpl(boothId);
     return booth ? booth.transactions : [];
+  };
+
+  const loadUserFundsTransactions = () => {
+    // Filter transactions for fund-type transactions belonging to the current user
+    return transactions.filter(t => t.type === 'fund' && t.buyerId === user?.id);
+  };
+
+  const getSACTransactions = () => {
+    // Return all transactions for SAC dashboard
+    return transactions;
+  };
+
+  const getTransactionStats = (boothId: string, dateRange: DateRange): TransactionStats => {
+    // Basic implementation of transaction stats
+    const boothTransactions = transactions.filter(t => 
+      t.boothId === boothId && 
+      t.type === 'purchase' &&
+      (!dateRange.startDate || new Date(t.timestamp) >= dateRange.startDate) &&
+      (!dateRange.endDate || new Date(t.timestamp) <= dateRange.endDate)
+    );
+    
+    // Calculate daily sales
+    const dailySales: {[key: string]: number} = {};
+    boothTransactions.forEach(t => {
+      const date = new Date(t.timestamp).toISOString().split('T')[0];
+      dailySales[date] = (dailySales[date] || 0) + t.amount;
+    });
+    
+    // Calculate top products
+    const productCount: {[key: string]: {count: number, name: string}} = {};
+    boothTransactions.forEach(t => {
+      t.products?.forEach(p => {
+        if (!productCount[p.productId]) {
+          productCount[p.productId] = {count: 0, name: p.productName};
+        }
+        productCount[p.productId].count += p.quantity;
+      });
+    });
+    
+    const topProducts = Object.entries(productCount)
+      .map(([productId, data]) => ({
+        productId,
+        productName: data.name,
+        count: data.count
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    // Calculate total sales
+    const totalSales = boothTransactions.reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+      dailySales,
+      topProducts,
+      totalSales
+    };
   };
   
   // Cart management
@@ -191,7 +221,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Payment processing
-  const processPaymentImpl = async (boothId: string) => {
+  const processPayment = async (boothId: string) => {
     if (!user) {
       toast.error('You must be logged in to make a purchase');
       return null;
@@ -205,22 +235,48 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setIsLoading(true);
     
     try {
-      const result = await processPayment(user, cart, boothId);
+      const booth = getBoothByIdImpl(boothId);
+      if (!booth) {
+        toast.error('Booth not found');
+        return null;
+      }
+
+      const result = await processPurchase(
+        boothId,
+        user.id,
+        user.name,
+        booth.managers[0], // Using first manager as seller
+        'Booth Manager', // Generic name
+        cart,
+        booth.name
+      );
       
-      if (result.transaction) {
+      if (result.success && result.transaction) {
         // Update user balance after successful payment
         if (user) {
+          // Recalculating new balance
+          const totalAmount = cart.reduce(
+            (sum, item) => sum + (item.product.price * item.quantity),
+            0
+          );
+          const newBalance = user.balance - totalAmount;
+          
           updateUserData({
             ...user,
-            balance: result.newBalance
+            balance: newBalance
           });
+        }
+        
+        // Update transactions list
+        if (result.transaction) {
+          setTransactions(prev => [result.transaction, ...prev]);
         }
         
         clearCart();
         toast.success('Purchase successful!');
         return result.transaction;
       } else {
-        toast.error(result.error || 'Failed to process payment');
+        toast.error(result.success === false ? 'Failed to process payment' : 'Unknown error');
         return null;
       }
     } catch (error) {
@@ -241,18 +297,34 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setIsLoading(true);
     
     try {
-      const newBalance = await addFunds(userId, amount, sacMemberId);
+      const result = await addFunds(
+        amount,
+        userId,
+        'cash', // Default to cash
+        sacMemberId,
+        'SAC Member' // Generic name
+      );
       
-      // Update user balance if adding funds to self
-      if (userId === user.id) {
-        updateUserData({
-          ...user,
-          balance: newBalance
-        });
+      if (result.success && result.updatedBalance !== undefined) {
+        // Update user balance if adding funds to self
+        if (userId === user.id) {
+          updateUserData({
+            ...user,
+            balance: result.updatedBalance
+          });
+        }
+        
+        // Update transactions list
+        if (result.transaction) {
+          setTransactions(prev => [result.transaction, ...prev]);
+        }
+        
+        toast.success(`Successfully added $${amount.toFixed(2)} to account`);
+        return result.updatedBalance;
+      } else {
+        toast.error('Failed to add funds');
+        return 0;
       }
-      
-      toast.success(`Successfully added $${amount.toFixed(2)} to account`);
-      return newBalance;
     } catch (error) {
       console.error('Error adding funds:', error);
       toast.error('Failed to add funds');
@@ -262,20 +334,32 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // Fetch all transactions on mount
+  useEffect(() => {
+    if (user) {
+      const fetchTransactionsData = async () => {
+        const allTransactions = await fetchAllTransactions();
+        setTransactions(allTransactions);
+      };
+      
+      fetchTransactionsData();
+    }
+  }, [user]);
+
   return (
     <TransactionContext.Provider
       value={{
         // Booth management
         booths,
         getBoothById: getBoothByIdImpl,
-        loadBooths: loadBoothsImpl,
-        loadStudentBooths: loadStudentBoothsImpl,
+        loadBooths,
+        loadStudentBooths,
         
         // Product management
-        loadBoothProducts: loadBoothProductsImpl,
+        loadBoothProducts,
         
         // Transaction management
-        loadBoothTransactions: loadBoothTransactionsImpl,
+        loadBoothTransactions,
         loadUserFundsTransactions,
         getSACTransactions,
         getTransactionStats,
@@ -289,7 +373,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         decrementQuantity,
         
         // Payment processing
-        processPayment: processPaymentImpl,
+        processPayment,
         addFunds: addFundsImpl,
         
         // Loading states

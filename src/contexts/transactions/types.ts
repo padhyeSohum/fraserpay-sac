@@ -1,19 +1,34 @@
 
-import { Transaction, Booth, Product, CartItem } from '@/types';
+import { Transaction, Booth, Product, CartItem, TransactionStats, DateRange } from '@/types';
 
 export interface TransactionContextType {
-  transactions: Transaction[];
-  recentTransactions: Transaction[];
-  loadUserTransactions: (userId: string) => Transaction[];
+  // Booth management
+  booths: Booth[];
+  getBoothById: (id: string) => Booth | undefined;
+  loadBooths: () => void;
+  loadStudentBooths: () => Booth[];
+  
+  // Product management
+  loadBoothProducts: (boothId: string) => Product[];
+  
+  // Transaction management
   loadBoothTransactions: (boothId: string) => Transaction[];
-  addFunds: (amount: number, studentId: string, paymentMethod: 'cash' | 'card', sacMemberId: string, sacMemberName: string) => Promise<boolean>;
-  processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
-  getBoothById: (boothId: string) => Booth | undefined;
-  getBoothsByUserId: (userId: string) => Booth[];
-  createBooth: (name: string, description: string, userId: string) => Promise<string | null>;
-  addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
-  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
-  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
-  fetchAllTransactions: () => Promise<void>;
-  fetchAllBooths: () => Promise<void>;
+  loadUserFundsTransactions: () => Transaction[];
+  getSACTransactions: () => Transaction[];
+  getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
+  
+  // Cart management
+  cart: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: string) => void;
+  clearCart: () => void;
+  incrementQuantity: (productId: string) => void;
+  decrementQuantity: (productId: string) => void;
+  
+  // Payment processing
+  processPayment: (boothId: string) => Promise<Transaction | null>;
+  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<number>;
+  
+  // Loading states
+  isLoading: boolean;
 }

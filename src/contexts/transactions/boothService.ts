@@ -35,7 +35,8 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
             name: p.name,
             price: p.price / 100,
             boothId: p.booth_id,
-            salesCount: 0
+            salesCount: 0,
+            image: p.image
           })),
           managers: b.members || [],
           totalEarnings: b.sales / 100,

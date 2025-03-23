@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import { encodeUserData, generateQRCode } from '@/utils/qrCode';
