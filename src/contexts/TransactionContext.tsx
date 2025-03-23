@@ -20,7 +20,6 @@ interface TransactionContextType {
   getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
   fetchAllTransactions: () => Promise<void>;
   fetchAllBooths: () => Promise<void>;
-  adjustUserBalance: (studentId: string, newBalance: number, verificationCode: string) => Promise<boolean>;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -121,7 +120,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               name: p.name,
               price: p.price / 100,
               boothId: p.booth_id,
-              image: p.image,
               salesCount: 0
             })),
             managers: b.members || [],
@@ -156,7 +154,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('tickets, name, student_number')
+        .select('tickets, name')
         .eq('id', studentId)
         .single();
       
@@ -197,7 +195,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         timestamp: new Date(transactionData.created_at).getTime(),
         buyerId: studentId,
         buyerName: userData.name,
-        studentNumber: userData.student_number,
         amount: amount,
         type: 'fund',
         paymentMethod,
@@ -206,14 +203,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       };
       
       setTransactions(prev => [newTransaction, ...prev]);
-      
-      toast.success(`$${amount.toFixed(2)} added to account`, {
-        description: `New balance: $${(newBalance / 100).toFixed(2)}`
-      });
-      
-      if (user && user.id === studentId) {
-        user.balance = newBalance / 100;
-      }
       
       return true;
     } catch (error) {
@@ -246,7 +235,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('tickets, student_number')
+      .select('tickets')
       .eq('id', buyerId)
       .single();
     
@@ -329,7 +318,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       timestamp: new Date(transactionData.created_at).getTime(),
       buyerId,
       buyerName,
-      studentNumber: userData.student_number,
       sellerId,
       sellerName,
       boothId,
@@ -359,14 +347,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       })
     );
     
-    toast.success(`Purchase complete: $${totalAmount.toFixed(2)}`, {
-      description: `New balance: $${(newBalance / 100).toFixed(2)}`
-    });
-    
-    if (user && user.id === buyerId) {
-      user.balance = newBalance / 100;
-    }
-    
     return true;
   };
 
@@ -382,8 +362,10 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       console.log("Creating booth:", { name, description, userId });
       
+      // Generate a 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
+      // Insert the new booth
       const { data, error } = await supabase
         .from('booths')
         .insert({
@@ -408,6 +390,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       console.log("Booth created:", data);
       
+      // Update user's booth access
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('booth_access')
@@ -431,6 +414,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         throw updateError;
       }
       
+      // Add the new booth to local state
       const newBooth: Booth = {
         id: data.id,
         name: data.name,
@@ -445,6 +429,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setBooths(prev => [...prev, newBooth]);
       console.log("Booth added to local state:", newBooth);
       
+      // Refresh booths from server to ensure we have the latest data
       fetchAllBooths();
       
       return data.id;
@@ -457,7 +442,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
     try {
-      console.log('Adding product to booth:', boothId, product);
       const priceInCents = Math.round(product.price * 100);
       
       const { data, error } = await supabase
@@ -498,7 +482,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       );
       
       toast.success(`Added product: ${product.name}`);
-      console.log('Product added successfully:', newProduct);
+      
       return true;
     } catch (error) {
       console.error('Error adding product:', error);
@@ -549,84 +533,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return boothEarnings.sort((a, b) => b.earnings - a.earnings);
   };
 
-  const adjustUserBalance = async (studentId: string, newBalance: number, verificationCode: string) => {
-    try {
-      if (verificationCode !== '090207') {
-        toast.error('Invalid verification code');
-        return false;
-      }
-      
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tickets, name, student_number')
-        .eq('id', studentId)
-        .single();
-      
-      if (userError) {
-        throw userError;
-      }
-      
-      const newBalanceInCents = Math.round(newBalance * 100);
-      const oldBalance = userData.tickets / 100;
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ tickets: newBalanceInCents })
-        .eq('id', studentId);
-      
-      if (updateError) {
-        throw updateError;
-      }
-      
-      const adjustmentAmount = newBalance - oldBalance;
-      const transactionType = adjustmentAmount >= 0 ? 'fund' : 'refund';
-      
-      const { data: transactionData, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          student_id: studentId,
-          student_name: userData.name,
-          amount: Math.abs(Math.round(adjustmentAmount * 100)),
-          type: transactionType,
-          sac_member: 'Admin Adjustment'
-        })
-        .select()
-        .single();
-      
-      if (transactionError) {
-        throw transactionError;
-      }
-      
-      const newTransaction: Transaction = {
-        id: transactionData.id,
-        timestamp: new Date(transactionData.created_at).getTime(),
-        buyerId: studentId,
-        buyerName: userData.name,
-        studentNumber: userData.student_number,
-        amount: Math.abs(adjustmentAmount),
-        type: transactionType,
-        sacMemberId: 'admin',
-        sacMemberName: 'Admin Adjustment'
-      };
-      
-      setTransactions(prev => [newTransaction, ...prev]);
-      
-      toast.success(`Balance manually adjusted to $${newBalance.toFixed(2)}`, {
-        description: `Change: ${adjustmentAmount >= 0 ? '+' : ''}$${adjustmentAmount.toFixed(2)}`
-      });
-      
-      if (user && user.id === studentId) {
-        user.balance = newBalance;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error adjusting balance:', error);
-      toast.error('Failed to adjust balance');
-      return false;
-    }
-  };
-
   return (
     <TransactionContext.Provider
       value={{
@@ -643,8 +549,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         removeProductFromBooth,
         getLeaderboard,
         fetchAllTransactions,
-        fetchAllBooths,
-        adjustUserBalance
+        fetchAllBooths
       }}
     >
       {children}

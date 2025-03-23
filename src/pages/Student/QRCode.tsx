@@ -50,7 +50,7 @@ const QRCode = () => {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="QR Code" className="w-full h-full" />
+                  <div dangerouslySetInnerHTML={{ __html: decodeURIComponent(qrCodeUrl.split(',')[1]) }} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-muted-foreground">Loading QR code...</p>

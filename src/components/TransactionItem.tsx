@@ -3,7 +3,7 @@ import React from 'react';
 import { Transaction } from '@/types';
 import { formatDistance } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, User } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -11,7 +11,7 @@ interface TransactionItemProps {
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupport = false }) => {
-  const { timestamp, buyerName, studentNumber, amount, type, products } = transaction;
+  const { timestamp, buyerName, amount, type, products } = transaction;
   
   const formattedTime = formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(timestamp).toLocaleString();
@@ -35,15 +35,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupp
     <div className="bg-white rounded-lg shadow-sm border border-border/50 p-4 mb-3 animate-fade-in-scale">
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium flex items-center gap-1">
-            {buyerName}
-          </div>
-          {studentNumber && (
-            <div className="text-xs text-muted-foreground flex items-center">
-              <User className="h-3 w-3 mr-1" />
-              Student #: {studentNumber}
-            </div>
-          )}
+          <div className="font-medium">{buyerName}</div>
           <div className="text-xs text-muted-foreground" title={formattedDate}>
             {formattedTime}
           </div>
@@ -51,7 +43,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupp
         </div>
         
         <div className="flex flex-col items-end">
-          <div className={`font-semibold text-right ${type === 'fund' ? 'text-green-600' : type === 'refund' ? 'text-red-600' : ''}`}>
+          <div className="font-semibold text-right">
             {type === 'fund' ? '+' : '-'}${amount.toFixed(2)}
           </div>
           
