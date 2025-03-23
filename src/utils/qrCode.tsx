@@ -45,18 +45,16 @@ export const validateQRCode = (qrData: string): { isValid: boolean; userId?: str
 // Generate QR code SVG as string
 export const generateQRCode = (data: string): string => {
   try {
-    // Create a QRCode element with the correct props
-    const qrCodeElement = QRCodeSVG({
-      value: data,
-      size: 300,
-      level: "H",
-      includeMargin: true
-    });
+    const qrCodeElement = renderToString(
+      <QRCodeSVG
+        value={data}
+        size={300}
+        level="H"
+        includeMargin={true}
+      />
+    );
     
-    // Render it to a string
-    const qrCodeString = renderToString(qrCodeElement);
-    
-    return qrCodeString;
+    return qrCodeElement;
   } catch (e) {
     console.error("Error generating QR code:", e);
     return "";

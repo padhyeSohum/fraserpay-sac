@@ -21,19 +21,19 @@ interface User {
   qr_code?: string;
 }
 
-interface UsersTableProps {
+export interface UsersTableProps {
   users: User[];
   isLoading: boolean;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
   onUserSelect: (user: User) => void;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
   users,
   isLoading,
-  searchTerm,
-  onSearchChange,
+  searchTerm = "",
+  onSearchChange = () => {},
   onUserSelect
 }) => {
   return (

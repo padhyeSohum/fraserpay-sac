@@ -8,10 +8,11 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { Minus, Plus, Printer, QrCode } from 'lucide-react';
+import { Minus, Plus, Printer } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
-interface StudentDetailDialogProps {
+export interface StudentDetailDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   student: {
@@ -23,9 +24,9 @@ interface StudentDetailDialogProps {
     qrCode?: string;
   } | null;
   qrCodeUrl: string;
-  onAddFunds: (studentId: string) => void;
-  onRefund: (studentId: string) => void;
-  onPrintQRCode: () => void;
+  onAddFunds?: (studentId: string) => void;
+  onRefund?: (studentId: string) => void;
+  onPrintQRCode?: () => void;
 }
 
 const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
@@ -33,9 +34,9 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
   onOpenChange,
   student,
   qrCodeUrl,
-  onAddFunds,
-  onRefund,
-  onPrintQRCode
+  onAddFunds = () => toast.info("Add funds functionality not implemented"),
+  onRefund = () => toast.info("Refund functionality not implemented"),
+  onPrintQRCode = () => toast.info("Print QR code functionality not implemented")
 }) => {
   if (!student) {
     return (

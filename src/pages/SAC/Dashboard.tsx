@@ -15,16 +15,32 @@ import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 
+export interface StatsData {
+  totalUsers: number;
+  totalTickets: number;
+  totalBooths: number;
+  totalTransactions: number;
+  totalRevenue: number;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [usersList, setUsersList] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [isUserLoading, setIsUserLoading] = useState(false);
-  const [stats, setStats] = useState({
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [isBoothDialogOpen, setIsBoothDialogOpen] = useState(false);
+  const [isBoothLoading, setIsBoothLoading] = useState(false);
+  
+  const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
     totalTickets: 0,
     totalBooths: 0,
-    totalTransactions: 0
+    totalTransactions: 0,
+    totalRevenue: 0
   });
   
   const [foundStudent, setFoundStudent] = useState<any | null>(null);
@@ -33,7 +49,22 @@ const Dashboard = () => {
   
   useEffect(() => {
     loadUsers();
+    loadTransactions();
+    loadBoothLeaderboard();
   }, []);
+  
+  useEffect(() => {
+    if (userSearchTerm) {
+      const filtered = usersList.filter(user => 
+        user.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+        user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+        user.student_number?.toLowerCase().includes(userSearchTerm.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers(usersList);
+    }
+  }, [userSearchTerm, usersList]);
   
   const loadUsers = async () => {
     setIsUserLoading(true);
@@ -62,6 +93,64 @@ const Dashboard = () => {
       setFilteredUsers([]);
     } finally {
       setIsUserLoading(false);
+    }
+  };
+  
+  const loadTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      
+      if (data) {
+        console.log('SAC Dashboard: Loaded transactions', data.length);
+        setTransactions(data);
+        
+        setStats(prev => ({
+          ...prev,
+          totalTransactions: data.length
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      toast.error('Failed to load transactions');
+      setTransactions([]);
+    }
+  };
+  
+  const loadBoothLeaderboard = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('booths')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Simulate leaderboard data since we don't have real sales data
+        const leaderboardData = data.map(booth => ({
+          ...booth,
+          sales: Math.floor(Math.random() * 50),
+          revenue: Math.random() * 1000
+        })).sort((a, b) => b.revenue - a.revenue);
+        
+        setLeaderboard(leaderboardData);
+        
+        setStats(prev => ({
+          ...prev,
+          totalBooths: data.length,
+          totalRevenue: leaderboardData.reduce((sum, booth) => sum + booth.revenue, 0)
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading booths:', error);
+      toast.error('Failed to load booths');
+      setLeaderboard([]);
     }
   };
   
@@ -129,6 +218,53 @@ const Dashboard = () => {
     setIsStudentDetailOpen(true);
   };
   
+  const handleCreateBooth = async (boothData: { name: string; description: string }) => {
+    setIsBoothLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('booths')
+        .insert([
+          { 
+            name: boothData.name,
+            description: boothData.description,
+            managers: [user?.id || ''],
+            organization_id: null,
+            is_active: true
+          }
+        ])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      toast.success('Booth created successfully');
+      loadBoothLeaderboard(); // Refresh booth data
+      
+      return data;
+    } catch (error) {
+      console.error('Error creating booth:', error);
+      toast.error('Failed to create booth');
+      throw error;
+    } finally {
+      setIsBoothLoading(false);
+    }
+  };
+  
+  const handleAddFunds = (studentId: string) => {
+    // This would be implemented with a dialog to add funds
+    toast.info('Add funds functionality would open a dialog');
+  };
+  
+  const handleRefund = (studentId: string) => {
+    // This would be implemented with a dialog to process refunds
+    toast.info('Refund functionality would open a dialog');
+  };
+  
+  const handlePrintQRCode = () => {
+    // This would implement printing functionality
+    toast.info('Print QR code functionality');
+  };
+  
   return (
     <Layout title="SAC Dashboard">
       <div className="space-y-6">
@@ -141,22 +277,36 @@ const Dashboard = () => {
             <UsersTable 
               users={filteredUsers} 
               isLoading={isUserLoading} 
-              onUserSelected={handleUserSelected}
+              searchTerm={userSearchTerm}
+              onSearchChange={setUserSearchTerm}
+              onUserSelect={handleUserSelected}
             />
           </div>
           <div className="space-y-6">
-            <BoothLeaderboard />
-            <TransactionsTable />
+            <BoothLeaderboard leaderboard={leaderboard} />
+            <TransactionsTable 
+              transactions={transactions} 
+              searchTerm={transactionSearchTerm}
+              onSearchChange={setTransactionSearchTerm}
+            />
           </div>
         </div>
         
-        <CreateBoothDialog />
+        <CreateBoothDialog 
+          isOpen={isBoothDialogOpen}
+          onOpenChange={setIsBoothDialogOpen}
+          onCreateBooth={handleCreateBooth}
+          isLoading={isBoothLoading}
+        />
         
         <StudentDetailDialog 
           student={foundStudent}
           qrCodeUrl={qrCodeUrl}
           isOpen={isStudentDetailOpen}
           onOpenChange={setIsStudentDetailOpen}
+          onAddFunds={handleAddFunds}
+          onRefund={handleRefund}
+          onPrintQRCode={handlePrintQRCode}
         />
       </div>
     </Layout>

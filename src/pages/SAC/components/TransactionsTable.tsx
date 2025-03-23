@@ -11,16 +11,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 
-interface TransactionsTableProps {
+export interface TransactionsTableProps {
   transactions: any[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({ 
-  transactions,
-  searchTerm,
-  onSearchChange
+  transactions = [],
+  searchTerm = "",
+  onSearchChange = () => {}
 }) => {
   // Format date helper that handles strings or Date objects
   const formatDate = (dateValue: string | Date | null | undefined) => {
@@ -58,7 +58,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
         </div>
       </div>
       
-      {transactions.length === 0 ? (
+      {!transactions || transactions.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
           No transactions found
         </div>
