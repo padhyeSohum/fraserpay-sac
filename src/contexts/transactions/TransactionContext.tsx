@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
@@ -30,55 +31,55 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // We don't need state here as the useTransactionManagement hook manages its own state
   };
 
+  const contextValue: TransactionContextType = {
+    // Booth management
+    booths: boothManagement.booths,
+    getBoothById: boothManagement.getBoothById,
+    loadBooths: boothManagement.loadBooths,
+    loadStudentBooths: boothManagement.loadStudentBooths,
+    getBoothsByUserId: boothManagement.getBoothsByUserId,
+    fetchAllBooths: boothManagement.fetchAllBooths,
+    createBooth: boothManagement.createBooth,
+    
+    // Product management
+    loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
+    addProductToBooth: productManagement.addProductToBooth,
+    removeProductFromBooth: productManagement.removeProductFromBooth,
+    
+    // Transaction management
+    loadBoothTransactions: (boothId) => transactionManagement.loadBoothTransactions(boothId, boothManagement.booths),
+    loadUserFundsTransactions: transactionManagement.loadUserFundsTransactions,
+    loadUserTransactions: transactionManagement.loadUserTransactions,
+    getSACTransactions: transactionManagement.getSACTransactions,
+    getTransactionStats: transactionManagement.getTransactionStats,
+    getLeaderboard: transactionManagement.getLeaderboard,
+    recentTransactions: transactionManagement.recentTransactions,
+    
+    // Cart management
+    cart: cartManagement.cart,
+    addToCart: cartManagement.addToCart,
+    removeFromCart: cartManagement.removeFromCart,
+    clearCart: cartManagement.clearCart,
+    incrementQuantity: cartManagement.incrementQuantity,
+    decrementQuantity: cartManagement.decrementQuantity,
+    
+    // Payment processing
+    processPayment: (boothId) => paymentProcessing.processPayment(
+      boothId, 
+      cartManagement.cart, 
+      boothManagement.getBoothById,
+      updateTransactions
+    ),
+    processPurchase: paymentProcessing.processPurchase,
+    addFunds: paymentProcessing.addFunds,
+    
+    // Loading states
+    isLoading: boothManagement.isLoading || paymentProcessing.isLoading,
+    findUserByStudentNumber
+  };
+
   return (
-    <TransactionContext.Provider
-      value={{
-        // Booth management
-        booths: boothManagement.booths,
-        getBoothById: boothManagement.getBoothById,
-        loadBooths: boothManagement.loadBooths,
-        loadStudentBooths: boothManagement.loadStudentBooths,
-        getBoothsByUserId: boothManagement.getBoothsByUserId,
-        fetchAllBooths: boothManagement.fetchAllBooths,
-        createBooth: boothManagement.createBooth,
-        
-        // Product management
-        loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
-        addProductToBooth: productManagement.addProductToBooth,
-        removeProductFromBooth: productManagement.removeProductFromBooth,
-        
-        // Transaction management
-        loadBoothTransactions: (boothId) => transactionManagement.loadBoothTransactions(boothId, boothManagement.booths),
-        loadUserFundsTransactions: transactionManagement.loadUserFundsTransactions,
-        loadUserTransactions: transactionManagement.loadUserTransactions,
-        getSACTransactions: transactionManagement.getSACTransactions,
-        getTransactionStats: transactionManagement.getTransactionStats,
-        getLeaderboard: transactionManagement.getLeaderboard,
-        recentTransactions: transactionManagement.recentTransactions,
-        
-        // Cart management
-        cart: cartManagement.cart,
-        addToCart: cartManagement.addToCart,
-        removeFromCart: cartManagement.removeFromCart,
-        clearCart: cartManagement.clearCart,
-        incrementQuantity: cartManagement.incrementQuantity,
-        decrementQuantity: cartManagement.decrementQuantity,
-        
-        // Payment processing
-        processPayment: (boothId) => paymentProcessing.processPayment(
-          boothId, 
-          cartManagement.cart, 
-          boothManagement.getBoothById,
-          updateTransactions
-        ),
-        processPurchase: paymentProcessing.processPurchase,
-        addFunds: paymentProcessing.addFunds,
-        
-        // Loading states
-        isLoading: boothManagement.isLoading || paymentProcessing.isLoading,
-        findUserByStudentNumber
-      }}
-    >
+    <TransactionContext.Provider value={contextValue}>
       {children}
     </TransactionContext.Provider>
   );
