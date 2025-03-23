@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Product } from '@/types';
-import { addProductToBooth, removeProductFromBooth } from '../boothService';
+import { addProductToBooth as addProductToBoothService, removeProductFromBooth as removeProductFromBoothService } from '../boothService';
 
 export interface UseProductManagementReturn {
   loadBoothProducts: (boothId: string, booths: Array<any>) => Product[];
@@ -15,9 +15,27 @@ export const useProductManagement = (): UseProductManagementReturn => {
     return booth ? booth.products : [];
   };
 
+  const addProductToBoothImpl = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
+    try {
+      return await addProductToBoothService(boothId, product);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      return false;
+    }
+  };
+
+  const removeProductFromBoothImpl = async (boothId: string, productId: string) => {
+    try {
+      return await removeProductFromBoothService(boothId, productId);
+    } catch (error) {
+      console.error('Error removing product:', error);
+      return false;
+    }
+  };
+
   return {
     loadBoothProducts,
-    addProductToBooth,
-    removeProductFromBooth
+    addProductToBooth: addProductToBoothImpl,
+    removeProductFromBooth: removeProductFromBoothImpl
   };
 };
