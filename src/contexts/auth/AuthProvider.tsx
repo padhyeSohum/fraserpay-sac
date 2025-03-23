@@ -22,11 +22,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Log auth state for debugging
+  useEffect(() => {
+    console.log('Auth state:', { isLoading, session: session?.user?.id || null, user: user?.id || null, authInitialized });
+  }, [isLoading, session, user, authInitialized]);
+
   useEffect(() => {
     let mounted = true;
+    let authTimeout: NodeJS.Timeout;
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -44,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (mounted) {
               setUser(userData);
               setIsLoading(false);
+              setAuthInitialized(true);
             }
             
             // Only navigate on SIGNED_IN event, not on every auth state change
@@ -53,13 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch (error) {
             console.error('Error in auth state change handler:', error);
-            if (mounted) setIsLoading(false);
+            if (mounted) {
+              setIsLoading(false);
+              setAuthInitialized(true);
+            }
           }
         } else {
           if (mounted) {
             setUser(null);
             setSession(null);
             setIsLoading(false);
+            setAuthInitialized(true);
           }
           
           if (event === 'SIGNED_OUT' && mounted) {
@@ -92,14 +104,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } finally {
         if (mounted) {
           setIsLoading(false);
+          setAuthInitialized(true);
         }
       }
     };
     
     checkSession();
 
+    // Add timeout to ensure auth always initializes
+    authTimeout = setTimeout(() => {
+      if (mounted && !authInitialized) {
+        console.warn('Auth initialization timeout reached. Force completing auth loading.');
+        setIsLoading(false);
+        setAuthInitialized(true);
+      }
+    }, 3000); // 3 second timeout
+
     return () => {
       mounted = false;
+      clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
   }, [navigate, location.pathname]);

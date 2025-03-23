@@ -99,7 +99,7 @@ export const routes = [
   { path: "/not-found", element: <NotFound /> },
 ];
 
-// Enhanced Loading component with timeout detection
+// Enhanced Loading component with timeout detection and more detailed feedback
 export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
   <div className="flex flex-col items-center justify-center h-screen p-4">
     <p className="text-sm mb-2">Loading Fraser Pay...</p>
@@ -108,17 +108,28 @@ export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
     {timeout && (
       <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3 max-w-md">
         <p className="text-sm text-yellow-700">
-          Loading is taking longer than expected. You may want to:
+          Loading is taking longer than expected. The app will continue loading shortly.
         </p>
         <ul className="list-disc text-xs text-yellow-600 pl-5 mt-1">
           <li className="mt-1">Check your internet connection</li>
-          <li className="mt-1">Try refreshing the page</li>
           <li className="mt-1">
             <button 
               onClick={() => window.location.reload()} 
               className="text-blue-500 underline"
             >
-              Click here to refresh
+              Refresh the page
+            </button>
+          </li>
+          <li className="mt-1">
+            <button 
+              onClick={() => {
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.href = '/login';
+              }} 
+              className="text-blue-500 underline"
+            >
+              Clear cache and restart
             </button>
           </li>
         </ul>

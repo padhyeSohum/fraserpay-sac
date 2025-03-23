@@ -16,7 +16,7 @@ const AppRoutes: React.FC = () => {
     if (isLoading) {
       const timer = setTimeout(() => {
         setLoadingTimeout(true);
-      }, 10000); // Show timeout warning after 10 seconds
+      }, 5000); // Show timeout warning after 5 seconds
       
       return () => clearTimeout(timer);
     } else {
@@ -69,13 +69,24 @@ const AppRoutes: React.FC = () => {
     };
   }, [isAuthenticated, navigate, location.pathname]);
   
-  // Show loading screen when auth state is being determined
+  // Show loading screen for initial auth state determination, but with a timeout fallback
   if (isLoading) {
     console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen timeout={loadingTimeout} />;
   }
   
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
+
+  // If we're at a protected route and not authenticated, redirect to login
+  const isProtectedRoute = routes.some(route => 
+    route.protected && 
+    (location.pathname === route.path || 
+     (route.path.includes(':') && location.pathname.startsWith(route.path.split(':')[0])))
+  );
+
+  if (isProtectedRoute && !isAuthenticated && !isLoading) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <Routes>

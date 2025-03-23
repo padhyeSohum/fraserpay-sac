@@ -49,11 +49,19 @@ const App = () => {
     
     initializeApp();
     
+    // Add a timeout to ensure the app always loads even if something hangs
+    const fallbackTimer = setTimeout(() => {
+      if (!isReady) {
+        console.warn('App initialization timeout reached. Forcing app to load.');
+        setIsReady(true);
+      }
+    }, 5000); // 5 second timeout
+    
     // Clean up function to prevent any potential memory leaks
     return () => {
-      // Any cleanup needed
+      clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [isReady]);
   
   // Only render the app once initialization is complete
   if (!isReady) {
