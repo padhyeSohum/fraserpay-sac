@@ -7,11 +7,11 @@ import { encodeUserData, generateQRCode } from '@/utils/qrCode';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { QRCodeSVG } from 'qrcode.react';
 
 const QRCode = () => {
   const { user, updateUserData } = useAuth();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [qrData, setQrData] = useState<string>('');
+  const [qrCodeData, setQrCodeData] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,46 +23,35 @@ const QRCode = () => {
       // Refresh user data to get the latest balance
       const { data: freshUserData, error: userError } = await supabase
         .from('users')
-        .select('tickets')
+        .select('tickets, qr_code')
         .eq('id', user.id)
         .single();
         
       if (!userError && freshUserData) {
         console.log("QR Code - refreshed user data:", freshUserData);
         
-        // Only update if the balance changed
-        if (freshUserData.tickets / 100 !== user.balance) {
+        // Check if the balance changed
+        const newBalance = freshUserData.tickets / 100;
+        if (newBalance !== user.balance) {
           // Update user context with fresh balance
           updateUserData({
             ...user,
-            balance: freshUserData.tickets / 100
+            balance: newBalance
           });
         }
-        return true;
+        
+        // Return the updated QR code from the database
+        return freshUserData.qr_code || encodeUserData(user.id);
       }
-      return false;
+      
+      // Default fallback - use the user ID to create QR data
+      return encodeUserData(user.id);
     } catch (error) {
       console.error("Error refreshing user data:", error);
-      return false;
+      // Fallback in case of error
+      return encodeUserData(user.id);
     }
   }, [user, updateUserData]);
-
-  // Generate QR code function
-  const generateQRForUser = useCallback(() => {
-    if (!user) return;
-    
-    try {
-      // Generate QR code data
-      const userData = encodeUserData(user.id);
-      setQrData(userData);
-      
-      // Generate QR code image
-      const qrUrl = generateQRCode(userData);
-      setQrCodeUrl(qrUrl);
-    } catch (error) {
-      console.error("Error generating QR code:", error);
-    }
-  }, [user]);
 
   // Initial load effect
   useEffect(() => {
@@ -72,14 +61,15 @@ const QRCode = () => {
       setIsLoading(true);
       
       if (user) {
-        // First refresh user data
-        await refreshUserData();
+        // First refresh user data and get QR code data
+        const qrData = await refreshUserData();
         
         // Only proceed if component is still mounted
         if (!isMounted) return;
         
-        // Generate QR code
-        generateQRForUser();
+        if (qrData) {
+          setQrCodeData(qrData);
+        }
       }
       
       if (isMounted) {
@@ -89,10 +79,16 @@ const QRCode = () => {
     
     loadData();
     
+    // Set up automatic refresh interval
+    const intervalId = setInterval(() => {
+      if (user) refreshUserData();
+    }, 30000); // Refresh every 30 seconds
+    
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
     };
-  }, [user, refreshUserData, generateQRForUser]);
+  }, [user, refreshUserData]);
 
   const regenerateQR = async () => {
     if (!user) return;
@@ -101,11 +97,13 @@ const QRCode = () => {
     
     try {
       // Refresh user data first
-      await refreshUserData();
+      const qrData = await refreshUserData();
       
       // Add a small delay for UI feedback
       setTimeout(() => {
-        generateQRForUser();
+        if (qrData) {
+          setQrCodeData(qrData);
+        }
         setIsRefreshing(false);
       }, 600);
     } catch (error) {
@@ -125,8 +123,13 @@ const QRCode = () => {
               <div 
                 className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing || isLoading ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
               >
-                {qrCodeUrl && !isLoading ? (
-                  <img src={qrCodeUrl} alt="QR Code" className="w-full h-full" />
+                {qrCodeData && !isLoading ? (
+                  <QRCodeSVG 
+                    value={qrCodeData}
+                    size={224}
+                    level="M"
+                    className="w-full h-full"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-muted-foreground">Loading QR code...</p>

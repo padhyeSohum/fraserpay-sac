@@ -11,6 +11,7 @@ import {
 import { Minus, Plus, Printer } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { QRCodeSVG } from 'qrcode.react';
 
 export interface StudentDetailDialogProps {
   isOpen: boolean;
@@ -24,8 +25,8 @@ export interface StudentDetailDialogProps {
     qrCode?: string;
   } | null;
   qrCodeUrl: string;
-  onAddFunds?: (studentId: string) => void;
-  onRefund?: (studentId: string) => void;
+  onAddFunds: (studentId: string) => void;
+  onRefund: (studentId: string) => void;
   onPrintQRCode?: () => void;
 }
 
@@ -34,8 +35,8 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
   onOpenChange,
   student,
   qrCodeUrl,
-  onAddFunds = () => toast.info("Add funds functionality not implemented"),
-  onRefund = () => toast.info("Refund functionality not implemented"),
+  onAddFunds,
+  onRefund,
   onPrintQRCode = () => toast.info("Print QR code functionality not implemented")
 }) => {
   if (!student) {
@@ -80,10 +81,24 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             
             {qrCodeUrl && (
               <div className="flex flex-col items-center gap-4">
-                <div 
-                  className="border p-3 rounded-md bg-white"
-                  dangerouslySetInnerHTML={{ __html: qrCodeUrl }} 
-                />
+                {qrCodeUrl.startsWith('http') ? (
+                  <div className="border p-3 rounded-md bg-white">
+                    <img 
+                      src={qrCodeUrl} 
+                      alt="QR Code" 
+                      width={200} 
+                      height={200} 
+                      className="max-w-full" 
+                    />
+                  </div>
+                ) : (
+                  <div className="border p-3 rounded-md bg-white">
+                    <QRCodeSVG 
+                      value={student.qrCode || student.id} 
+                      size={200} 
+                    />
+                  </div>
+                )}
                 <Button variant="outline" onClick={onPrintQRCode}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print QR Code

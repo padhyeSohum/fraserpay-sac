@@ -1,56 +1,54 @@
 
 import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-export interface BoothLeaderboardProps {
+interface BoothLeaderboardProps {
   leaderboard: any[];
+  isLoading?: boolean;
 }
 
 const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({ 
-  leaderboard = []
+  leaderboard = [],
+  isLoading = false
 }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top Performing Booths</CardTitle>
+        <CardTitle>Booth Leaderboard</CardTitle>
+        <CardDescription>Top performing booths</CardDescription>
       </CardHeader>
       <CardContent>
-        {leaderboard.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            No booth data available
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse flex justify-between py-2">
+                <div className="h-5 bg-muted rounded w-1/3"></div>
+                <div className="h-5 bg-muted rounded w-1/4"></div>
+              </div>
+            ))}
           </div>
-        ) : (
+        ) : leaderboard.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Booth</TableHead>
-                <TableHead>Sales</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboard.map((booth, index) => (
+              {leaderboard.slice(0, 5).map((booth) => (
                 <TableRow key={booth.id}>
-                  <TableCell className="font-medium">
-                    {index < 3 && (
-                      <span className="mr-2">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                      </span>
-                    )}
-                    {booth.name}
-                  </TableCell>
-                  <TableCell>{booth.sales || 0}</TableCell>
-                  <TableCell className="text-right">${booth.revenue?.toFixed(2) || '0.00'}</TableCell>
+                  <TableCell className="font-medium">{booth.name}</TableCell>
+                  <TableCell className="text-right">${booth.totalEarnings.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+        ) : (
+          <div className="text-center py-2 text-muted-foreground">
+            <p>No booths to display</p>
+          </div>
         )}
       </CardContent>
     </Card>

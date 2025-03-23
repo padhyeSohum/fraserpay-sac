@@ -17,9 +17,13 @@ interface StatsData {
 
 interface StatCardsProps {
   stats: StatsData;
+  isLoading?: boolean;
 }
 
-const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
+const StatCards: React.FC<StatCardsProps> = ({ 
+  stats, 
+  isLoading = false 
+}) => {
   // Use default values if stats are undefined
   const safeStats = {
     totalUsers: stats?.totalUsers || 0,
@@ -29,46 +33,62 @@ const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Total Transactions</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Total Transactions</CardTitle>
           <CardDescription>All transactions in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{safeStats.totalTransactions}</p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+          ) : (
+            <p className="text-3xl font-bold">{safeStats.totalTransactions}</p>
+          )}
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader>
-          <CardTitle>Total Booths</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Total Booths</CardTitle>
           <CardDescription>Active booths in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{safeStats.totalBooths}</p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+          ) : (
+            <p className="text-3xl font-bold">{safeStats.totalBooths}</p>
+          )}
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader>
-          <CardTitle>Total Users</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Total Users</CardTitle>
           <CardDescription>Registered users in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{safeStats.totalUsers}</p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+          ) : (
+            <p className="text-3xl font-bold">{safeStats.totalUsers}</p>
+          )}
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader>
-          <CardTitle>Total Revenue</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Total Revenue</CardTitle>
           <CardDescription>All funds processed</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">
-            ${safeStats.totalRevenue.toFixed(2)}
-          </p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+          ) : (
+            <p className="text-3xl font-bold">
+              ${safeStats.totalRevenue.toFixed(2)}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
