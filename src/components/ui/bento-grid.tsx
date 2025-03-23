@@ -1,6 +1,6 @@
 
 import { ReactNode } from "react";
-import { ArrowRightIcon } from "@radix-ui/react-icons";
+import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ const BentoCard = ({
       <Button variant="ghost" asChild size="sm" className="pointer-events-auto">
         <a href={href}>
           {cta}
-          <ArrowRightIcon className="ml-2 h-4 w-4" />
+          <ArrowRight className="ml-2 h-4 w-4" />
         </a>
       </Button>
     </div>
