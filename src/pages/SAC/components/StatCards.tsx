@@ -20,6 +20,14 @@ interface StatCardsProps {
 }
 
 const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
+  // Use default values if stats are undefined
+  const safeStats = {
+    totalUsers: stats?.totalUsers || 0,
+    totalBooths: stats?.totalBooths || 0,
+    totalTransactions: stats?.totalTransactions || 0,
+    totalRevenue: stats?.totalRevenue || 0
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
       <Card>
@@ -28,7 +36,7 @@ const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
           <CardDescription>All transactions in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{stats.totalTransactions}</p>
+          <p className="text-4xl font-bold">{safeStats.totalTransactions}</p>
         </CardContent>
       </Card>
       
@@ -38,7 +46,7 @@ const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
           <CardDescription>Active booths in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{stats.totalBooths}</p>
+          <p className="text-4xl font-bold">{safeStats.totalBooths}</p>
         </CardContent>
       </Card>
       
@@ -48,7 +56,7 @@ const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
           <CardDescription>Registered users in the system</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-4xl font-bold">{stats.totalUsers}</p>
+          <p className="text-4xl font-bold">{safeStats.totalUsers}</p>
         </CardContent>
       </Card>
       
@@ -59,7 +67,7 @@ const StatCards: React.FC<StatCardsProps> = ({ stats }) => {
         </CardHeader>
         <CardContent>
           <p className="text-4xl font-bold">
-            ${stats.totalRevenue.toFixed(2)}
+            ${safeStats.totalRevenue.toFixed(2)}
           </p>
         </CardContent>
       </Card>

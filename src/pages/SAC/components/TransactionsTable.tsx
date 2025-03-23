@@ -2,88 +2,100 @@
 import React from 'react';
 import { 
   Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
   TableHeader, 
-  TableRow 
+  TableRow, 
+  TableHead, 
+  TableBody, 
+  TableCell 
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { formatDate } from '@/utils/format';
-
-interface Transaction {
-  id: string;
-  timestamp: string;
-  buyerName: string;
-  boothName?: string;
-  type: string;
-  amount: number;
-}
+import { format } from 'date-fns';
 
 interface TransactionsTableProps {
-  transactions: Transaction[];
+  transactions: any[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
 }
 
-const TransactionsTable: React.FC<TransactionsTableProps> = ({
+const TransactionsTable: React.FC<TransactionsTableProps> = ({ 
   transactions,
   searchTerm,
   onSearchChange
 }) => {
+  // Format date helper that handles strings or Date objects
+  const formatDate = (dateValue: string | Date | null | undefined) => {
+    if (!dateValue) return 'N/A';
+    
+    try {
+      // If it's a string date, convert to Date object
+      const date = typeof dateValue === 'string' 
+        ? new Date(dateValue) 
+        : dateValue;
+      
+      // Verify it's a valid date before formatting
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      return format(date, 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">All Transactions</h3>
-        <div className="w-64">
+        <h2 className="text-2xl font-bold">Transactions</h2>
+        <div className="max-w-xs w-full">
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
+            className="max-w-xs"
           />
         </div>
       </div>
       
-      <Table>
-        <TableCaption>All transactions in the system</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[140px]">Date</TableHead>
-            <TableHead>Student</TableHead>
-            <TableHead>Booth</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {transactions.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                No transactions found
-              </TableCell>
-            </TableRow>
-          ) : (
-            transactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-medium">
-                  {formatDate(transaction.timestamp)}
-                </TableCell>
-                <TableCell>{transaction.buyerName || 'N/A'}</TableCell>
-                <TableCell>{transaction.boothName || 'SAC Funds'}</TableCell>
-                <TableCell>
-                  {transaction.type === 'funds' ? 'Add Funds' : 'Purchase'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className={transaction.type === 'funds' ? 'text-green-600' : ''}>
-                    ${transaction.amount.toFixed(2)}
-                  </span>
-                </TableCell>
+      {transactions.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          No transactions found
+        </div>
+      ) : (
+        <div className="rounded-md border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Booth</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-medium">
+                    {formatDate(transaction.created_at)}
+                  </TableCell>
+                  <TableCell>{transaction.buyerName || 'N/A'}</TableCell>
+                  <TableCell>{transaction.boothName || 'System'}</TableCell>
+                  <TableCell>
+                    {transaction.type === 'booth_purchase' ? 'Purchase' : 
+                     transaction.type === 'add_funds' ? 'Add Funds' : 
+                     transaction.type}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    ${transaction.amount?.toFixed(2) || '0.00'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };

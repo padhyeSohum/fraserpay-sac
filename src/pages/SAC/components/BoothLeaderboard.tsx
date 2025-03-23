@@ -20,6 +20,18 @@ interface BoothLeaderboardProps {
 }
 
 const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({ leaderboard }) => {
+  // Early return with a message if leaderboard is empty
+  if (!leaderboard || leaderboard.length === 0) {
+    return (
+      <>
+        <h2 className="text-2xl font-bold mb-4">Booth Leaderboard</h2>
+        <Card className="p-6">
+          <p className="text-center text-muted-foreground">No booths data available</p>
+        </Card>
+      </>
+    );
+  }
+
   return (
     <>
       <h2 className="text-2xl font-bold mb-4">Booth Leaderboard</h2>
@@ -35,7 +47,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({ leaderboard }) => {
                   </CardDescription>
                 </div>
                 <div className="bg-primary/10 text-primary font-medium px-2 py-1 rounded text-sm">
-                  ${booth.totalRevenue.toFixed(2)}
+                  ${(booth.totalRevenue || 0).toFixed(2)}
                 </div>
               </div>
             </CardHeader>
@@ -43,14 +55,14 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({ leaderboard }) => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Orders</span>
-                  <span>{booth.totalTransactions}</span>
+                  <span>{booth.totalTransactions || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Average Order</span>
                   <span>
-                    ${booth.totalTransactions > 0 
-                      ? (booth.totalRevenue / booth.totalTransactions).toFixed(2) 
-                      : '0.00'}
+                    ${(booth.totalTransactions > 0 
+                      ? (booth.totalRevenue / booth.totalTransactions) 
+                      : 0).toFixed(2)}
                   </span>
                 </div>
               </div>

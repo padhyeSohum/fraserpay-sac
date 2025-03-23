@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -67,6 +66,7 @@ const SACDashboard: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -84,16 +84,31 @@ const SACDashboard: React.FC = () => {
   }, [user]);
   
   const loadData = async () => {
+    setIsLoading(true);
     try {
       await loadBooths();
       
-      const allTransactions = getSACTransactions();
-      console.log('SAC Dashboard: Loaded transactions', allTransactions.length);
+      // Safely get transactions
+      let allTransactions = [];
+      try {
+        allTransactions = getSACTransactions() || [];
+        console.log('SAC Dashboard: Loaded transactions', allTransactions.length);
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+        allTransactions = [];
+      }
       setTransactions(allTransactions);
       setFilteredTransactions(allTransactions);
       
-      const boothLeaderboard = getLeaderboard();
-      console.log('SAC Dashboard: Loaded leaderboard', boothLeaderboard.length);
+      // Safely get leaderboard
+      let boothLeaderboard = [];
+      try {
+        boothLeaderboard = getLeaderboard() || [];
+        console.log('SAC Dashboard: Loaded leaderboard', boothLeaderboard.length);
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        boothLeaderboard = [];
+      }
       setLeaderboard(boothLeaderboard);
       
       await loadUsers();
@@ -102,11 +117,13 @@ const SACDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error loading SAC dashboard data:', error);
       toast.error('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
     }
   };
   
   const calculateStats = (allTransactions: any[]) => {
-    const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalRevenue = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
     
     setStats({
       totalUsers: usersList.length,
@@ -139,6 +156,8 @@ const SACDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Failed to load users');
+      setUsersList([]);
+      setFilteredUsers([]);
     } finally {
       setIsUserLoading(false);
     }
@@ -151,9 +170,9 @@ const SACDashboard: React.FC = () => {
     } else {
       const filtered = transactions.filter(
         transaction => 
-          transaction.buyerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (transaction.buyerName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
           (transaction.boothName && transaction.boothName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          transaction.id.toLowerCase().includes(searchTerm.toLowerCase())
+          (transaction.id && transaction.id.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredTransactions(filtered);
     }
@@ -404,6 +423,22 @@ const SACDashboard: React.FC = () => {
               You do not have permission to view this page.
             </CardDescription>
           </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">SAC Dashboard</h1>
+        </div>
+        <Card className="p-8">
+          <div className="flex flex-col items-center justify-center">
+            <p className="text-muted-foreground mb-2">Loading dashboard data...</p>
+          </div>
         </Card>
       </div>
     );
