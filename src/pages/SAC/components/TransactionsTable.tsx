@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { formatCurrency } from '@/utils/format';
 
 export interface TransactionsTableProps {
   transactions: any[];
@@ -45,6 +44,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
       console.error('Error formatting date:', error);
       return 'Invalid date';
     }
+  };
+
+  // Format currency properly
+  const formatCurrency = (amount: number) => {
+    return (amount / 100).toFixed(2);
   };
 
   return (
@@ -97,7 +101,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                      transaction.type}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ${formatCurrency(transaction.amount / 100)}
+                    ${formatCurrency(transaction.amount)}
                   </TableCell>
                 </TableRow>
               ))}

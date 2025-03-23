@@ -451,7 +451,96 @@ const Dashboard = () => {
   };
   
   const handlePrintQRCode = () => {
-    toast.info('Printing QR code - This would open a print dialog in a production environment');
+    if (!foundStudent || !foundStudent.qrCode) {
+      toast.error('No QR code available to print');
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Unable to open print window. Please check your popup blocker settings.');
+      return;
+    }
+
+    const studentInfo = foundStudent.name || 'Student';
+    const studentId = foundStudent.studentNumber || '';
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QR Code - ${studentInfo}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+          }
+          .container {
+            max-width: 400px;
+          }
+          .student-info {
+            margin-bottom: 20px;
+          }
+          .qr-code {
+            margin: 20px 0;
+          }
+          h1 {
+            margin-bottom: 5px;
+          }
+          @media print {
+            body {
+              padding: 0;
+            }
+            button {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="student-info">
+            <h1>${studentInfo}</h1>
+            ${studentId ? `<p>Student ID: ${studentId}</p>` : ''}
+            <p>Balance: $${typeof foundStudent.balance === 'number' ? foundStudent.balance.toFixed(2) : '0.00'}</p>
+          </div>
+          <div class="qr-code">
+            ${foundStudent.qrCode ? 
+              `<div id="qrcode"></div>` : 
+              `<p>No QR code available</p>`
+            }
+          </div>
+          <button onclick="window.print(); window.close();">Print QR Code</button>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+        <script>
+          if (document.getElementById('qrcode')) {
+            QRCode.toCanvas(
+              document.getElementById('qrcode'), 
+              "${foundStudent.qrCode || ''}",
+              { width: 300, margin: 2 },
+              function(error) {
+                if (error) console.error(error);
+              }
+            );
+          }
+          setTimeout(() => {
+            window.print();
+          }, 500);
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    
+    toast.success('QR code sent to printer');
   };
   
   const handleNewBoothClick = () => {

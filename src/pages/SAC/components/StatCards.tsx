@@ -7,7 +7,6 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { formatCurrency } from '@/utils/format';
 
 interface StatsData {
   totalUsers: number;
@@ -31,6 +30,11 @@ const StatCards: React.FC<StatCardsProps> = ({
     totalBooths: stats?.totalBooths || 0,
     totalTransactions: stats?.totalTransactions || 0,
     totalRevenue: stats?.totalRevenue || 0
+  };
+
+  // Format currency properly
+  const formatCurrency = (amount: number) => {
+    return amount.toFixed(2);
   };
 
   return (

@@ -54,6 +54,93 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
     );
   }
 
+  const handlePrintQRCode = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Unable to open print window. Please check your popup blocker settings.');
+      return;
+    }
+
+    const studentInfo = student.name || 'Student';
+    const studentId = student.studentNumber || '';
+    
+    // Create content for the print window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QR Code - ${studentInfo}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+          }
+          .container {
+            max-width: 400px;
+          }
+          .student-info {
+            margin-bottom: 20px;
+          }
+          .qr-code {
+            margin: 20px 0;
+          }
+          h1 {
+            margin-bottom: 5px;
+          }
+          @media print {
+            body {
+              padding: 0;
+            }
+            button {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="student-info">
+            <h1>${studentInfo}</h1>
+            ${studentId ? `<p>Student ID: ${studentId}</p>` : ''}
+            <p>Balance: $${typeof student.balance === 'number' ? student.balance.toFixed(2) : '0.00'}</p>
+          </div>
+          <div class="qr-code">
+            ${student.qrCode ? 
+              `<div id="qrcode"></div>` : 
+              `<p>No QR code available</p>`
+            }
+          </div>
+          <button onclick="window.print(); window.close();">Print QR Code</button>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+        <script>
+          if (document.getElementById('qrcode')) {
+            QRCode.toCanvas(
+              document.getElementById('qrcode'), 
+              "${student.qrCode || ''}",
+              { width: 300, margin: 2 },
+              function(error) {
+                if (error) console.error(error);
+              }
+            );
+          }
+          setTimeout(() => {
+            window.print();
+          }, 500);
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -99,7 +186,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                     />
                   </div>
                 )}
-                <Button variant="outline" onClick={onPrintQRCode}>
+                <Button variant="outline" onClick={handlePrintQRCode}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print QR Code
                 </Button>
