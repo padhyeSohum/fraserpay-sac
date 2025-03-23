@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { CartItem, Transaction } from '@/types';
@@ -104,6 +103,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
     setIsLoading(true);
     
     try {
+      // amount is in dollars, but we need cents for the backend
       const result = await addFunds(
         amount,
         userId,
@@ -117,7 +117,7 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
         if (userId === user.id) {
           updateUserData({
             ...user,
-            balance: result.updatedBalance / 100
+            balance: result.updatedBalance
           });
         }
         
