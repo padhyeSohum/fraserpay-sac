@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { CartItem, Transaction } from '@/types';
 import { toast } from 'sonner';
 import { processPurchase, addFunds } from '../transactionService';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface UsePaymentProcessingReturn {
   processPayment: (boothId: string, cart: CartItem[], getBoothById: (id: string) => any, updateTransactions: (tx: Transaction) => void) => Promise<Transaction | null>;
