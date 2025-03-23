@@ -1,4 +1,3 @@
-
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -250,7 +249,49 @@ export const processPurchase = async (
     
     const newBalance = userData.tickets - totalAmountInCents;
     
-    // Update user balance first
+    // Create transaction record first
+    const { data: transactionData, error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        student_id: buyerId,
+        student_name: buyerName,
+        booth_id: boothId,
+        booth_name: boothName,
+        amount: totalAmountInCents,
+        type: 'purchase'
+      })
+      .select()
+      .single();
+    
+    if (transactionError) {
+      console.error('Error creating transaction record:', transactionError);
+      toast.error('Failed to record transaction');
+      return { success: false };
+    }
+    
+    console.log('Transaction record created:', transactionData);
+    
+    // Create transaction products records
+    const transactionProducts = cartItems.map(item => ({
+      transaction_id: transactionData.id,
+      product_id: item.product.id,
+      product_name: item.product.name,
+      quantity: item.quantity,
+      price: Math.round(item.product.price * 100)
+    }));
+    
+    const { error: productsError } = await supabase
+      .from('transaction_products')
+      .insert(transactionProducts);
+    
+    if (productsError) {
+      console.error('Error creating transaction products records:', productsError);
+      // We'll still continue since the main transaction record was created
+    } else {
+      console.log('Transaction products recorded:', transactionProducts.length);
+    }
+    
+    // Update user balance AFTER transaction recording is successful
     const { error: updateUserError } = await supabase
       .from('users')
       .update({ tickets: newBalance })
@@ -271,78 +312,23 @@ export const processPurchase = async (
       .eq('id', boothId)
       .single();
     
-    if (boothError) {
-      console.error('Error fetching booth sales:', boothError);
-      // Continue anyway as this is not critical to the user experience
-    }
-    
-    const currentSales = boothData?.sales || 0;
-    const newSales = currentSales + totalAmountInCents;
-    
-    const { error: updateBoothError } = await supabase
-      .from('booths')
-      .update({ sales: newSales })
-      .eq('id', boothId);
-    
-    if (updateBoothError) {
-      console.error('Error updating booth sales:', updateBoothError);
-      // Continue anyway as this is not critical to the user experience
-    } else {
-      console.log('Booth sales updated:', {
-        previousSales: currentSales / 100,
-        newSales: newSales / 100
-      });
-    }
-    
-    // Create transaction record
-    const { data: transactionData, error: transactionError } = await supabase
-      .from('transactions')
-      .insert({
-        student_id: buyerId,
-        student_name: buyerName,
-        booth_id: boothId,
-        booth_name: boothName,
-        amount: totalAmountInCents,
-        type: 'purchase'
-      })
-      .select()
-      .single();
-    
-    if (transactionError) {
-      console.error('Error creating transaction record:', transactionError);
-      toast.error('Failed to record transaction');
+    if (!boothError && boothData) {
+      const currentSales = boothData.sales || 0;
+      const newSales = currentSales + totalAmountInCents;
       
-      // If transaction recording fails but balance was updated, we should return success
-      // but log this issue for reconciliation
-      console.warn("Balance updated but transaction recording failed:", {
-        buyerId,
-        amount: totalAmount,
-        newBalance: newBalance / 100
-      });
+      const { error: updateBoothError } = await supabase
+        .from('booths')
+        .update({ sales: newSales })
+        .eq('id', boothId);
       
-      return { success: true };
-    }
-    
-    console.log('Transaction record created:', transactionData);
-    
-    // Create transaction products records
-    const transactionProducts = cartItems.map(item => ({
-      transaction_id: transactionData.id,
-      product_id: item.product.id,
-      product_name: item.product.name,
-      quantity: item.quantity,
-      price: Math.round(item.product.price * 100)
-    }));
-    
-    const { error: productsError } = await supabase
-      .from('transaction_products')
-      .insert(transactionProducts);
-    
-    if (productsError) {
-      console.error('Error creating transaction products records:', productsError);
-      // Continue anyway as the main transaction record was created
-    } else {
-      console.log('Transaction products recorded:', transactionProducts.length);
+      if (updateBoothError) {
+        console.error('Error updating booth sales:', updateBoothError);
+      } else {
+        console.log('Booth sales updated:', {
+          previousSales: currentSales / 100,
+          newSales: newSales / 100
+        });
+      }
     }
     
     // Verify the balance update by fetching the user again
