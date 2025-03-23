@@ -2,7 +2,7 @@
 import React from 'react';
 import AppRoutes from './AppRoutes';
 import { BrowserRouter } from 'react-router-dom';
-import { AppProviders } from '@/providers/AppProviders';
+import AppProviders from '@/providers/AppProviders';
 
 // Import all route components to ensure they're properly loaded
 import Index from '@/pages/Index';

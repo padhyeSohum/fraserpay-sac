@@ -8,13 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { UserRole } from '@/types';
 
-const AdjustBalance = () => {
+const AddFunds = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [amount, setAmount] = useState('');
-  const [isDeduction, setIsDeduction] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { user: currentUser } = useAuth();
 
@@ -33,13 +30,6 @@ const AdjustBalance = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Verify security code if needed
-    if (isDeduction && verificationCode !== '090207') {
-      toast.error('Invalid security code');
-      return;
-    }
-    
     if (!selectedUser || !amount || parseFloat(amount) <= 0) {
       toast.error('Please select a user and enter a valid amount');
       return;
@@ -55,26 +45,13 @@ const AdjustBalance = () => {
       return;
     }
 
-    // Calculate the new balance
-    const adjustmentAmount = parseFloat(amount);
-    const newBalance = isDeduction 
-      ? targetUser.balance - adjustmentAmount 
-      : targetUser.balance + adjustmentAmount;
-    
-    // Check if there's enough balance for deduction
-    if (isDeduction && newBalance < 0) {
-      toast.error(`Insufficient funds in ${targetUser.name}'s account`);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       // Update user balance
       const updatedUsers = users.map((u: any) => {
         if (u.id === selectedUser) {
           return {
             ...u,
-            balance: newBalance
+            balance: u.balance + parseFloat(amount)
           };
         }
         return u;
@@ -87,8 +64,8 @@ const AdjustBalance = () => {
         buyerId: targetUser.id,
         buyerName: targetUser.name,
         studentNumber: targetUser.studentNumber,
-        amount: adjustmentAmount,
-        type: isDeduction ? 'refund' : 'fund',
+        amount: parseFloat(amount),
+        type: 'fund',
         sacMemberId: currentUser?.id,
         sacMemberName: currentUser?.name
       };
@@ -101,24 +78,23 @@ const AdjustBalance = () => {
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       localStorage.setItem('transactions', JSON.stringify([...transactions, newTransaction]));
 
-      toast.success(`Successfully ${isDeduction ? 'deducted' : 'added'} $${amount} ${isDeduction ? 'from' : 'to'} ${targetUser.name}'s account`);
+      toast.success(`Successfully added $${amount} to ${targetUser.name}'s account`);
       setSelectedUser('');
       setAmount('');
-      setVerificationCode('');
     } catch (error) {
-      console.error('Error adjusting balance:', error);
-      toast.error('An error occurred while adjusting balance');
+      console.error('Error adding funds:', error);
+      toast.error('An error occurred while adding funds');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Layout title="Adjust Balance">
+    <Layout title="Add Funds">
       <div className="container px-4 py-6 mx-auto max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl text-center">Adjust Student Balance</CardTitle>
+            <CardTitle className="text-xl text-center">Add Funds to Student Account</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,28 +106,12 @@ const AdjustBalance = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {users
-                      .filter((u: any) => u.role === 'student' as UserRole)
+                      .filter((u: any) => u.role === 'student')
                       .map((user: any) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.name} ({user.studentNumber})
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="operation" className="text-sm font-medium">Operation</label>
-                <Select 
-                  value={isDeduction ? "deduct" : "add"} 
-                  onValueChange={(v) => setIsDeduction(v === "deduct")}
-                >
-                  <SelectTrigger id="operation">
-                    <SelectValue placeholder="Select operation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="add">Add Funds</SelectItem>
-                    <SelectItem value="deduct">Deduct Funds</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -175,26 +135,12 @@ const AdjustBalance = () => {
                 </div>
               </div>
 
-              {isDeduction && (
-                <div className="space-y-2">
-                  <label htmlFor="verification" className="text-sm font-medium">Security Code</label>
-                  <Input
-                    id="verification"
-                    type="password"
-                    placeholder="Enter security code"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">Security code required for deductions</p>
-                </div>
-              )}
-
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Processing..." : isDeduction ? "Deduct Funds" : "Add Funds"}
+                {isLoading ? "Processing..." : "Add Funds"}
               </Button>
             </form>
           </CardContent>
@@ -204,4 +150,4 @@ const AdjustBalance = () => {
   );
 };
 
-export default AdjustBalance;
+export default AddFunds;
