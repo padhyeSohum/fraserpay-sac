@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { LogOut, ChevronLeft, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';

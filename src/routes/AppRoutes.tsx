@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
 import { toast } from 'sonner';
 
