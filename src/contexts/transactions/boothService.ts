@@ -40,7 +40,8 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
           })),
           managers: b.members || [],
           totalEarnings: b.sales / 100,
-          transactions: []
+          transactions: [],
+          createdAt: b.created_at // Add the createdAt property from created_at
         };
       });
 

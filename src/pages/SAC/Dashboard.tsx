@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -75,19 +74,16 @@ const SACDashboard: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
   
-  // New states for booth management
   const [isCreateBoothOpen, setIsCreateBoothOpen] = useState(false);
   const [boothName, setBoothName] = useState('');
   const [boothDescription, setBoothDescription] = useState('');
   const [isBoothLoading, setIsBoothLoading] = useState(false);
   
-  // New states for user management
   const [usersList, setUsersList] = useState<any[]>([]);
   const [isUserLoading, setIsUserLoading] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   
-  // Stats states
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalBooths: 0,
@@ -105,19 +101,15 @@ const SACDashboard: React.FC = () => {
       const boothLeaderboard = getLeaderboard();
       setLeaderboard(boothLeaderboard);
       
-      // Load users
       loadUsers();
       
-      // Calculate stats
       calculateStats(allTransactions);
     }
   }, [user]);
   
   const calculateStats = (allTransactions: any[]) => {
-    // Calculate total revenue
     const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0);
     
-    // Set stats
     setStats({
       totalUsers: usersList.length,
       totalBooths: booths.length,
@@ -140,7 +132,6 @@ const SACDashboard: React.FC = () => {
         setUsersList(data);
         setFilteredUsers(data);
         
-        // Update stats with user count
         setStats(prev => ({
           ...prev,
           totalUsers: data.length
@@ -340,10 +331,8 @@ const SACDashboard: React.FC = () => {
         setBoothDescription('');
         toast.success('Booth created successfully');
         
-        // Reload booths
         await loadBooths();
         
-        // Update stats
         setStats(prev => ({
           ...prev,
           totalBooths: booths.length + 1
