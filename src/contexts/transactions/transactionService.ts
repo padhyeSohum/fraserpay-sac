@@ -250,10 +250,54 @@ export const processPurchase = async (
     
     const newBalance = userData.tickets - totalAmountInCents;
     
-    // Use a transaction to ensure all operations are atomic
-    // First, we'll prepare all our operations for the transaction
+    // IMPORTANT: First update the user balance to ensure funds are reserved
+    // This is the first and most critical operation
+    const { error: updateUserError } = await supabase
+      .from('users')
+      .update({ tickets: newBalance })
+      .eq('id', buyerId);
     
-    // 1. Create the transaction record
+    if (updateUserError) {
+      console.error('Error updating user balance:', updateUserError);
+      toast.error('Failed to update user balance');
+      return { success: false };
+    }
+    
+    console.log('User balance updated to:', newBalance / 100);
+    
+    // Verify the user balance was updated correctly
+    const { data: verifiedUser, error: verifyError } = await supabase
+      .from('users')
+      .select('tickets')
+      .eq('id', buyerId)
+      .single();
+    
+    if (verifyError) {
+      console.error('Error verifying balance update:', verifyError);
+      // Continue with recording the transaction, but log the verification failure
+    } else if (verifiedUser.tickets !== newBalance) {
+      console.error('Balance verification failed:', {
+        expected: newBalance / 100,
+        actual: verifiedUser.tickets / 100
+      });
+      
+      // If verification failed, try one more time to update the balance
+      const { error: retryError } = await supabase
+        .from('users')
+        .update({ tickets: newBalance })
+        .eq('id', buyerId);
+        
+      if (retryError) {
+        console.error('Error in retry update:', retryError);
+        // Continue with transaction record, but log the retry failure
+      } else {
+        console.log('Balance update retry attempted');
+      }
+    } else {
+      console.log('Balance verification successful:', verifiedUser.tickets / 100);
+    }
+    
+    // Now create the transaction record
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
@@ -270,12 +314,19 @@ export const processPurchase = async (
     if (transactionError) {
       console.error('Error creating transaction record:', transactionError);
       toast.error('Failed to record transaction');
+      // Critical error: funds were deducted but transaction not recorded
+      // We should attempt to refund the user
+      await supabase
+        .from('users')
+        .update({ tickets: userData.tickets })
+        .eq('id', buyerId);
+      console.error('Transaction failed, attempted to restore user balance');
       return { success: false };
     }
     
     console.log('Transaction record created:', transactionData);
     
-    // 2. Create transaction products records
+    // Create transaction products records
     const transactionProducts = cartItems.map(item => ({
       transaction_id: transactionData.id,
       product_id: item.product.id,
@@ -295,23 +346,7 @@ export const processPurchase = async (
       console.log('Transaction products recorded:', transactionProducts.length);
     }
     
-    // 3. NOW update user balance AFTER transaction recording is successful
-    const { error: updateUserError } = await supabase
-      .from('users')
-      .update({ tickets: newBalance })
-      .eq('id', buyerId);
-    
-    if (updateUserError) {
-      console.error('Error updating user balance:', updateUserError);
-      toast.error('Failed to update user balance');
-      // Even if user balance update fails, the transaction was recorded
-      // Consider this a critical error that needs investigation
-      return { success: false };
-    }
-    
-    console.log('User balance updated to:', newBalance / 100);
-    
-    // 4. Update booth sales
+    // Finally update booth sales
     const { data: boothData, error: boothError } = await supabase
       .from('booths')
       .select('sales')
@@ -337,51 +372,23 @@ export const processPurchase = async (
       }
     }
     
-    // 5. CRITICAL: Verify the balance update by fetching the user again to confirm
-    const { data: verifiedUser, error: verifyError } = await supabase
+    // Do one final verification check of the user's balance
+    const { data: finalCheck } = await supabase
       .from('users')
       .select('tickets')
       .eq('id', buyerId)
       .single();
-    
-    if (verifyError) {
-      console.error('Error verifying balance update:', verifyError);
-    } else if (verifiedUser.tickets !== newBalance) {
-      console.error('Balance verification failed:', {
-        expected: newBalance / 100,
-        actual: verifiedUser.tickets / 100
-      });
       
-      // Try one more time to update the balance if verification failed
-      if (verifiedUser.tickets === userData.tickets) {
-        console.log('Retrying balance update...');
-        const { error: retryError } = await supabase
-          .from('users')
-          .update({ tickets: newBalance })
-          .eq('id', buyerId);
-          
-        if (retryError) {
-          console.error('Error in retry update:', retryError);
-          toast.error('Failed to update balance. Please check your account.');
-          return { success: false };
-        }
-        
-        // Verify again
-        const { data: finalCheck } = await supabase
-          .from('users')
-          .select('tickets')
-          .eq('id', buyerId)
-          .single();
-          
-        if (finalCheck && finalCheck.tickets === newBalance) {
-          console.log('Balance updated successfully on retry');
-        } else {
-          console.error('Balance update failed even after retry');
-          toast.error('Transaction recorded but balance may not be updated correctly');
-        }
-      }
-    } else {
-      console.log('Balance verification successful:', verifiedUser.tickets / 100);
+    if (finalCheck && finalCheck.tickets !== newBalance) {
+      console.error('Final balance check failed:', {
+        expected: newBalance / 100,
+        actual: finalCheck.tickets / 100
+      });
+      // Make one last attempt to ensure the balance is correct
+      await supabase
+        .from('users')
+        .update({ tickets: newBalance })
+        .eq('id', buyerId);
     }
     
     const newTransaction: Transaction = {

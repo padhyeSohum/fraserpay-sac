@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { CartItem, Transaction } from '@/types';
@@ -61,17 +62,34 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
       if (result.success && result.transaction) {
         // Update user balance after successful payment
         if (user) {
-          // Recalculating new balance
-          const totalAmount = cart.reduce(
-            (sum, item) => sum + (item.product.price * item.quantity),
-            0
-          );
-          const newBalance = user.balance - totalAmount;
-          
-          updateUserData({
-            ...user,
-            balance: newBalance
-          });
+          // The new balance was already calculated in the backend
+          // We need to fetch the fresh user data to get the correct balance
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('tickets')
+            .eq('id', user.id)
+            .single();
+            
+          if (!error && userData) {
+            const newBalance = userData.tickets / 100; // Convert cents to dollars
+            
+            updateUserData({
+              ...user,
+              balance: newBalance
+            });
+          } else {
+            // Fallback: calculate locally as before
+            const totalAmount = cart.reduce(
+              (sum, item) => sum + (item.product.price * item.quantity),
+              0
+            );
+            const newBalance = user.balance - totalAmount;
+            
+            updateUserData({
+              ...user,
+              balance: newBalance
+            });
+          }
         }
         
         // Update transactions list
