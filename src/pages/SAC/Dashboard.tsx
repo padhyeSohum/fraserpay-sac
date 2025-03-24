@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -631,14 +630,15 @@ const Dashboard = () => {
               leaderboard={leaderboard} 
               isLoading={isBoothLoading}
             />
-            <TransactionsTable 
-              transactions={transactions} 
-              searchTerm={transactionSearchTerm}
-              onSearchChange={setTransactionSearchTerm}
-              isLoading={isTransactionLoading}
-            />
           </div>
         </div>
+        
+        <TransactionsTable 
+          transactions={transactions} 
+          searchTerm={transactionSearchTerm}
+          onSearchChange={setTransactionSearchTerm}
+          isLoading={isTransactionLoading}
+        />
         
         <CreateBoothDialog 
           isOpen={isBoothDialogOpen}
