@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
@@ -36,6 +35,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     const initializeData = async () => {
       try {
+        console.log("Initializing transaction data fetch");
         await boothManagement.fetchAllBooths();
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
