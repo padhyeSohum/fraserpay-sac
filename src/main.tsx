@@ -35,15 +35,19 @@ const mountApp = () => {
       console.error('Failed to find the root element');
       return;
     }
-
-    // Create React root and render once
+    
+    // Create React root and render only once
     const root = createRoot(rootElement);
+    
     root.render(
       <React.StrictMode>
         <App />
       </React.StrictMode>
     );
+    
+    console.log('React application mounted successfully');
   } catch (error) {
+    console.error('Error mounting React application:', error);
     handleRenderError(error as Error);
   }
 };

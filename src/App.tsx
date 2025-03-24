@@ -1,23 +1,23 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { toast } from 'sonner';
 
 const App = () => {
-  // Use useState for reactive state that triggers re-renders
-  const [isReady, setIsReady] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  // Use useRef for tracking initialization attempts to prevent duplicate initialization
-  const initAttempted = useRef(false);
+  // Use React.useState instead of useState directly to avoid potential reference issues
+  const [isReady, setIsReady] = React.useState(false);
+  const [isInitializing, setIsInitializing] = React.useState(true);
+  // Use React.useRef instead of useRef directly
+  const initAttempted = React.useRef(false);
 
   // Debug logging for initialization state
-  useEffect(() => {
+  React.useEffect(() => {
     console.log(`App state: isReady=${isReady}, isInitializing=${isInitializing}`);
   }, [isReady, isInitializing]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Prevent multiple initialization attempts
     if (initAttempted.current) return;
     initAttempted.current = true;
