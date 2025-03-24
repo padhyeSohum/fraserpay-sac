@@ -1,173 +1,302 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
-import { ArrowRight, Plus, Receipt } from 'lucide-react';
-import { formatCurrency } from '@/utils/format';
-import { Link } from 'react-router-dom';
-import { withRetry } from '@/utils/supabaseHelpers';
-import { toast } from 'sonner';
+import TransactionItem from '@/components/TransactionItem';
+import BoothCard from '@/components/BoothCard';
+import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const { getTransactionsByUser, getLeaderboardData } = useTransactions();
-  const [transactions, setTransactions] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const { user, updateUserData } = useAuth();
+  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
+  const navigate = useNavigate();
+  
+  const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
+  const [userBooths, setUserBooths] = useState<ReturnType<typeof getBoothsByUserId>>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataInitialized, setDataInitialized] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch transactions with retry logic
-        const transactionData = await withRetry(
-          async () => getTransactionsByUser(user?.id || ''),
-          {
-            maxRetries: 3,
-            retryDelay: 1000,
-            onRetry: (attempt, max) => {
-              console.log(`Retrying transaction fetch (${attempt}/${max})...`);
-            },
-            onFail: (error) => {
-              console.error('Failed to fetch transactions:', error);
-              toast.error('Could not load your transactions. Please try again later.');
-            }
-          }
-        );
-
-        if (transactionData) {
-          setTransactions(transactionData.slice(0, 5)); // Get latest 5 transactions
-        } else {
-          toast.error('No transaction data found');
+  const refreshUserData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: freshUserData, error: userError } = await supabase
+        .from('users')
+        .select('tickets')
+        .eq('id', user.id)
+        .single();
+        
+      if (userError) {
+        console.error("Error refreshing user data:", userError);
+        return;
+      }
+      
+      if (freshUserData && user) {
+        console.log("Dashboard - refreshed user data:", freshUserData);
+        
+        if (freshUserData.tickets / 100 !== user.balance) {
+          updateUserData({
+            ...user,
+            balance: freshUserData.tickets / 100
+          });
         }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  }, [user, updateUserData]);
 
-        // Fetch leaderboard with retry logic
-        const leaderboardData = await withRetry(
-          async () => getLeaderboardData(),
-          {
-            maxRetries: 3,
-            retryDelay: 1000,
-            onRetry: (attempt, max) => {
-              console.log(`Retrying leaderboard fetch (${attempt}/${max})...`);
-            },
-            onFail: (error) => {
-              console.error('Failed to fetch leaderboard:', error);
-              toast.error('Could not load leaderboard data. Please try again later.');
-            }
-          }
-        );
-
-        if (leaderboardData) {
-          setLeaderboard(leaderboardData.slice(0, 5)); // Get top 5
-        } else {
-          toast.error('No leaderboard data found');
+  const fetchDataWithRetry = useCallback(async () => {
+    if (!user || dataInitialized) return;
+    
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      await refreshUserData();
+      
+      // Fetch booths with retry logic
+      let boothsData;
+      try {
+        boothsData = await fetchAllBooths();
+        if (!boothsData) {
+          throw new Error("Failed to fetch booths");
         }
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        toast.error('Something went wrong while loading your dashboard');
-      } finally {
-        setIsLoading(false);
+        console.error("Error fetching booths:", error);
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          toast.error(`Failed to load booths. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return;
+        } else {
+          setLoadError("Failed to load booths after multiple attempts");
+          toast.error("Failed to load booths after multiple attempts. Please refresh the page.");
+        }
       }
-    };
-
-    if (user?.id) {
-      fetchUserData();
-    } else {
-      toast.error('User information not available');
+      
+      // Load transactions with error handling
+      let transactions;
+      try {
+        transactions = loadUserTransactions(user.id);
+        setUserTransactions(transactions.slice(0, 3));
+      } catch (error) {
+        console.error("Error loading transactions:", error);
+        setUserTransactions([]);
+        toast.error("Failed to load transactions");
+      }
+      
+      // Get user booths with error handling
+      try {
+        const booths = getBoothsByUserId(user.id);
+        setUserBooths(booths);
+      } catch (error) {
+        console.error("Error loading user booths:", error);
+        setUserBooths([]);
+        toast.error("Failed to load your booths");
+      }
+      
+      setDataInitialized(true);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        toast.error(`Failed to load data. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+      } else {
+        setLoadError("Failed to load data after multiple attempts");
+        toast.error("Failed to load data after multiple attempts. Please refresh the page.");
+      }
+    } finally {
       setIsLoading(false);
     }
-  }, [user, getTransactionsByUser, getLeaderboardData]);
+  }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData, retryCount]);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
+      fetchDataWithRetry();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchDataWithRetry, dataInitialized, retryCount]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refreshUserData();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshUserData]);
+
+  const handleViewQRCode = () => {
+    navigate('/qr-code');
+  };
+
+  const handleViewLeaderboard = () => {
+    navigate('/leaderboard');
+  };
+
+  const handleViewSettings = () => {
+    navigate('/settings');
+  };
+
+  const handleJoinBooth = () => {
+    navigate('/booth/join');
+  };
+
+  const handleBoothCardClick = (boothId: string) => {
+    navigate(`/booth/${boothId}`);
+  };
+
+  const logo = (
+    <div className="flex items-center mb-2">
+      <div>
+        <h1 className="text-xl font-bold">FraserPay</h1>
+        <p className="text-sm text-muted-foreground">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</p>
+      </div>
+    </div>
+  );
+
+  if (!user) {
+    return (
+      <Layout title="Loading...">
+        <div className="flex items-center justify-center min-h-[70vh]">
+          <p>Loading user data...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <Layout title="Dashboard">
-      <div className="space-y-6 animate-fade-in">
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome, {user?.name}!</CardTitle>
-            <CardDescription>Here's a summary of your account</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-muted-foreground">Current Balance</p>
-                <h2 className="text-2xl font-semibold">{formatCurrency(user?.balance)}</h2>
-              </div>
-            </div>
-            <Button asChild>
-              <Link to="/qr-code" className="w-full">
-                Generate QR Code <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+    <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
+      <div className="space-y-6">
+        <div className="balance-card rounded-xl overflow-hidden">
+          <div className="flex flex-col">
+            <span className="text-white/80 mb-1">Your Balance</span>
+            <span className="text-3xl font-bold">${user.balance.toFixed(2)}</span>
+            
+            <p className="mt-4 text-sm text-white/80">
+              Visit the SAC booth to add funds to your account
+            </p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <Button
+            variant="outline"
+            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+            onClick={handleViewQRCode}
+          >
+            <QrCode className="h-6 w-6 mb-1" />
+            <span className="text-xs">QR Code</span>
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+            onClick={handleViewLeaderboard}
+          >
+            <ListOrdered className="h-6 w-6 mb-1" />
+            <span className="text-xs">Leaderboard</span>
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="flex flex-col items-center justify-center h-20 bg-white/80 hover:bg-white"
+            onClick={handleViewSettings}
+          >
+            <Settings className="h-6 w-6 mb-1" />
+            <span className="text-xs">Settings</span>
+          </Button>
+        </div>
+        
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold">Your Booths</h2>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleJoinBooth}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Join Booth</span>
             </Button>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Recent Transactions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>Your last 5 transactions</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
+          </div>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {isLoading ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p>Loading booths...</p>
+                </CardContent>
+              </Card>
+            ) : userBooths.length > 0 ? (
+              userBooths.map(booth => (
+                <BoothCard
+                  key={booth.id}
+                  booth={booth}
+                  userRole="manager"
+                  earnings={booth.totalEarnings}
+                  onClick={() => handleBoothCardClick(booth.id)}
+                />
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  <p>You don't have access to any booths yet</p>
+                  <Button 
+                    variant="link" 
+                    onClick={handleJoinBooth}
+                    className="mt-2"
+                  >
+                    Join a booth with PIN
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+        
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold">Recent Transactions</h2>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/transactions')}>
+              View All
+            </Button>
+          </div>
+          
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-6 text-center">
                 <p>Loading transactions...</p>
-              ) : transactions.length > 0 ? (
-                transactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{transaction.description}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleDateString()}</p>
-                    </div>
-                    <p className="font-medium">{formatCurrency(transaction.amount)}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No recent transactions</p>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button asChild variant="link" size="sm">
-                <Link to="/transactions">
-                  View All <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Leaderboard */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Leaderboard</CardTitle>
-              <CardDescription>Top 5 students with the highest balance</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <p>Loading leaderboard...</p>
-              ) : leaderboard.length > 0 ? (
-                leaderboard.map((student, index) => (
-                  <div key={student.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{student.name}</p>
-                      <p className="text-sm text-muted-foreground">Student Number: {student.studentNumber}</p>
-                    </div>
-                    <p className="font-medium">{formatCurrency(student.balance)}</p>
-                  </div>
-                ))
-              ) : (
-                <p>Leaderboard data not available</p>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button asChild variant="link" size="sm">
-                <Link to="/leaderboard">
-                  View Full Leaderboard <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : userTransactions.length > 0 ? (
+            <div className="space-y-3">
+              {userTransactions.map(transaction => (
+                <TransactionItem key={transaction.id} transaction={transaction} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                <p>No transactions yet</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </Layout>

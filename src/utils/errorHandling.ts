@@ -62,21 +62,6 @@ export const validateRequired = <T>(value: T | null | undefined, errorMessage: s
 };
 
 /**
- * Validates credential pairs for authentication
- * @param username The username to validate
- * @param password The password to validate 
- * @param validCredentials Map of valid username/password combinations
- * @returns Boolean indicating whether credentials are valid
- */
-export const validateCredentials = (
-  username: string,
-  password: string,
-  validCredentials: Record<string, string> = { 'sacadmin': 'codyisabum' }
-): boolean => {
-  return validCredentials[username] === password;
-};
-
-/**
  * Handles Supabase specific errors with appropriate messages
  * @param error The error from Supabase
  * @param operation Description of the operation being performed
