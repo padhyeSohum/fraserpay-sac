@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
@@ -32,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
+    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.id);
@@ -39,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!mounted) return;
         
         if (currentSession) {
+          // We have a session, update state and get user data
           setSession(currentSession);
           
           try {
@@ -48,6 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(userData);
               setIsLoading(false);
               setAuthInitialized(true);
+              
+              // Log user details for debugging
+              console.log("User data loaded:", {
+                id: userData?.id,
+                role: userData?.role,
+                booths: userData?.booths?.length || 0
+              });
             }
             
             if (event === 'SIGNED_IN' && mounted) {
@@ -61,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
+          // No session, clear user data
           if (mounted) {
             setUser(null);
             setSession(null);
@@ -78,18 +89,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
+    // Initial session check
     const checkSession = async () => {
       try {
+        console.log("Checking initial session");
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
         if (initialSession?.user) {
+          console.log("Found initial session for user:", initialSession.user.id);
           setSession(initialSession);
           const userData = await fetchUserData(initialSession.user.id);
           if (mounted) {
             setUser(userData);
+            
+            // Log user details for debugging
+            console.log("Initial user data loaded:", {
+              id: userData?.id,
+              role: userData?.role,
+              booths: userData?.booths?.length || 0
+            });
           }
+        } else {
+          console.log("No initial session found");
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -103,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     checkSession();
 
+    // Safety timeout to ensure auth state is eventually resolved
     authTimeout = setTimeout(() => {
       if (mounted && !authInitialized) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
@@ -174,8 +198,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await verifyBoothAccess(pin, user.id, user.booths);
       
       if (result.success && result.boothId) {
+        // Update user state with new booth access
         setUser(prev => {
           if (!prev) return null;
+          
+          // Add boothId to booths array if not already present
           const updatedBooths = prev.booths?.includes(result.boothId!) 
             ? prev.booths 
             : [...(prev.booths || []), result.boothId!];
@@ -200,6 +227,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserData = (userData: User) => {
+    console.log("Updating user data:", {
+      id: userData.id,
+      role: userData.role,
+      booths: userData.booths?.length || 0
+    });
     setUser(userData);
   };
 

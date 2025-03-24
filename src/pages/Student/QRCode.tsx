@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 const QRCode = () => {
   const { user, updateUserData } = useAuth();
@@ -15,19 +16,26 @@ const QRCode = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Separate the user data refresh logic to make it reusable
+  // Enhanced refreshUserData function with better error handling
   const refreshUserData = useCallback(async () => {
-    if (!user) return false;
+    if (!user) return null;
     
     try {
-      // Refresh user data to get the latest balance
+      console.log("QR Code - refreshing user data for user:", user.id);
+      
+      // Refresh user data to get the latest balance and QR code
       const { data: freshUserData, error: userError } = await supabase
         .from('users')
         .select('tickets, qr_code')
         .eq('id', user.id)
         .single();
         
-      if (!userError && freshUserData) {
+      if (userError) {
+        console.error("Error fetching user data:", userError);
+        return null;
+      }
+      
+      if (freshUserData) {
         console.log("QR Code - refreshed user data:", freshUserData);
         
         // Check if the balance changed
@@ -49,10 +57,14 @@ const QRCode = () => {
           
           // Store the new QR code in the database
           console.log("Storing new QR code in database:", qrCode);
-          await supabase
+          const { error: updateError } = await supabase
             .from('users')
             .update({ qr_code: qrCode })
             .eq('id', user.id);
+            
+          if (updateError) {
+            console.error("Error updating QR code:", updateError);
+          }
         }
         
         return qrCode;
@@ -63,11 +75,11 @@ const QRCode = () => {
     } catch (error) {
       console.error("Error refreshing user data:", error);
       // Fallback in case of error
-      return encodeUserData(user.id);
+      return user ? encodeUserData(user.id) : null;
     }
   }, [user, updateUserData]);
 
-  // Initial load effect
+  // Initial load effect with improved error handling
   useEffect(() => {
     let isMounted = true;
     
@@ -75,6 +87,7 @@ const QRCode = () => {
       setIsLoading(true);
       
       if (user) {
+        console.log("QR Code - loading initial data for user:", user.name);
         // First refresh user data and get QR code data
         const qrData = await refreshUserData();
         
@@ -82,8 +95,15 @@ const QRCode = () => {
         if (!isMounted) return;
         
         if (qrData) {
+          console.log("QR Code - setting QR code data");
           setQrCodeData(qrData);
+        } else {
+          // Fallback if no QR data could be retrieved
+          console.log("QR Code - using fallback QR code data");
+          setQrCodeData(encodeUserData(user.id));
         }
+      } else {
+        console.log("QR Code - no user data available");
       }
       
       if (isMounted) {
@@ -112,20 +132,28 @@ const QRCode = () => {
     try {
       // Generate a new QR code
       const newQrCode = encodeUserData(user.id);
+      console.log("QR Code - regenerating QR code");
       
       // Update the QR code in the database
-      await supabase
+      const { error } = await supabase
         .from('users')
         .update({ qr_code: newQrCode })
         .eq('id', user.id);
-      
-      // Add a small delay for UI feedback
-      setTimeout(() => {
-        setQrCodeData(newQrCode);
-        setIsRefreshing(false);
-      }, 600);
+        
+      if (error) {
+        console.error("Error updating QR code:", error);
+        toast.error("Failed to regenerate QR code");
+      } else {
+        // Add a small delay for UI feedback
+        setTimeout(() => {
+          setQrCodeData(newQrCode);
+          setIsRefreshing(false);
+          toast.success("QR code regenerated successfully");
+        }, 600);
+      }
     } catch (error) {
       console.error("Error refreshing QR code:", error);
+      toast.error("Failed to regenerate QR code");
       setIsRefreshing(false);
     }
   };

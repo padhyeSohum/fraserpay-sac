@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -39,8 +38,10 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     setIsLoading(true);
     
     try {
+      console.log("useBoothManagement: Loading booths for user:", user?.id);
       const fetchedBooths = await fetchAllBooths();
       setBooths(fetchedBooths);
+      console.log(`useBoothManagement: Loaded ${fetchedBooths.length} booths`);
     } catch (error) {
       console.error('Unexpected error loading booths:', error);
       toast.error('Failed to load booths');
@@ -51,13 +52,16 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   
   const loadStudentBooths = () => {
     if (!user || !user.booths || user.booths.length === 0) {
+      console.log("useBoothManagement: No booths for user");
       return [];
     }
     
+    console.log(`useBoothManagement: Filtering booths for user's booth access:`, user.booths);
     const studentBooths = booths.filter(booth => 
       user.booths?.includes(booth.id)
     );
     
+    console.log(`useBoothManagement: Found ${studentBooths.length} booths for user`);
     return studentBooths;
   };
   
@@ -66,22 +70,28 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   };
   
   const getBoothsByUserIdImpl = (userId: string) => {
+    if (!userId || !booths || booths.length === 0) {
+      return [];
+    }
+    console.log(`useBoothManagement: Getting booths for userId: ${userId}`);
     return booths.filter(booth => booth.managers.includes(userId));
   };
 
   const fetchAllBoothsImpl = async () => {
+    console.log("useBoothManagement: Fetching all booths");
     const fetchedBooths = await fetchAllBooths();
     setBooths(fetchedBooths);
+    console.log(`useBoothManagement: Fetched ${fetchedBooths.length} booths`);
     return fetchedBooths;
   };
 
-  // New function to refresh user's booths after joining a booth
   const refreshUserBoothsImpl = async () => {
-    console.log("Refreshing user booths...");
+    console.log("useBoothManagement: Refreshing user booths");
     setIsLoading(true);
     try {
       const fetchedBooths = await fetchAllBooths();
       setBooths(fetchedBooths);
+      console.log(`useBoothManagement: Refreshed ${fetchedBooths.length} booths`);
       return fetchedBooths;
     } catch (error) {
       console.error('Error refreshing user booths:', error);
