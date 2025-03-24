@@ -8,32 +8,40 @@ import { SAC_PIN } from './types';
 // Login functionality
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
+    console.log('Attempting login with student number:', studentNumber);
+    
     // First, find the user by student number
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('email')
+      .select('email, student_number')
       .eq('student_number', studentNumber)
       .single();
     
     if (userError || !userData) {
+      console.error('Student number lookup error:', userError || 'No user found');
       throw new Error('Student number not found');
     }
     
+    console.log('Found user with student number, proceeding with auth');
+    
     // Now sign in with email and password
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email: userData.email,
       password: password
     });
     
     if (error) {
+      console.error('Auth error:', error);
       throw error;
     }
     
+    console.log('Login successful, user authenticated');
     toast.success('Login successful');
     
     // Get session to retrieve user ID
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session?.user.id) {
+      console.error('Failed to retrieve user session');
       throw new Error('Failed to retrieve user session');
     }
     
@@ -41,8 +49,8 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     return await fetchUserData(sessionData.session.user.id);
     
   } catch (error) {
+    console.error('Login error:', error);
     toast.error(error instanceof Error ? error.message : 'Login failed');
-    console.error(error);
     return null;
   }
 };

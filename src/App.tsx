@@ -4,6 +4,7 @@ import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { toast } from 'sonner';
+import { supabase } from './integrations/supabase/client';
 
 const App = () => {
   // Use useState for reactive state that triggers re-renders
@@ -25,12 +26,24 @@ const App = () => {
         // Step 1: Measure app performance
         measurePerformance();
         
-        // Step 2: Preload critical resources
+        // Step 2: Check if Supabase is accessible
+        try {
+          const { error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+          if (error) {
+            console.warn('Supabase connection check failed:', error.message);
+          } else {
+            console.log('Supabase connection successful');
+          }
+        } catch (dbError) {
+          console.warn('Supabase connection error:', dbError);
+        }
+        
+        // Step 3: Preload critical resources
         await preloadCriticalResources([
           '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
         ]);
         
-        // Step 3: Register connectivity listeners
+        // Step 4: Register connectivity listeners
         registerConnectivityListeners(
           // Online callback
           () => {
@@ -79,7 +92,16 @@ const App = () => {
   
   // Return null during initialization to avoid premature rendering
   if (!isReady) {
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+        <img 
+          src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" 
+          alt="Fraser Pay" 
+          className="w-32 h-auto mb-4" 
+        />
+        <p className="text-gray-600 animate-pulse">Loading FraserPay...</p>
+      </div>
+    );
   }
   
   return (

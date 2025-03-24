@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
 import { Session } from '@supabase/supabase-js';
@@ -23,14 +22,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Log auth state for debugging
   useEffect(() => {
-    console.log('Auth state:', { isLoading, session: session?.user?.id || null, user: user?.id || null, authInitialized });
-  }, [isLoading, session, user, authInitialized]);
+    console.log('Auth state:', { 
+      isLoading, 
+      session: session?.user?.id || null, 
+      user: user?.id || null, 
+      authInitialized,
+      currentPath: location.pathname 
+    });
+  }, [isLoading, session, user, authInitialized, location.pathname]);
 
+  // Reset auth error when location changes
+  useEffect(() => {
+    if (authError) {
+      setAuthError(null);
+    }
+  }, [location.pathname, authError]);
+
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
@@ -49,19 +63,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = await fetchUserData(currentSession.user.id);
             
             if (mounted) {
-              setUser(userData);
+              if (userData) {
+                console.log("User data fetched successfully:", userData.name);
+                setUser(userData);
+              } else {
+                console.error("Failed to fetch user data after auth change");
+                setAuthError("Failed to fetch user profile");
+              }
+              
               setIsLoading(false);
               setAuthInitialized(true);
-            }
-            
-            // Only navigate on SIGNED_IN event, not on every auth state change
-            if (event === 'SIGNED_IN' && mounted) {
-              console.log("User signed in, navigating based on role:", userData?.role);
-              // Let AppRoutes handle the navigation based on role
             }
           } catch (error) {
             console.error('Error in auth state change handler:', error);
             if (mounted) {
+              setAuthError(error instanceof Error ? error.message : "Authentication error");
               setIsLoading(false);
               setAuthInitialized(true);
             }
@@ -88,19 +104,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session
     const checkSession = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log("Checking for existing session...");
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error checking session:", error);
+          if (mounted) {
+            setAuthError(error.message);
+          }
+        }
         
         if (!mounted) return;
         
         if (initialSession?.user) {
+          console.log("Found existing session, fetching user data");
           setSession(initialSession);
-          const userData = await fetchUserData(initialSession.user.id);
-          if (mounted) {
-            setUser(userData);
+          
+          try {
+            const userData = await fetchUserData(initialSession.user.id);
+            if (mounted) {
+              if (userData) {
+                console.log("User data fetched for existing session:", userData.name);
+                setUser(userData);
+              } else {
+                console.error("Failed to fetch user data for existing session");
+                setAuthError("Failed to fetch user profile");
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching user data for existing session:", error);
+            if (mounted) {
+              setAuthError(error instanceof Error ? error.message : "Error fetching user data");
+            }
           }
+        } else {
+          console.log("No existing session found");
         }
       } catch (error) {
         console.error('Error checking session:', error);
+        if (mounted) {
+          setAuthError(error instanceof Error ? error.message : "Session check error");
+        }
       } finally {
         if (mounted) {
           setIsLoading(false);
@@ -118,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         setAuthInitialized(true);
       }
-    }, 3000); // 3 second timeout
+    }, 5000); // 5 second timeout
 
     return () => {
       mounted = false;
@@ -127,11 +171,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate, location.pathname]);
 
+  // Login function
   const login = async (studentNumber: string, password: string) => {
     setIsLoading(true);
+    setAuthError(null);
     try {
+      console.log("Attempting login with student number:", studentNumber);
       const loggedInUser = await loginUser(studentNumber, password);
+      
+      if (!loggedInUser) {
+        throw new Error("Login failed. Please check your credentials.");
+      }
+      
       // Navigation is handled in the auth state change listener
+      return true;
+    } catch (error) {
+      console.error("Login error:", error);
+      setAuthError(error instanceof Error ? error.message : "Login failed");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -215,6 +272,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData);
   };
 
+  const clearAuthError = () => {
+    setAuthError(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -222,13 +283,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
-        register,
-        logout,
+        register: registerUser,
+        logout: logoutUser,
         verifySACPin,
         verifyBoothPin,
         joinBooth,
         session,
-        updateUserData
+        updateUserData,
+        authError,
+        clearAuthError
       }}
     >
       {children}

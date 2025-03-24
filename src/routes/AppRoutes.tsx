@@ -6,7 +6,7 @@ import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './ind
 import { toast } from 'sonner';
 
 const AppRoutes: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, authError } = useAuth();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -29,6 +29,13 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     setLoadingTimeout(false);
   }, [location.pathname]);
+  
+  // Display auth errors in toast
+  useEffect(() => {
+    if (authError && !['/login', '/register'].includes(location.pathname)) {
+      toast.error(authError, { id: 'auth-error' });
+    }
+  }, [authError, location.pathname]);
   
   // Handle page refresh and direct URL access - optimize to run once
   useEffect(() => {
