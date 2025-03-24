@@ -339,11 +339,17 @@ const Dashboard = () => {
         throw new Error("You must be logged in to create a booth");
       }
       
+      console.log("Creating booth with data:", {
+        name: boothData.name,
+        description: boothData.description,
+        pin: boothData.pin
+      });
+      
       const boothId = await createBoothFromContext(
         boothData.name,
         boothData.description || '',
         user.id,
-        boothData.pin
+        boothData.pin // Pass the pin from the dialog
       );
       
       if (!boothId) {

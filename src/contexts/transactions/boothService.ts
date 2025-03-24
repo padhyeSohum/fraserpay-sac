@@ -106,27 +106,31 @@ export const createBooth = async (
     
     console.log("Booth created successfully:", data);
     
-    // Update the user's booth_access array to include the new booth
-    const { data: userData, error: userError } = await supabase
+    // Get the user's current booth_access array
+    const { data: userData, error: getUserError } = await supabase
       .from('users')
       .select('booth_access')
       .eq('id', userId)
       .single();
     
-    if (userError) {
-      console.error("Error fetching user booth access:", userError);
+    if (getUserError) {
+      console.error("Error fetching user booth access:", getUserError);
       // Continue even if this fails, as the booth was created successfully
-    } else {
+    } else if (userData) {
+      // Create a new array with the existing booths plus the new one
       const updatedBoothAccess = [...(userData.booth_access || []), data.id];
       
-      const { error: updateError } = await supabase
+      // Update the user's booth_access array
+      const { error: updateUserError } = await supabase
         .from('users')
         .update({ booth_access: updatedBoothAccess })
         .eq('id', userId);
       
-      if (updateError) {
-        console.error("Error updating user booth access:", updateError);
+      if (updateUserError) {
+        console.error("Error updating user booth access:", updateUserError);
         // Continue even if this fails, as the booth was created successfully
+      } else {
+        console.log("Updated user booth access successfully:", updatedBoothAccess);
       }
     }
     
