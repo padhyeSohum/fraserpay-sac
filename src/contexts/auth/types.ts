@@ -10,7 +10,7 @@ export interface AuthContextType {
   register: (studentNumber: string, name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   verifySACPin: (pin: string) => Promise<boolean>;
-  verifyBoothPin: (pin: string) => Promise<boolean>;
+  verifyBoothPin: (pin: string) => Promise<{ success: boolean; boothId?: string }>;
   joinBooth: (boothId: string) => void;
   session: Session | null;
   updateUserData: (userData: User) => void;

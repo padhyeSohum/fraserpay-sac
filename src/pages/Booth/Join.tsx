@@ -57,7 +57,7 @@ const JoinBooth = () => {
       const result = await verifyBoothPin(values.pin);
       console.log("PIN verification result:", result);
       
-      if (result && result.success) {
+      if (result.success) {
         // Refresh booths data after successful join
         await refreshUserBooths();
         

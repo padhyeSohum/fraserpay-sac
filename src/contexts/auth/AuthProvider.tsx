@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
@@ -15,7 +14,6 @@ import {
   verifyBoothAccess 
 } from './authOperations';
 
-// Create the context with undefined initial value
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -26,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Log auth state for debugging
   useEffect(() => {
     console.log('Auth state:', { isLoading, session: session?.user?.id || null, user: user?.id || null, authInitialized });
   }, [isLoading, session, user, authInitialized]);
@@ -35,7 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.id);
@@ -54,10 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setAuthInitialized(true);
             }
             
-            // Only navigate on SIGNED_IN event, not on every auth state change
             if (event === 'SIGNED_IN' && mounted) {
               console.log("User signed in, navigating based on role:", userData?.role);
-              // Let AppRoutes handle the navigation based on role
             }
           } catch (error) {
             console.error('Error in auth state change handler:', error);
@@ -76,7 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (event === 'SIGNED_OUT' && mounted) {
             console.log("User signed out, redirecting to login");
-            // Only navigate if we're not already on login or register
             if (location.pathname !== '/login' && location.pathname !== '/register') {
               navigate('/login');
             }
@@ -85,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check for existing session
     const checkSession = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -111,14 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     checkSession();
 
-    // Add timeout to ensure auth always initializes
     authTimeout = setTimeout(() => {
       if (mounted && !authInitialized) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
         setIsLoading(false);
         setAuthInitialized(true);
       }
-    }, 3000); // 3 second timeout
+    }, 3000);
 
     return () => {
       mounted = false;
@@ -131,7 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const loggedInUser = await loginUser(studentNumber, password);
-      // Navigation is handled in the auth state change listener
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +157,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const success = await verifySACAccess(pin, user.id);
       if (success) {
-        // Update local user state
         setUser(prev => prev ? { ...prev, role: 'sac' } : null);
         navigate('/sac/dashboard');
       }
@@ -177,20 +166,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyBoothPin = async (pin: string): Promise<boolean> => {
-    if (!user) return false;
+  const verifyBoothPin = async (pin: string): Promise<{ success: boolean, boothId?: string }> => {
+    if (!user) return { success: false };
     
     setIsLoading(true);
     try {
-      const { success, boothId } = await verifyBoothAccess(pin, user.id, user.booths);
+      const result = await verifyBoothAccess(pin, user.id, user.booths);
       
-      if (success && boothId) {
-        // Update local user state
+      if (result.success && result.boothId) {
         setUser(prev => {
           if (!prev) return null;
-          const updatedBooths = prev.booths?.includes(boothId) 
+          const updatedBooths = prev.booths?.includes(result.boothId!) 
             ? prev.booths 
-            : [...(prev.booths || []), boothId];
+            : [...(prev.booths || []), result.boothId!];
           
           return {
             ...prev,
@@ -199,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      return success;
+      return result;
     } finally {
       setIsLoading(false);
     }
