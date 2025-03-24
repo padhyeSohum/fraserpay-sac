@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,11 +9,10 @@ import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserBooths } = useTransactions();
+  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
@@ -22,97 +20,60 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [dataInitialized, setDataInitialized] = useState(false);
 
-  // Enhanced refreshUserData with better error handling
   const refreshUserData = useCallback(async () => {
     if (!user) return;
     
     try {
-      console.log("Dashboard - refreshing user data for user:", user.id);
       const { data: freshUserData, error: userError } = await supabase
         .from('users')
-        .select('tickets, booth_access')
+        .select('tickets')
         .eq('id', user.id)
         .single();
         
-      if (userError) {
-        console.error("Error fetching user data:", userError);
-        return false;
-      }
-      
-      if (freshUserData) {
+      if (!userError && freshUserData && user) {
         console.log("Dashboard - refreshed user data:", freshUserData);
         
-        // Update the user context with the fresh data
-        updateUserData({
-          ...user,
-          balance: freshUserData.tickets / 100,
-          booths: freshUserData.booth_access || []
-        });
-        
-        // If booth access has changed, refresh booth data
-        if (JSON.stringify(user.booths) !== JSON.stringify(freshUserData.booth_access)) {
-          console.log("Booth access changed, refreshing booths");
-          await refreshUserBooths();
-          const booths = getBoothsByUserId(user.id);
-          setUserBooths(booths);
+        if (freshUserData.tickets / 100 !== user.balance) {
+          updateUserData({
+            ...user,
+            balance: freshUserData.tickets / 100
+          });
         }
-        
-        return true;
       }
-      
-      return false;
     } catch (error) {
       console.error('Error refreshing user data:', error);
-      return false;
     }
-  }, [user, updateUserData, getBoothsByUserId, refreshUserBooths]);
+  }, [user, updateUserData]);
 
-  // Initial data loading effect with improved error handling
   useEffect(() => {
     let isMounted = true;
     
     async function loadData() {
       if (!user || dataInitialized) return;
       
-      console.log("Dashboard - loading initial data for user:", user.name);
-      
       try {
         setIsLoading(true);
         
-        // Refresh user data first
         await refreshUserData();
         
         if (!isMounted) return;
         
-        // Load booths data
-        console.log("Dashboard - fetching all booths");
-        const allBooths = await fetchAllBooths();
+        await fetchAllBooths();
         
         if (!isMounted) return;
         
-        console.log("Dashboard - fetched booths:", allBooths.length);
-        
-        // Load transactions data
-        console.log("Dashboard - loading user transactions");
         const transactions = loadUserTransactions(user.id);
         if (isMounted) {
-          console.log("Dashboard - loaded transactions:", transactions.length);
           setUserTransactions(transactions.slice(0, 3));
         }
         
-        // Load user's booths
-        console.log("Dashboard - loading user booths");
         const booths = getBoothsByUserId(user.id);
         if (isMounted) {
-          console.log("Dashboard - loaded user booths:", booths.length);
           setUserBooths(booths);
           setDataInitialized(true);
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-        if (isMounted) {
-          toast.error('Error loading dashboard data. Please try refreshing the page.');
-        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -127,67 +88,14 @@ const Dashboard = () => {
     };
   }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData]);
 
-  // Real-time subscription effect
-  useEffect(() => {
-    if (!user) return;
-    
-    console.log("Dashboard - setting up real-time subscriptions");
-    
-    // Subscribe to booth changes
-    const boothsChannel = supabase
-      .channel('public:booths')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'booths' }, 
-        async (payload) => {
-          console.log('Booths table changed:', payload);
-          await refreshUserBooths();
-          const booths = getBoothsByUserId(user.id);
-          setUserBooths(booths);
-        }
-      )
-      .subscribe();
-
-    // Subscribe to user changes
-    const userChannel = supabase
-      .channel('public:users')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, 
-        async (payload) => {
-          console.log('User updated:', payload);
-          await refreshUserData();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      console.log("Dashboard - cleaning up subscriptions");
-      supabase.removeChannel(boothsChannel);
-      supabase.removeChannel(userChannel);
-    };
-  }, [user, refreshUserData, getBoothsByUserId, refreshUserBooths]);
-
-  // Periodic refresh effect
   useEffect(() => {
     const intervalId = setInterval(() => {
-      if (user) {
-        console.log("Dashboard - periodic refresh");
-        refreshUserData();
-      }
+      refreshUserData();
     }, 30000);
     
     return () => clearInterval(intervalId);
-  }, [refreshUserData, user]);
+  }, [refreshUserData]);
 
-  // Ensure booth list is up to date whenever the user changes
-  useEffect(() => {
-    if (user && dataInitialized) {
-      console.log("Dashboard - updating booth list after user change");
-      const booths = getBoothsByUserId(user.id);
-      setUserBooths(booths);
-    }
-  }, [user, dataInitialized, getBoothsByUserId]);
-
-  // Navigation handlers
   const handleViewQRCode = () => {
     navigate('/qr-code');
   };
@@ -217,15 +125,8 @@ const Dashboard = () => {
     </div>
   );
 
-  // If no user is present, show a minimal loading state
   if (!user) {
-    return (
-      <Layout>
-        <div className="flex justify-center items-center h-96">
-          <p>Loading your dashboard...</p>
-        </div>
-      </Layout>
-    );
+    return <div>Loading...</div>;
   }
 
   return (

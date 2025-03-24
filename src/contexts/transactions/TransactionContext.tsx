@@ -20,8 +20,8 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
+  const { user, isAuthenticated } = useAuth();
   const isMounted = useRef(true);
-  const { user } = useAuth();
 
   // Use our custom hooks for each feature area
   const boothManagement = useBoothManagement();
@@ -36,35 +36,32 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     const initializeData = async () => {
       try {
-        console.log("Initializing transaction data fetch");
-        await boothManagement.fetchAllBooths();
+        // Only fetch data if authentication is complete
+        if (isAuthenticated !== undefined) {
+          console.log('Authentication state determined, now initializing transaction data');
+          await boothManagement.fetchAllBooths();
+          
+          if (isMounted.current) {
+            setIsInitialized(true);
+          }
+        }
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
-      } finally {
+        // Still mark as initialized to avoid infinite loading
         if (isMounted.current) {
           setIsInitialized(true);
         }
       }
     };
 
-    initializeData();
+    if (!isInitialized) {
+      initializeData();
+    }
     
     return () => {
       isMounted.current = false;
     };
-  }, []);
-
-  // Update booths when user changes
-  useEffect(() => {
-    if (user && isInitialized) {
-      boothManagement.loadBooths();
-    }
-  }, [user, isInitialized]);
-
-  // Function to update transactions list when a new transaction is created
-  const updateTransactions = (transaction: Transaction) => {
-    // We don't need state here as the useTransactionManagement hook manages its own state
-  };
+  }, [isAuthenticated, isInitialized]);
 
   const contextValue: TransactionContextType = {
     // Booth management
@@ -75,7 +72,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     fetchAllBooths: boothManagement.fetchAllBooths,
     createBooth: boothManagement.createBooth,
-    refreshUserBooths: boothManagement.refreshUserBooths,
     
     // Product management
     loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
@@ -100,38 +96,21 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     decrementQuantity: cartManagement.decrementQuantity,
     
     // Payment processing
-    processPayment: async (boothId) => {
-      const result = await paymentProcessing.processPayment(
-        boothId, 
-        cartManagement.cart, 
-        boothManagement.getBoothById,
-        updateTransactions
-      );
-      return result !== null; // Convert to boolean
-    },
-    processPurchase: async (boothId, studentId, studentName, sellerId, sellerName, items, boothName) => {
-      const result = await paymentProcessing.processPurchase(
-        boothId,
-        studentId,
-        studentName,
-        sellerId,
-        sellerName,
-        items,
-        boothName
-      );
-      return result.success;
-    },
+    processPayment: (boothId) => paymentProcessing.processPayment(
+      boothId, 
+      cartManagement.cart, 
+      boothManagement.getBoothById,
+      () => {} // Empty callback for updateTransactions
+    ),
+    processPurchase: paymentProcessing.processPurchase,
     addFunds: paymentProcessing.addFunds,
+    
+    // User management
+    findUserByStudentNumber,
     
     // Loading states
     isLoading: boothManagement.isLoading || paymentProcessing.isLoading || !isInitialized,
-    findUserByStudentNumber
   };
-
-  // Render a loading state if not initialized yet
-  if (!isInitialized) {
-    console.log('TransactionContext is still initializing...');
-  }
 
   return (
     <TransactionContext.Provider value={contextValue}>

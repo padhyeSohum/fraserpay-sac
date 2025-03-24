@@ -2,33 +2,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { useTransactions } from "@/contexts/transactions";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
 import { toast } from 'sonner';
 
 const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const { fetchAllBooths } = useTransactions();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const routeInitialized = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Handle loading timeout state - show timeout warning after 5 seconds
+  // Handle loading timeout state
   useEffect(() => {
     if (isLoading) {
-      timeoutRef.current = setTimeout(() => {
-        console.log('Auth loading timeout reached, proceeding with route rendering');
+      const timer = setTimeout(() => {
         setLoadingTimeout(true);
-      }, 5000);
+      }, 5000); // Show timeout warning after 5 seconds
       
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      };
+      return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
     }
@@ -43,7 +34,7 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     if (routeInitialized.current) return;
     
-    const handleRouteInitialization = async () => {
+    const handleRouteInitialization = () => {
       // Only run once per session
       routeInitialized.current = true;
       
@@ -51,15 +42,6 @@ const AppRoutes: React.FC = () => {
       
       // Handle direct URL access
       if (isAuthenticated && !isLoading) {
-        // Ensure booths are loaded
-        if (user) {
-          try {
-            await fetchAllBooths();
-          } catch (error) {
-            console.error("Error fetching booths:", error);
-          }
-        }
-        
         // For root path, redirect to dashboard if authenticated
         if (location.pathname === '/' || location.pathname === '') {
           navigate('/dashboard', { replace: true });
@@ -67,10 +49,9 @@ const AppRoutes: React.FC = () => {
       }
     };
     
-    // Always run route initialization after a short delay, even if still loading
-    const initTimer = setTimeout(() => {
+    if (!isLoading) {
       handleRouteInitialization();
-    }, 1000); // 1 second delay
+    }
     
     // Track page refreshes to maintain state
     const handleBeforeUnload = () => {
@@ -80,15 +61,13 @@ const AppRoutes: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      clearTimeout(initTimer);
     };
-  }, [isAuthenticated, isLoading, location.pathname, navigate, user, fetchAllBooths]);
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
   
-  // Show loading screen for initial auth state determination, but proceed after timeout
-  // if loading takes too long, or if we've already hit the loading timeout
-  if (isLoading && !loadingTimeout) {
+  // Show loading screen for initial auth state determination, but with a timeout fallback
+  if (isLoading) {
     console.log("App is in loading state, auth status not determined yet");
-    return <LoadingScreen timeout={false} />;
+    return <LoadingScreen timeout={loadingTimeout} />;
   }
   
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
