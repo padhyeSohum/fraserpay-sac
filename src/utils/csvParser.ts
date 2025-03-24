@@ -93,8 +93,17 @@ export const validateBoothCSV = (data: Record<string, string>[]): { isValid: boo
     return { isValid: false, message: 'CSV file is empty' };
   }
   
-  const requiredFields = ['name', 'description', 'pin'];
   const firstRow = data[0];
+  let requiredFields: string[];
+  
+  // Check if this is a booth with products CSV by looking for product fields
+  const hasProductFields = Object.keys(firstRow).some(key => key.includes('product'));
+  
+  if (hasProductFields) {
+    requiredFields = ['name', 'description', 'pin'];
+  } else {
+    requiredFields = ['name', 'description', 'pin'];
+  }
   
   const missingFields = requiredFields.filter(field => !Object.keys(firstRow).includes(field));
   

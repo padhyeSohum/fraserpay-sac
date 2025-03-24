@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import CSVUploader from '@/components/CSVUploader';
-import { parseCSV, validateBoothCSV, generateBoothCSVTemplate, downloadCSVTemplate } from '@/utils/csvParser';
+import { parseCSV, validateBoothCSV, generateBoothCSVTemplate, generateBoothWithProductsCSVTemplate, downloadCSVTemplate } from '@/utils/csvParser';
 import { Button } from '@/components/ui/button';
 import { Download, Store, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
