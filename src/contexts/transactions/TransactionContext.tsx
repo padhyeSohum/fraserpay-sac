@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
@@ -74,6 +75,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     fetchAllBooths: boothManagement.fetchAllBooths,
     createBooth: boothManagement.createBooth,
+    refreshUserBooths: boothManagement.refreshUserBooths, // Add the new function
     
     // Product management
     loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -28,8 +27,8 @@ const joinBoothSchema = z.object({
 const JoinBooth = () => {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyBoothPin, user } = useAuth();
-  const { createBooth, fetchAllBooths } = useTransactions();
+  const { verifyBoothPin, user, updateUserData } = useAuth();
+  const { createBooth, fetchAllBooths, refreshUserBooths } = useTransactions();
   const navigate = useNavigate();
 
   const joinForm = useForm<z.infer<typeof joinBoothSchema>>({
@@ -53,21 +52,40 @@ const JoinBooth = () => {
     
     try {
       console.log("Attempting to verify booth PIN:", values.pin);
-      const success = await verifyBoothPin(values.pin);
-      console.log("PIN verification result:", success);
+      const result = await verifyBoothPin(values.pin);
+      console.log("PIN verification result:", result);
       
-      if (success) {
+      if (result.success) {
         // Refresh booths data after successful join
-        await fetchAllBooths();
+        await refreshUserBooths();
+        
+        // Get the latest user data to ensure booths are up to date
+        if (user) {
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (!error && userData) {
+            // Update the user data in context to reflect new booth access
+            updateUserData({
+              ...user,
+              booths: userData.booth_access || []
+            });
+          }
+        }
         
         toast.success("Successfully joined booth!");
-        // Update to fetch the booth ID and navigate to it directly
-        const boothAccess = user?.booths || [];
-        if (boothAccess.length > 0) {
-          navigate(`/booth/${boothAccess[boothAccess.length - 1]}`);
+        
+        // Navigate to the new booth if we have its ID
+        if (result.boothId) {
+          navigate(`/booth/${result.boothId}`);
         } else {
           navigate('/dashboard');
         }
+      } else {
+        toast.error("Failed to join booth. Invalid PIN.");
       }
     } catch (error) {
       console.error("Join booth error:", error);

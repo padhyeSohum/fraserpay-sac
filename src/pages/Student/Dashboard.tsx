@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
+  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
@@ -26,24 +26,30 @@ const Dashboard = () => {
     try {
       const { data: freshUserData, error: userError } = await supabase
         .from('users')
-        .select('tickets')
+        .select('tickets, booth_access')
         .eq('id', user.id)
         .single();
         
       if (!userError && freshUserData && user) {
         console.log("Dashboard - refreshed user data:", freshUserData);
         
-        if (freshUserData.tickets / 100 !== user.balance) {
-          updateUserData({
-            ...user,
-            balance: freshUserData.tickets / 100
-          });
+        updateUserData({
+          ...user,
+          balance: freshUserData.tickets / 100,
+          booths: freshUserData.booth_access || []
+        });
+        
+        if (JSON.stringify(user.booths) !== JSON.stringify(freshUserData.booth_access)) {
+          console.log("Booth access changed, refreshing booths");
+          await refreshUserBooths();
+          const booths = getBoothsByUserId(user.id);
+          setUserBooths(booths);
         }
       }
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }
-  }, [user, updateUserData]);
+  }, [user, updateUserData, getBoothsByUserId, refreshUserBooths]);
 
   useEffect(() => {
     let isMounted = true;
@@ -89,12 +95,52 @@ const Dashboard = () => {
   }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData]);
 
   useEffect(() => {
+    if (!user) return;
+    
+    const boothsChannel = supabase
+      .channel('public:booths')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'booths' }, 
+        async (payload) => {
+          console.log('Booths table changed:', payload);
+          await refreshUserBooths();
+          const booths = getBoothsByUserId(user.id);
+          setUserBooths(booths);
+        }
+      )
+      .subscribe();
+
+    const userChannel = supabase
+      .channel('public:users')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, 
+        async (payload) => {
+          console.log('User updated:', payload);
+          await refreshUserData();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(boothsChannel);
+      supabase.removeChannel(userChannel);
+    };
+  }, [user, refreshUserData, getBoothsByUserId, refreshUserBooths]);
+
+  useEffect(() => {
     const intervalId = setInterval(() => {
       refreshUserData();
     }, 30000);
     
     return () => clearInterval(intervalId);
   }, [refreshUserData]);
+
+  useEffect(() => {
+    if (user && dataInitialized) {
+      const booths = getBoothsByUserId(user.id);
+      setUserBooths(booths);
+    }
+  }, [user, dataInitialized, getBoothsByUserId]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -20,6 +21,7 @@ export interface UseBoothManagementReturn {
   createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
   addProductToBooth: (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   isLoading: boolean;
+  refreshUserBooths: () => Promise<Booth[]>;
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
@@ -73,6 +75,22 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     return fetchedBooths;
   };
 
+  // New function to refresh user's booths after joining a booth
+  const refreshUserBoothsImpl = async () => {
+    console.log("Refreshing user booths...");
+    setIsLoading(true);
+    try {
+      const fetchedBooths = await fetchAllBooths();
+      setBooths(fetchedBooths);
+      return fetchedBooths;
+    } catch (error) {
+      console.error('Error refreshing user booths:', error);
+      return booths; // Return current state if refresh fails
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {
     setIsLoading(true);
     try {
@@ -118,6 +136,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     fetchAllBooths: fetchAllBoothsImpl,
     createBooth: createBoothImpl,
     addProductToBooth: addProductToBoothImpl,
-    isLoading
+    isLoading,
+    refreshUserBooths: refreshUserBoothsImpl
   };
 };
