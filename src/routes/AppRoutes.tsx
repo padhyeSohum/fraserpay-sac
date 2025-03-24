@@ -13,15 +13,20 @@ const AppRoutes: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const routeInitialized = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Handle loading timeout state
   useEffect(() => {
     if (isLoading) {
-      const timer = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setLoadingTimeout(true);
       }, 5000); // Show timeout warning after 5 seconds
       
-      return () => clearTimeout(timer);
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
     } else {
       setLoadingTimeout(false);
     }
@@ -46,7 +51,11 @@ const AppRoutes: React.FC = () => {
       if (isAuthenticated && !isLoading) {
         // Ensure booths are loaded
         if (user) {
-          await fetchAllBooths();
+          try {
+            await fetchAllBooths();
+          } catch (error) {
+            console.error("Error fetching booths:", error);
+          }
         }
         
         // For root path, redirect to dashboard if authenticated
@@ -56,9 +65,10 @@ const AppRoutes: React.FC = () => {
       }
     };
     
-    if (!isLoading) {
+    // Always run route initialization after a short delay, even if still loading
+    const initTimer = setTimeout(() => {
       handleRouteInitialization();
-    }
+    }, 1000); // 1 second delay
     
     // Track page refreshes to maintain state
     const handleBeforeUnload = () => {
@@ -68,13 +78,15 @@ const AppRoutes: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearTimeout(initTimer);
     };
   }, [isAuthenticated, isLoading, location.pathname, navigate, user, fetchAllBooths]);
   
-  // Show loading screen for initial auth state determination, but with a timeout fallback
-  if (isLoading) {
+  // Show loading screen for initial auth state determination, but proceed after 8 seconds
+  // regardless of auth state to prevent permanent loading
+  if (isLoading && !loadingTimeout) {
     console.log("App is in loading state, auth status not determined yet");
-    return <LoadingScreen timeout={loadingTimeout} />;
+    return <LoadingScreen timeout={false} />;
   }
   
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);

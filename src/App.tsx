@@ -11,12 +11,21 @@ const App = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   // Use useRef for tracking initialization attempts to prevent duplicate initialization
   const initAttempted = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Prevent multiple initialization attempts
     if (initAttempted.current) return;
     initAttempted.current = true;
     
+    // Add a FALLBACK TIMER first to ensure the app always loads
+    // This is the critical change to fix the loading issue
+    timeoutRef.current = setTimeout(() => {
+      console.warn('App initialization timeout reached. Forcing app to load.');
+      setIsInitializing(false);
+      setIsReady(true);
+    }, 5000); // 5 second timeout
+
     // Initialize app in a controlled sequence
     const initializeApp = async () => {
       try {
@@ -26,8 +35,11 @@ const App = () => {
         measurePerformance();
         
         // Step 2: Preload critical resources
-        await preloadCriticalResources([
-          '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
+        await Promise.race([
+          preloadCriticalResources([
+            '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
+          ]),
+          new Promise(resolve => setTimeout(resolve, 2000)) // 2 second timeout for preloading
         ]);
         
         // Step 3: Register connectivity listeners
@@ -49,6 +61,11 @@ const App = () => {
         );
         
         console.log('App initialization complete');
+        // Cancel the fallback timer if initialization completes successfully
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         // Mark app as ready when initialization is complete
         setIsInitializing(false);
         setIsReady(true);
@@ -62,26 +79,15 @@ const App = () => {
     
     initializeApp();
     
-    // Add a timeout to ensure the app always loads even if something hangs
-    const fallbackTimer = setTimeout(() => {
-      if (isInitializing) {
-        console.warn('App initialization timeout reached. Forcing app to load.');
-        setIsInitializing(false);
-        setIsReady(true);
-      }
-    }, 5000); // 5 second timeout
-    
     // Clean up function to prevent any potential memory leaks
     return () => {
-      clearTimeout(fallbackTimer);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, []); // Remove isInitializing from dependency array to prevent loops
+  }, []); // Clean dependency array
   
-  // Return null during initialization to avoid premature rendering
-  if (!isReady) {
-    return null;
-  }
-  
+  // Return the app as soon as it's ready, don't block on loading
   return (
     <AppProviders>
       <AppRoutes />

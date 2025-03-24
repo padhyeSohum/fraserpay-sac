@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
 import { Session } from '@supabase/supabase-js';
@@ -22,6 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,7 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let authTimeout: NodeJS.Timeout;
     
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
 
     // Safety timeout to ensure auth state is eventually resolved
-    authTimeout = setTimeout(() => {
+    authTimeoutRef.current = setTimeout(() => {
       if (mounted && !authInitialized) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
         setIsLoading(false);
@@ -137,7 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       mounted = false;
-      clearTimeout(authTimeout);
+      if (authTimeoutRef.current) {
+        clearTimeout(authTimeoutRef.current);
+      }
       subscription.unsubscribe();
     };
   }, [navigate, location.pathname]);
