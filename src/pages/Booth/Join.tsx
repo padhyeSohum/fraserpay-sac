@@ -117,15 +117,6 @@ const JoinBooth = () => {
                 <CardTitle className="text-2xl font-bold">
                   {mode === 'join' ? "Join a Booth" : "Create a Booth"}
                 </CardTitle>
-                {canCreateBooth && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setMode(mode === 'join' ? 'create' : 'join')}
-                  >
-                    {mode === 'join' ? "Create" : "Join"}
-                  </Button>
-                )}
               </div>
               <CardDescription>
                 {mode === 'join' 
