@@ -15,16 +15,18 @@ const AppRoutes: React.FC = () => {
   const routeInitialized = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Handle loading timeout state
+  // Handle loading timeout state - show timeout warning after 5 seconds
   useEffect(() => {
     if (isLoading) {
       timeoutRef.current = setTimeout(() => {
+        console.log('Auth loading timeout reached, proceeding with route rendering');
         setLoadingTimeout(true);
-      }, 5000); // Show timeout warning after 5 seconds
+      }, 5000);
       
       return () => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
         }
       };
     } else {
@@ -82,8 +84,8 @@ const AppRoutes: React.FC = () => {
     };
   }, [isAuthenticated, isLoading, location.pathname, navigate, user, fetchAllBooths]);
   
-  // Show loading screen for initial auth state determination, but proceed after 8 seconds
-  // regardless of auth state to prevent permanent loading
+  // Show loading screen for initial auth state determination, but proceed after timeout
+  // if loading takes too long, or if we've already hit the loading timeout
   if (isLoading && !loadingTimeout) {
     console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen timeout={false} />;

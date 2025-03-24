@@ -61,7 +61,11 @@ const App = () => {
         );
         
         console.log('App initialization complete');
-        // Cancel the fallback timer if initialization completes successfully
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+      } finally {
+        // Always mark app as ready and not initializing, regardless of success or failure
+        // Cancel the fallback timer if initialization completes
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -69,11 +73,7 @@ const App = () => {
         // Mark app as ready when initialization is complete
         setIsInitializing(false);
         setIsReady(true);
-      } catch (error) {
-        console.error('Failed to initialize app:', error);
-        // Allow the app to render even if initialization fails
-        setIsInitializing(false);
-        setIsReady(true);
+        console.log('App is now ready to render, isInitializing:', false, 'isReady:', true);
       }
     };
     
@@ -86,6 +86,11 @@ const App = () => {
       }
     };
   }, []); // Clean dependency array
+  
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('App state updated - isInitializing:', isInitializing, 'isReady:', isReady);
+  }, [isInitializing, isReady]);
   
   // Return the app as soon as it's ready, don't block on loading
   return (

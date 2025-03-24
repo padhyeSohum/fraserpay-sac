@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { SAC_PIN } from './types';
@@ -246,5 +245,44 @@ export const verifyBoothAccess = async (
   } catch (error) {
     console.error('Error verifying booth access:', error);
     return { success: false };
+  }
+};
+
+/**
+ * Creates a new user with the given data
+ */
+export const createNewUser = async (userData: {
+  id: string;
+  email: string;
+  name: string;
+  student_number: string;
+  tickets: number;
+  role: string;
+  booth_access: string[];
+}): Promise<AuthUser | null> => {
+  try {
+    // Generate a QR code string using the user's ID
+    const qrCodeString = userData.id;
+    
+    const { data, error } = await supabase.from('users').insert({
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      student_number: userData.student_number,
+      tickets: userData.tickets,
+      role: userData.role,
+      booth_access: userData.booth_access,
+      qr_code: qrCodeString // Add the required qr_code field
+    }).select().single();
+    
+    if (error) {
+      console.error("Error creating user:", error);
+      return null;
+    }
+    
+    return data as AuthUser;
+  } catch (error) {
+    console.error("Exception in createNewUser:", error);
+    return null;
   }
 };
