@@ -36,7 +36,15 @@ export interface TransactionContextType {
   
   // Payment processing
   processPayment: (boothId: string) => Promise<boolean>;
-  processPurchase: (boothId: string, studentId: string, items: CartItem[]) => Promise<boolean>;
+  processPurchase: (
+    boothId: string, 
+    studentId: string, 
+    studentName: string, 
+    sellerId: string, 
+    sellerName: string, 
+    items: CartItem[],
+    boothName: string
+  ) => Promise<boolean>;
   addFunds: (studentId: string, amount: number, sacUserId: string) => Promise<{ success: boolean }>;
   
   // User search

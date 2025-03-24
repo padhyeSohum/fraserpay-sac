@@ -75,7 +75,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     fetchAllBooths: boothManagement.fetchAllBooths,
     createBooth: boothManagement.createBooth,
-    refreshUserBooths: boothManagement.refreshUserBooths, // Add the new function
+    refreshUserBooths: boothManagement.refreshUserBooths,
     
     // Product management
     loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
@@ -100,13 +100,27 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     decrementQuantity: cartManagement.decrementQuantity,
     
     // Payment processing
-    processPayment: (boothId) => paymentProcessing.processPayment(
-      boothId, 
-      cartManagement.cart, 
-      boothManagement.getBoothById,
-      updateTransactions
-    ),
-    processPurchase: paymentProcessing.processPurchase,
+    processPayment: async (boothId) => {
+      const result = await paymentProcessing.processPayment(
+        boothId, 
+        cartManagement.cart, 
+        boothManagement.getBoothById,
+        updateTransactions
+      );
+      return result !== null; // Convert to boolean
+    },
+    processPurchase: async (boothId, studentId, studentName, sellerId, sellerName, items, boothName) => {
+      const result = await paymentProcessing.processPurchase(
+        boothId,
+        studentId,
+        studentName,
+        sellerId,
+        sellerName,
+        items,
+        boothName
+      );
+      return result.success;
+    },
     addFunds: paymentProcessing.addFunds,
     
     // Loading states

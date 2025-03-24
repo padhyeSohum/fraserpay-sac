@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -11,6 +12,7 @@ import Layout from '@/components/Layout';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { supabase } from '@/integrations/supabase/client';
 
 // Create a schema for booth creation
 const createBoothSchema = z.object({
@@ -55,7 +57,7 @@ const JoinBooth = () => {
       const result = await verifyBoothPin(values.pin);
       console.log("PIN verification result:", result);
       
-      if (result.success) {
+      if (result && result.success) {
         // Refresh booths data after successful join
         await refreshUserBooths();
         
