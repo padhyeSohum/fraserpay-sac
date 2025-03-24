@@ -35,7 +35,7 @@ const BoothsList: React.FC<BoothsListProps> = ({
   );
 
   return (
-    <Card className="w-full">
+    <Card className="w-full shadow-sm">
       <CardHeader>
         <CardTitle>Booths</CardTitle>
         <CardDescription>All active booths with their access PINs</CardDescription>

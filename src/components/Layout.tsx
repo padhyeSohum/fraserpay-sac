@@ -96,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
         
-        <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full flex flex-col items-center justify-center">
+        <main className="flex-1 px-6 py-4 w-full flex flex-col items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
         </main>
         
@@ -155,7 +155,7 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </header>
       
-      <main className="flex-1 px-6 py-4 max-w-md mx-auto w-full">
+      <main className="flex-1 px-6 py-4 w-full max-w-7xl mx-auto">
         {children}
       </main>
       
@@ -164,6 +164,6 @@ const Layout: React.FC<LayoutProps> = ({
       </footer>
     </div>
   );
-};
+}
 
 export default Layout;

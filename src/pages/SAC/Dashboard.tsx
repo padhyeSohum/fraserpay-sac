@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -568,13 +569,13 @@ const Dashboard = () => {
       title="SAC Dashboard" 
       showBack={true}
     >
-      <div className="w-full max-w-7xl mx-auto px-4 space-y-6">
+      <div className="w-full space-y-6">
         <StatCards 
           stats={stats} 
           isLoading={isLoading}
         />
         
-        <div className="grid grid-cols-3 gap-4 w-full max-w-full mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
           <Button
             onClick={handleNewBoothClick}
             size="lg"
