@@ -10,6 +10,7 @@ import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
