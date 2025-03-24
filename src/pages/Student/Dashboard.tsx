@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -19,6 +20,9 @@ const Dashboard = () => {
   const [userBooths, setUserBooths] = useState<ReturnType<typeof getBoothsByUserId>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataInitialized, setDataInitialized] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   const refreshUserData = useCallback(async () => {
     if (!user) return;
@@ -30,7 +34,12 @@ const Dashboard = () => {
         .eq('id', user.id)
         .single();
         
-      if (!userError && freshUserData && user) {
+      if (userError) {
+        console.error("Error refreshing user data:", userError);
+        return;
+      }
+      
+      if (freshUserData && user) {
         console.log("Dashboard - refreshed user data:", freshUserData);
         
         if (freshUserData.tickets / 100 !== user.balance) {
@@ -45,48 +54,83 @@ const Dashboard = () => {
     }
   }, [user, updateUserData]);
 
+  const fetchDataWithRetry = useCallback(async () => {
+    if (!user || dataInitialized) return;
+    
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      await refreshUserData();
+      
+      // Fetch booths with retry logic
+      let boothsData;
+      try {
+        boothsData = await fetchAllBooths();
+        if (!boothsData) {
+          throw new Error("Failed to fetch booths");
+        }
+      } catch (error) {
+        console.error("Error fetching booths:", error);
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          toast.error(`Failed to load booths. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return;
+        } else {
+          setLoadError("Failed to load booths after multiple attempts");
+          toast.error("Failed to load booths after multiple attempts. Please refresh the page.");
+        }
+      }
+      
+      // Load transactions with error handling
+      let transactions;
+      try {
+        transactions = loadUserTransactions(user.id);
+        setUserTransactions(transactions.slice(0, 3));
+      } catch (error) {
+        console.error("Error loading transactions:", error);
+        setUserTransactions([]);
+        toast.error("Failed to load transactions");
+      }
+      
+      // Get user booths with error handling
+      try {
+        const booths = getBoothsByUserId(user.id);
+        setUserBooths(booths);
+      } catch (error) {
+        console.error("Error loading user booths:", error);
+        setUserBooths([]);
+        toast.error("Failed to load your booths");
+      }
+      
+      setDataInitialized(true);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        toast.error(`Failed to load data. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+      } else {
+        setLoadError("Failed to load data after multiple attempts");
+        toast.error("Failed to load data after multiple attempts. Please refresh the page.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData, retryCount]);
+
   useEffect(() => {
     let isMounted = true;
     
-    async function loadData() {
-      if (!user || dataInitialized) return;
-      
-      try {
-        setIsLoading(true);
-        
-        await refreshUserData();
-        
-        if (!isMounted) return;
-        
-        await fetchAllBooths();
-        
-        if (!isMounted) return;
-        
-        const transactions = loadUserTransactions(user.id);
-        if (isMounted) {
-          setUserTransactions(transactions.slice(0, 3));
-        }
-        
-        const booths = getBoothsByUserId(user.id);
-        if (isMounted) {
-          setUserBooths(booths);
-          setDataInitialized(true);
-        }
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
+      fetchDataWithRetry();
     }
-    
-    loadData();
     
     return () => {
       isMounted = false;
     };
-  }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData]);
+  }, [fetchDataWithRetry, dataInitialized, retryCount]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -126,7 +170,13 @@ const Dashboard = () => {
   );
 
   if (!user) {
-    return <div>Loading...</div>;
+    return (
+      <Layout title="Loading...">
+        <div className="flex items-center justify-center min-h-[70vh]">
+          <p>Loading user data...</p>
+        </div>
+      </Layout>
+    );
   }
 
   return (

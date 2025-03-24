@@ -17,6 +17,19 @@ const App = () => {
     console.log(`App state: isReady=${isReady}, isInitializing=${isInitializing}`);
   }, [isReady, isInitializing]);
 
+  // Add a safety timeout to prevent app from being stuck in loading state
+  React.useEffect(() => {
+    if (isReady) return;
+    
+    const safetyTimeout = setTimeout(() => {
+      console.warn('App initialization safety timeout reached. Forcing app to load.');
+      setIsInitializing(false);
+      setIsReady(true);
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(safetyTimeout);
+  }, [isReady]);
+
   React.useEffect(() => {
     // Prevent multiple initialization attempts
     if (initAttempted.current) return;
@@ -81,19 +94,6 @@ const App = () => {
     // Start initialization process
     initializeApp();
     
-    // Add a timeout to ensure the app always loads even if something hangs
-    const fallbackTimer = setTimeout(() => {
-      if (isInitializing || !isReady) {
-        console.warn('App initialization timeout reached. Forcing app to load.');
-        setIsInitializing(false);
-        setIsReady(true);
-      }
-    }, 5000); // 5 second timeout
-    
-    // Clean up function to prevent any potential memory leaks
-    return () => {
-      clearTimeout(fallbackTimer);
-    };
   }, []); // Empty dependency array so it only runs once
   
   // Return null during initialization to avoid premature rendering

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User } from '@/types';
@@ -99,7 +100,7 @@ export const registerUser = async (
         role: 'student',
         tickets: 0,
         booth_access: [], // Ensure this is an empty array, not undefined
-        qr_code: qrCode // Include the required qr_code field
+        qr_code: qrCode || "" // Ensure qr_code is never null or undefined
       });
     
     if (profileError) {
@@ -179,8 +180,8 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
       throw new Error('Invalid booth PIN');
     }
     
-    if (!boothData) {
-      console.error("No booth found with that PIN");
+    if (!boothData || !boothData.id) {
+      console.error("No booth found with that PIN or booth ID is missing");
       throw new Error('Invalid booth PIN');
     }
     

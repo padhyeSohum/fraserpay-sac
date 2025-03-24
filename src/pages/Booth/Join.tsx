@@ -52,6 +52,10 @@ const JoinBooth = () => {
     setIsLoading(true);
     
     try {
+      if (!user) {
+        throw new Error("You must be logged in to join a booth");
+      }
+      
       console.log("Attempting to verify booth PIN:", values.pin);
       const result = await verifyBoothPin(values.pin);
       console.log("PIN verification result:", result);
@@ -59,10 +63,14 @@ const JoinBooth = () => {
       if (result.success) {
         toast.success("Successfully joined booth!");
         
+        // Add proper boothId handling with fallback
         if (result.boothId) {
           navigate(`/booth/${result.boothId}`);
         } else if (user?.booths && user.booths.length > 0) {
-          navigate(`/booth/${user.booths[user.booths.length - 1]}`);
+          // Fallback: Navigate to the most recently added booth
+          const mostRecentBoothId = user.booths[user.booths.length - 1];
+          navigate(`/booth/${mostRecentBoothId}`);
+          console.log("Booth ID not returned from verification, using fallback:", mostRecentBoothId);
         } else {
           toast.error("Could not determine booth ID. Redirecting to dashboard.");
           navigate('/dashboard');
@@ -90,7 +98,8 @@ const JoinBooth = () => {
       const boothId = await createBooth(
         values.name,
         values.description || '',
-        user.id
+        user.id,
+        values.pin // Pass the PIN from the form
       );
       
       console.log("Booth creation result:", boothId);
