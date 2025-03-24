@@ -20,13 +20,15 @@ export interface UseTransactionManagementReturn {
 }
 
 export const useTransactionManagement = (booths: Booth[]): UseTransactionManagementReturn => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
   // Load transactions on mount
   useEffect(() => {
     const fetchTransactionsData = async () => {
+      if (!isAuthenticated) return;
+      
       console.log('Initializing transaction data fetch');
       try {
         const allTransactions = await fetchAllTransactions();
@@ -45,7 +47,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     };
     
     fetchTransactionsData();
-  }, [user]);
+  }, [user, isAuthenticated]);
 
   const loadBoothTransactions = (boothId: string, booths: Booth[]) => {
     // Filter transactions for the specific booth
@@ -53,8 +55,9 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
   };
 
   const loadUserFundsTransactions = () => {
+    if (!user) return [];
     // Filter transactions for fund-type transactions belonging to the current user
-    return transactions.filter(t => t.type === 'fund' && t.buyerId === user?.id);
+    return transactions.filter(t => t.type === 'fund' && t.buyerId === user.id);
   };
 
   const loadUserTransactionsImpl = (userId: string) => {

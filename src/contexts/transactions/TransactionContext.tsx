@@ -20,6 +20,7 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
+  const { user, isAuthenticated } = useAuth();
   const isMounted = useRef(true);
 
   // Use our custom hooks for each feature area
@@ -35,27 +36,32 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     const initializeData = async () => {
       try {
-        await boothManagement.fetchAllBooths();
+        // Only fetch data if authentication is complete
+        if (isAuthenticated !== undefined) {
+          console.log('Authentication state determined, now initializing transaction data');
+          await boothManagement.fetchAllBooths();
+          
+          if (isMounted.current) {
+            setIsInitialized(true);
+          }
+        }
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
-      } finally {
+        // Still mark as initialized to avoid infinite loading
         if (isMounted.current) {
           setIsInitialized(true);
         }
       }
     };
 
-    initializeData();
+    if (!isInitialized) {
+      initializeData();
+    }
     
     return () => {
       isMounted.current = false;
     };
-  }, []);
-
-  // Function to update transactions list when a new transaction is created
-  const updateTransactions = (transaction: Transaction) => {
-    // We don't need state here as the useTransactionManagement hook manages its own state
-  };
+  }, [isAuthenticated, isInitialized]);
 
   const contextValue: TransactionContextType = {
     // Booth management
@@ -94,20 +100,17 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       boothId, 
       cartManagement.cart, 
       boothManagement.getBoothById,
-      updateTransactions
+      () => {} // Empty callback for updateTransactions
     ),
     processPurchase: paymentProcessing.processPurchase,
     addFunds: paymentProcessing.addFunds,
     
+    // User management
+    findUserByStudentNumber,
+    
     // Loading states
     isLoading: boothManagement.isLoading || paymentProcessing.isLoading || !isInitialized,
-    findUserByStudentNumber
   };
-
-  // Render a loading state if not initialized yet
-  if (!isInitialized) {
-    console.log('TransactionContext is still initializing...');
-  }
 
   return (
     <TransactionContext.Provider value={contextValue}>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -23,24 +24,29 @@ export interface UseBoothManagementReturn {
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    // Only load booths when the auth state is determined and user is authenticated
+    if (isAuthenticated) {
       loadBooths();
     }
-  }, [user]);
+  }, [isAuthenticated]);
 
   const loadBooths = async () => {
+    if (!isAuthenticated) return;
+    
     setIsLoading(true);
     
     try {
+      console.log('useBoothManagement: Loading booths...');
       const fetchedBooths = await fetchAllBooths();
+      console.log('useBoothManagement: Loaded', fetchedBooths.length, 'booths');
       setBooths(fetchedBooths);
     } catch (error) {
-      console.error('Unexpected error loading booths:', error);
+      console.error('useBoothManagement: Error loading booths:', error);
       toast.error('Failed to load booths');
     } finally {
       setIsLoading(false);
@@ -68,7 +74,16 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   };
 
   const fetchAllBoothsImpl = async () => {
-    return await fetchAllBooths();
+    try {
+      console.log('Fetching all booths...');
+      const fetchedBooths = await fetchAllBooths();
+      console.log('Fetched', fetchedBooths.length, 'booths');
+      setBooths(fetchedBooths);
+      return fetchedBooths;
+    } catch (error) {
+      console.error('Error fetching all booths:', error);
+      return [];
+    }
   };
 
   const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {

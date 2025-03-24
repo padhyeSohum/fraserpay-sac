@@ -75,7 +75,7 @@ const App = () => {
     return () => {
       clearTimeout(fallbackTimer);
     };
-  }, []); // Remove isInitializing from dependency array to prevent loops
+  }, []); // Empty dependency array so it only runs once
   
   // Return null during initialization to avoid premature rendering
   if (!isReady) {
