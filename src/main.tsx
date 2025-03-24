@@ -14,7 +14,10 @@ const handleRenderError = (error: Error) => {
       <div style="padding: 20px; text-align: center;">
         <h2>Something went wrong</h2>
         <p>The application encountered an error. Please refresh the page to try again.</p>
-        <button onclick="window.location.reload()" style="padding: 8px 16px; cursor: pointer;">
+        <p style="color: #666; font-size: 14px; margin-top: 10px;">
+          Error details: ${error.message || 'Unknown error'}
+        </p>
+        <button onclick="window.location.reload()" style="padding: 8px 16px; cursor: pointer; margin-top: 16px; background-color: #4f46e5; color: white; border: none; border-radius: 4px;">
           Refresh Page
         </button>
       </div>
@@ -36,7 +39,9 @@ const mountApp = () => {
     // Create React root and render once
     const root = createRoot(rootElement);
     root.render(
-      <App />
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
     );
   } catch (error) {
     handleRenderError(error as Error);
@@ -49,6 +54,14 @@ window.addEventListener('error', (event) => {
   // Prevent default browser error handling
   event.preventDefault();
   handleRenderError(event.error);
+});
+
+// Add unhandled promise rejection handling
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  // Don't show the render error UI for promise rejections
+  // as these might be API failures that are handled elsewhere
+  console.warn('Unhandled promise rejection details:', event.reason);
 });
 
 // Initialize everything in a controlled sequence

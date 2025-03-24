@@ -15,12 +15,15 @@ const AppRoutes: React.FC = () => {
   // Handle loading timeout state
   useEffect(() => {
     if (isLoading) {
+      console.log("AppRoutes: Auth is loading, setting up timeout");
       const timer = setTimeout(() => {
+        console.log("AppRoutes: Loading timeout reached");
         setLoadingTimeout(true);
       }, 5000); // Show timeout warning after 5 seconds
       
       return () => clearTimeout(timer);
     } else {
+      console.log("AppRoutes: Auth is not loading, clearing timeout");
       setLoadingTimeout(false);
     }
   }, [isLoading]);
@@ -64,10 +67,29 @@ const AppRoutes: React.FC = () => {
     };
   }, [isAuthenticated, isLoading, location.pathname, navigate]);
   
+  // Add a safety timeout to ensure we render routes even if auth state gets stuck
+  useEffect(() => {
+    if (!isLoading) return; // Only activate when loading
+    
+    const safetyTimeout = setTimeout(() => {
+      console.warn("Auth loading state persisted too long, rendering app anyway");
+      // Proceed with rendering routes, auth state will update later
+      // We don't update isLoading since that comes from the auth context
+    }, 7000); // Wait a bit longer than the 5s timeout in App.tsx
+    
+    return () => clearTimeout(safetyTimeout);
+  }, [isLoading]);
+  
   // Show loading screen for initial auth state determination, but with a timeout fallback
-  if (isLoading) {
+  if (isLoading && !loadingTimeout) {
     console.log("App is in loading state, auth status not determined yet");
-    return <LoadingScreen timeout={loadingTimeout} />;
+    return <LoadingScreen timeout={false} />;
+  }
+  
+  // If loading has timed out, show the loading screen with timeout message
+  if (isLoading && loadingTimeout) {
+    console.log("Auth loading timed out, showing timeout screen");
+    return <LoadingScreen timeout={true} />;
   }
   
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);

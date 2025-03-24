@@ -8,7 +8,19 @@ export const useAuth = (): AuthContextType => {
   
   if (context === undefined) {
     console.error('Auth context is undefined, Provider may be missing');
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Instead of immediately throwing, log the error and return a default state
+    // This allows the app to continue rendering even when auth is unavailable
+    return {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      loginWithEmail: async () => null,
+      registerWithEmail: async () => false,
+      logout: async () => false,
+      verifyBoothPin: async () => ({ success: false }),
+      verifySACPin: async () => false,
+      updateUserData: () => {},
+    };
   }
   
   return context;

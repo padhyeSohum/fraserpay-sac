@@ -52,16 +52,18 @@ const JoinBooth = () => {
     
     try {
       console.log("Attempting to verify booth PIN:", values.pin);
-      const success = await verifyBoothPin(values.pin);
-      console.log("PIN verification result:", success);
+      const result = await verifyBoothPin(values.pin);
+      console.log("PIN verification result:", result);
       
-      if (success) {
+      if (result.success) {
         toast.success("Successfully joined booth!");
-        // Update to fetch the booth ID and navigate to it directly
-        const boothAccess = user?.booths || [];
-        if (boothAccess.length > 0) {
-          navigate(`/booth/${boothAccess[boothAccess.length - 1]}`);
+        
+        if (result.boothId) {
+          navigate(`/booth/${result.boothId}`);
+        } else if (user?.booths && user.booths.length > 0) {
+          navigate(`/booth/${user.booths[user.booths.length - 1]}`);
         } else {
+          toast.error("Could not determine booth ID. Redirecting to dashboard.");
           navigate('/dashboard');
         }
       }
@@ -158,7 +160,7 @@ const JoinBooth = () => {
                     </Button>
                   </form>
                 </Form>
-              ) : canCreateBooth ? (
+              ) : (
                 <Form {...createForm}>
                   <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-4">
                     <FormField
@@ -223,10 +225,6 @@ const JoinBooth = () => {
                     </Button>
                   </form>
                 </Form>
-              ) : (
-                <div className="text-center p-4">
-                  <p className="text-muted-foreground">Only SAC members can create booths</p>
-                </div>
               )}
             </CardContent>
             

@@ -12,6 +12,11 @@ const App = () => {
   // Use useRef for tracking initialization attempts to prevent duplicate initialization
   const initAttempted = useRef(false);
 
+  // Debug logging for initialization state
+  useEffect(() => {
+    console.log(`App state: isReady=${isReady}, isInitializing=${isInitializing}`);
+  }, [isReady, isInitializing]);
+
   useEffect(() => {
     // Prevent multiple initialization attempts
     if (initAttempted.current) return;
@@ -25,10 +30,20 @@ const App = () => {
         // Step 1: Measure app performance
         measurePerformance();
         
-        // Step 2: Preload critical resources
-        await preloadCriticalResources([
-          '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
-        ]);
+        // Step 2: Preload critical resources with timeout
+        try {
+          await Promise.race([
+            preloadCriticalResources([
+              '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
+            ]),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Preloading timed out')), 3000)
+            )
+          ]);
+        } catch (error) {
+          console.warn('Resource preloading incomplete:', error);
+          // Continue with app initialization despite preloading issues
+        }
         
         // Step 3: Register connectivity listeners
         registerConnectivityListeners(
@@ -49,22 +64,26 @@ const App = () => {
         );
         
         console.log('App initialization complete');
-        // Mark app as ready when initialization is complete
-        setIsInitializing(false);
-        setIsReady(true);
       } catch (error) {
         console.error('Failed to initialize app:', error);
-        // Allow the app to render even if initialization fails
+        // Log the specific error for debugging
+        if (error instanceof Error) {
+          console.error('Error details:', error.message, error.stack);
+        }
+      } finally {
+        // Always mark app as ready when initialization completes or fails
+        console.log('Finalizing initialization, regardless of success/failure');
         setIsInitializing(false);
         setIsReady(true);
       }
     };
     
+    // Start initialization process
     initializeApp();
     
     // Add a timeout to ensure the app always loads even if something hangs
     const fallbackTimer = setTimeout(() => {
-      if (isInitializing) {
+      if (isInitializing || !isReady) {
         console.warn('App initialization timeout reached. Forcing app to load.');
         setIsInitializing(false);
         setIsReady(true);

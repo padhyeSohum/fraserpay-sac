@@ -86,7 +86,10 @@ export const registerUser = async (
       throw authError || new Error('Failed to create account');
     }
     
-    // Create user profile in users table
+    // Generate QR code for the user
+    const qrCode = `USER:${authData.user.id}`;
+    
+    // Create user profile in users table with required qr_code field
     const { error: profileError } = await supabase
       .from('users')
       .insert({
@@ -96,10 +99,12 @@ export const registerUser = async (
         student_number: studentNumber,
         role: 'student',
         tickets: 0,
-        qr_code: `USER:${authData.user.id}`
+        booth_access: [], // Ensure this is an empty array, not undefined
+        qr_code: qrCode // Include the required qr_code field
       });
     
     if (profileError) {
+      console.error("Error creating user profile:", profileError);
       throw profileError;
     }
     
