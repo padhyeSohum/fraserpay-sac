@@ -8,12 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Download, Store, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const MassBoothImport = () => {
   const { user } = useAuth();
   const [booths, setBooths] = useState<Record<string, string>[]>([]);
   const [isUploaded, setIsUploaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
   const [processResult, setProcessResult] = useState<{
     success: number;
     failed: number;
@@ -40,8 +42,15 @@ const MassBoothImport = () => {
   };
   
   const handleDownloadTemplate = () => {
-    const template = generateBoothCSVTemplate();
-    downloadCSVTemplate(template, 'booth_template.csv');
+    const template = activeTab === 'basic'
+      ? generateBoothCSVTemplate() 
+      : generateBoothWithProductsCSVTemplate();
+    
+    const filename = activeTab === 'basic'
+      ? 'booth_template.csv'
+      : 'booth_with_products_template.csv';
+      
+    downloadCSVTemplate(template, filename);
     toast.success('Template downloaded successfully');
   };
   
@@ -95,7 +104,10 @@ const MassBoothImport = () => {
           if (error) {
             results.failed++;
             results.errors.push(`Failed to create booth "${booth.name}": ${error.message}`);
-          } else if (data) {
+            continue;
+          }
+          
+          if (data) {
             // Update the user's booth_access array
             const { data: userData, error: getUserError } = await supabase
               .from('users')
@@ -110,6 +122,40 @@ const MassBoothImport = () => {
                 .from('users')
                 .update({ booth_access: updatedBoothAccess })
                 .eq('id', user.id);
+            }
+            
+            // Add products if they exist in the CSV
+            if (activeTab === 'withProducts') {
+              const products = [];
+              
+              // Check for product1, product2, etc. pattern
+              let productIndex = 1;
+              while (booth[`product${productIndex}Name`] && booth[`product${productIndex}Price`]) {
+                const productName = booth[`product${productIndex}Name`];
+                const productPrice = parseFloat(booth[`product${productIndex}Price`]);
+                const productImage = booth[`product${productIndex}Image`] || null;
+                
+                if (productName && !isNaN(productPrice)) {
+                  products.push({
+                    name: productName,
+                    price: Math.round(productPrice * 100), // Convert to cents
+                    booth_id: data.id,
+                    image: productImage
+                  });
+                }
+                
+                productIndex++;
+              }
+              
+              if (products.length > 0) {
+                const { error: productsError } = await supabase
+                  .from('products')
+                  .insert(products);
+                
+                if (productsError) {
+                  results.errors.push(`Created booth "${booth.name}" but failed to add products: ${productsError.message}`);
+                }
+              }
             }
             
             results.success++;
@@ -154,11 +200,30 @@ const MassBoothImport = () => {
         </Button>
       </div>
       
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="basic">Basic Booths</TabsTrigger>
+          <TabsTrigger value="withProducts">Booths with Products</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="basic" className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload booths with basic information only (name, description, pin)
+          </p>
+        </TabsContent>
+        
+        <TabsContent value="withProducts" className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload booths with products (includes product1Name, product1Price, etc.)
+          </p>
+        </TabsContent>
+      </Tabs>
+      
       {!isUploaded ? (
         <CSVUploader 
           onFileLoad={handleFileLoad} 
-          title="Upload Booths CSV"
-          description="Upload a CSV file with booth data to import multiple booths at once"
+          title={`Upload ${activeTab === 'basic' ? 'Basic' : 'Products'} CSV`}
+          description={`Upload a CSV file with booth ${activeTab === 'withProducts' ? 'and product' : ''} data to import multiple booths at once`}
         />
       ) : (
         <div className="space-y-4">

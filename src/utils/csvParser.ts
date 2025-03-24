@@ -120,6 +120,15 @@ export const generateBoothCSVTemplate = (): string => {
 };
 
 /**
+ * Create sample CSV template for booths with products
+ */
+export const generateBoothWithProductsCSVTemplate = (): string => {
+  return 'name,description,pin,product1Name,product1Price,product1Image,product2Name,product2Price,product2Image\n' +
+    'Sample Booth,This is a sample booth description,123456,Product 1,9.99,https://example.com/image1.jpg,Product 2,14.99,\n' +
+    'Another Booth,Another description,654321,Hot Dog,5.99,,Soda,2.50,';
+};
+
+/**
  * Convert template to Blob for download
  */
 export const downloadCSVTemplate = (templateContent: string, filename: string): void => {
