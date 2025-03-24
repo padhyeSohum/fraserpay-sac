@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,23 +7,50 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const Settings = () => {
   const { user, logout, verifySACPin } = useAuth();
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const handleSACAccess = () => {
-    // Prompt for SAC PIN
-    const pin = prompt('Enter SAC admin PIN:');
-    if (pin) {
-      const result = verifySACPin(pin);
+    setIsOpen(true);
+    setUsername('');
+    setPassword('');
+    setLoginError('');
+  };
+
+  const handleLogin = () => {
+    // Validate credentials
+    if (username === "sacadmin" && password === "codyisabum") {
+      // Use the existing verifySACPin function with the hardcoded PIN
+      // This maintains the existing functionality while changing the UI
+      const result = verifySACPin("123456");
       if (!result) {
         toast({
-          title: "Invalid PIN",
-          description: "The PIN you entered is not correct",
+          title: "Authentication Error",
+          description: "Could not authenticate with SAC admin credentials",
           variant: "destructive"
         });
       }
+      setIsOpen(false);
+    } else {
+      setLoginError("Invalid username or password");
     }
   };
 
@@ -119,6 +146,45 @@ const Settings = () => {
           </CardFooter>
         </Card>
       </div>
+
+      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>SAC Admin Login</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter your SAC admin credentials to access the SAC dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input 
+                id="username" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+              />
+            </div>
+            {loginError && (
+              <p className="text-sm text-destructive">{loginError}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogin}>Login</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
