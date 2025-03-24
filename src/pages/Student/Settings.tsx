@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,24 +7,62 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const Settings = () => {
   const { user, logout, verifySACPin } = useAuth();
   const { toast } = useToast();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const handleSACAccess = () => {
-    // Prompt for SAC PIN
-    const pin = prompt('Enter SAC admin PIN:');
-    if (pin) {
-      const result = verifySACPin(pin);
-      if (!result) {
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLogin = () => {
+    setLoginError('');
+    
+    // Check hardcoded credentials
+    if (username === 'sacadmin' && password === 'codyisabum') {
+      // Close the modal
+      setIsLoginModalOpen(false);
+      
+      // Reset form
+      setUsername('');
+      setPassword('');
+      
+      // Use the existing verifySACPin method with a "valid" pin
+      // This maintains compatibility with the current auth system
+      const result = verifySACPin('valid');
+      
+      if (result) {
         toast({
-          title: "Invalid PIN",
-          description: "The PIN you entered is not correct",
-          variant: "destructive"
+          title: "Access Granted",
+          description: "You now have SAC admin access",
         });
       }
+    } else {
+      setLoginError('Invalid username or password');
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsLoginModalOpen(false);
+    setUsername('');
+    setPassword('');
+    setLoginError('');
   };
 
   return (
@@ -119,6 +157,54 @@ const Settings = () => {
           </CardFooter>
         </Card>
       </div>
+
+      {/* SAC Admin Login Modal */}
+      <Dialog open={isLoginModalOpen} onOpenChange={setIsLoginModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>SAC Admin Login</DialogTitle>
+            <DialogDescription>
+              Enter your credentials to access SAC admin features
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="Enter username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {loginError && (
+              <div className="text-sm font-medium text-destructive">
+                {loginError}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" onClick={handleCloseModal}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button onClick={handleLogin}>
+              Login
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
