@@ -2,13 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { useTransactions } from "@/contexts/transactions";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
 import { toast } from 'sonner';
 
 const AppRoutes: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const { fetchAllBooths } = useTransactions();
+  const { user, isAuthenticated, isLoading, authError } = useAuth();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,11 +30,18 @@ const AppRoutes: React.FC = () => {
     setLoadingTimeout(false);
   }, [location.pathname]);
   
+  // Display auth errors in toast
+  useEffect(() => {
+    if (authError && !['/login', '/register'].includes(location.pathname)) {
+      toast.error(authError, { id: 'auth-error' });
+    }
+  }, [authError, location.pathname]);
+  
   // Handle page refresh and direct URL access - optimize to run once
   useEffect(() => {
     if (routeInitialized.current) return;
     
-    const handleRouteInitialization = async () => {
+    const handleRouteInitialization = () => {
       // Only run once per session
       routeInitialized.current = true;
       
@@ -44,11 +49,6 @@ const AppRoutes: React.FC = () => {
       
       // Handle direct URL access
       if (isAuthenticated && !isLoading) {
-        // Ensure booths are loaded
-        if (user) {
-          await fetchAllBooths();
-        }
-        
         // For root path, redirect to dashboard if authenticated
         if (location.pathname === '/' || location.pathname === '') {
           navigate('/dashboard', { replace: true });
@@ -69,7 +69,7 @@ const AppRoutes: React.FC = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isAuthenticated, isLoading, location.pathname, navigate, user, fetchAllBooths]);
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
   
   // Show loading screen for initial auth state determination, but with a timeout fallback
   if (isLoading) {

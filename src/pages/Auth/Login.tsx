@@ -12,18 +12,22 @@ import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA } from '@/utils/pwa';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    // Clear any auth errors when component mounts
+    clearAuthError?.();
+    
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
       
@@ -34,7 +38,7 @@ const Login = () => {
       
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate, isMobile]);
+  }, [isAuthenticated, user, navigate, isMobile, clearAuthError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +55,11 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(studentNumber, password);
+      const success = await login(studentNumber, password);
+      if (!success) {
+        // Toast is handled in the auth provider
+        console.error("Login failed");
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -89,6 +97,15 @@ const Login = () => {
             </CardHeader>
             
             <CardContent>
+              {authError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {authError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="studentNumber">Student Number</Label>

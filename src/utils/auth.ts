@@ -22,7 +22,11 @@ export const resetAuthState = async () => {
 // Check if Supabase session exists (for debugging)
 export const checkSessionExists = async () => {
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("Error checking session:", error);
+      return false;
+    }
     console.log("Current session:", data.session ? "Exists" : "None");
     return !!data.session;
   } catch (error) {
@@ -50,5 +54,29 @@ export const manualSignIn = async (email: string, password: string) => {
   } catch (error) {
     console.error("Manual sign in failed:", error);
     return false;
+  }
+};
+
+// Debug function to find a user by student number
+export const findUserByStudentNumber = async (studentNumber: string) => {
+  try {
+    console.log("Looking up user with student number:", studentNumber);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, student_number, email, name')
+      .eq('student_number', studentNumber)
+      .single();
+    
+    if (error) {
+      console.error("Error finding student:", error);
+      return null;
+    }
+    
+    console.log("Found student:", data);
+    return data;
+  } catch (error) {
+    console.error("Error in student lookup:", error);
+    return null;
   }
 };
