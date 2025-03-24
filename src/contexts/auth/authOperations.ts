@@ -1,258 +1,250 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User } from '@/types';
-import { fetchUserData } from './authUtils';
+import { supabase } from '@/integrations/supabase/client';
 import { SAC_PIN } from './types';
 
-// Login functionality
-export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
+/**
+ * Logs in a user with student number and password
+ */
+export const loginUser = async (studentNumber: string, password: string) => {
   try {
-    console.log('Attempting login with student number:', studentNumber);
-    
-    // First, find the user by student number
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('email, student_number')
-      .eq('student_number', studentNumber)
+      .select('email')
+      .eq('student_number', studentNumber.trim())
       .single();
     
     if (userError) {
-      console.error('Student number lookup error:', userError);
-      // Log more detailed error information to help troubleshoot
-      if (userError.code === 'PGRST116') {
-        console.error('No user found with student number:', studentNumber);
-        throw new Error('Student number not found. Please check your credentials.');
-      } else {
-        console.error('Database error when looking up student number:', userError.message);
-        throw new Error('Error looking up student number');
-      }
+      console.error('Error finding user:', userError);
+      toast.error('Student number not found');
+      throw new Error('Student number not found');
     }
     
-    if (!userData) {
-      console.error('No user data returned for student number:', studentNumber);
-      throw new Error('Student number not found. Please check your credentials.');
-    }
+    const email = userData.email;
     
-    console.log('Found user with student number, proceeding with auth', userData);
-    
-    // Now sign in with email and password
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: password
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
     
     if (error) {
-      console.error('Auth error:', error);
-      if (error.message.includes('Invalid login credentials')) {
-        throw new Error('Incorrect password. Please try again.');
-      }
+      console.error('Error signing in:', error);
+      toast.error(error.message);
       throw error;
     }
     
-    console.log('Login successful, user authenticated');
-    toast.success('Login successful');
-    
-    // Get session to retrieve user ID
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user.id) {
-      console.error('Failed to retrieve user session');
-      throw new Error('Failed to retrieve user session');
-    }
-    
-    // Fetch and return user data
-    const userData2 = await fetchUserData(sessionData.session.user.id);
-    if (!userData2) {
-      console.error('Failed to fetch user data after successful login');
-      throw new Error('Failed to load user profile');
-    }
-    
-    return userData2;
-    
+    toast.success('Successfully logged in');
+    return data.user;
   } catch (error) {
-    console.error('Login error:', error);
-    toast.error(error instanceof Error ? error.message : 'Login failed');
-    return null;
+    console.error('Error logging in:', error);
+    throw error;
   }
 };
 
-// Registration functionality
-export const registerUser = async (
-  studentNumber: string, 
-  name: string, 
-  email: string, 
-  password: string
-): Promise<boolean> => {
+/**
+ * Registers a new user
+ */
+export const registerUser = async (studentNumber: string, name: string, email: string, password: string) => {
   try {
-    // Check if user already exists
+    // First check if user with this email or student number already exists
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .or(`student_number.eq.${studentNumber},email.eq.${email}`);
-    
+      .or(`email.eq.${email},student_number.eq.${studentNumber}`)
+      .limit(1);
+      
     if (checkError) {
-      throw new Error('Error checking existing users');
+      console.error('Error checking existing user:', checkError);
+      toast.error('Failed to check existing user');
+      throw checkError;
     }
     
     if (existingUsers && existingUsers.length > 0) {
-      throw new Error('Student number or email already registered');
+      toast.error('A user with this email or student number already exists');
+      throw new Error('User already exists');
     }
     
-    // Register user with Supabase Auth with email confirmation
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Register the user with Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           student_number: studentNumber,
-          name
-        },
-        emailRedirectTo: window.location.origin
+          name,
+        }
       }
     });
     
-    if (authError || !authData.user) {
-      throw authError || new Error('Failed to create account');
+    if (error) {
+      console.error('Error creating user:', error);
+      toast.error(error.message);
+      throw error;
     }
     
-    // Create user profile in users table
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
-        name,
-        email,
-        student_number: studentNumber,
-        role: 'student',
-        tickets: 0,
-        qr_code: `USER:${authData.user.id}`
-      });
-    
-    if (profileError) {
-      throw profileError;
+    // Create the user record in our custom users table
+    if (data.user) {
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email,
+          name,
+          student_number: studentNumber,
+          tickets: 0,
+          role: 'student',
+          booth_access: []
+        });
+      
+      if (insertError) {
+        console.error('Error creating user record:', insertError);
+        // Clean up auth user if we can't create the user record
+        try {
+          await supabase.auth.admin.deleteUser(data.user.id);
+        } catch (deleteError) {
+          console.error('Could not delete auth user after failed registration:', deleteError);
+        }
+        toast.error('Failed to create user account');
+        throw insertError;
+      }
     }
     
-    toast.success('Registration successful! Please check your email to confirm your account.');
-    return true;
+    toast.success('Account created successfully');
     
+    return data.user;
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Registration failed');
-    console.error(error);
-    return false;
+    console.error('Error registering:', error);
+    throw error;
   }
 };
 
-// Logout functionality
-export const logoutUser = async (): Promise<boolean> => {
+/**
+ * Logs out a user
+ */
+export const logoutUser = async () => {
   try {
     const { error } = await supabase.auth.signOut();
+    
     if (error) {
-      console.error('Error logging out:', error);
-      toast.error('Logout failed');
-      return false;
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out');
+      throw error;
     }
     
-    toast.info('Logged out');
+    toast.success('Successfully signed out');
     return true;
   } catch (error) {
-    console.error('Unexpected error during logout:', error);
+    console.error('Error signing out:', error);
     return false;
   }
 };
 
-// SAC PIN verification functionality
+/**
+ * Verifies SAC PIN for a user
+ */
 export const verifySACAccess = async (pin: string, userId: string): Promise<boolean> => {
-  if (pin === SAC_PIN) {
-    try {
-      // Update user role to SAC in database
-      const { error } = await supabase
-        .from('users')
-        .update({ role: 'sac' })
-        .eq('id', userId);
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('SAC access granted');
-      return true;
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast.error('Failed to grant SAC access');
+  try {
+    // First validate the PIN
+    if (pin !== SAC_PIN) {
+      toast.error('Invalid PIN');
       return false;
     }
+    
+    // Update the user role to SAC in the database
+    const { error } = await supabase
+      .from('users')
+      .update({ role: 'sac' })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
+      throw error;
+    }
+    
+    toast.success('You now have SAC access');
+    return true;
+  } catch (error) {
+    console.error('Error verifying SAC access:', error);
+    return false;
   }
-  
-  toast.error('Invalid PIN');
-  return false;
 };
 
-// Booth PIN verification functionality
-export const verifyBoothAccess = async (pin: string, userId: string, userBooths: string[] = []): Promise<{ success: boolean, boothId?: string }> => {
+/**
+ * Verifies Booth PIN for a user and adds booth access
+ */
+export const verifyBoothAccess = async (
+  pin: string, 
+  userId: string,
+  currentBooths: string[] = []
+): Promise<{ success: boolean; boothId?: string }> => {
   try {
-    console.log("Verifying booth PIN:", pin);
+    console.log('Verifying booth PIN:', pin, 'for user:', userId);
     
-    // Find booth with matching PIN
+    // Find the booth with this PIN
     const { data: boothData, error: boothError } = await supabase
       .from('booths')
-      .select('*')
+      .select('id, name')
       .eq('pin', pin)
       .single();
     
-    if (boothError) {
-      console.error("Booth PIN verification error:", boothError);
-      throw new Error('Invalid booth PIN');
+    if (boothError || !boothData) {
+      console.error('Error finding booth:', boothError);
+      toast.error('Invalid booth PIN');
+      return { success: false };
     }
     
-    if (!boothData) {
-      console.error("No booth found with that PIN");
-      throw new Error('Invalid booth PIN');
-    }
+    console.log('Found booth:', boothData);
     
-    console.log("Found booth:", boothData);
-    
-    // Check if user already has access
-    const hasAccess = userBooths.includes(boothData.id);
-    
-    if (hasAccess) {
-      console.log("User already has access to booth:", boothData.id);
+    // Check if user already has access to this booth
+    if (currentBooths.includes(boothData.id)) {
       toast.info(`You already have access to ${boothData.name}`);
       return { success: true, boothId: boothData.id };
     }
     
-    // Add booth to user's booth access
-    const updatedBoothAccess = [...(userBooths || []), boothData.id];
+    // Add this booth to the user's booth_access array
+    const updatedBooths = [...currentBooths, boothData.id];
     
-    // Update user's booth access in database
     const { error: updateError } = await supabase
       .from('users')
-      .update({ booth_access: updatedBoothAccess })
+      .update({ booth_access: updatedBooths })
       .eq('id', userId);
     
     if (updateError) {
-      console.error("Error updating user's booth access:", updateError);
-      throw updateError;
+      console.error('Error updating user booth access:', updateError);
+      toast.error('Failed to add booth access');
+      return { success: false };
     }
     
-    // Add user to booth members
-    const updatedMembers = [...(boothData.members || []), userId];
-    
-    const { error: boothUpdateError } = await supabase
+    // Add user to booth members if not already a member
+    const { data: boothDetails, error: detailsError } = await supabase
       .from('booths')
-      .update({ members: updatedMembers })
-      .eq('id', boothData.id);
+      .select('members')
+      .eq('id', boothData.id)
+      .single();
     
-    if (boothUpdateError) {
-      console.error('Error updating booth members:', boothUpdateError);
+    if (!detailsError && boothDetails) {
+      const members = boothDetails.members || [];
+      
+      if (!members.includes(userId)) {
+        const updatedMembers = [...members, userId];
+        
+        const { error: membersError } = await supabase
+          .from('booths')
+          .update({ members: updatedMembers })
+          .eq('id', boothData.id);
+        
+        if (membersError) {
+          console.error('Error updating booth members:', membersError);
+          // We don't need to show this error to the user as they already have access
+        }
+      }
     }
     
-    console.log("User successfully joined booth:", boothData.id);
     toast.success(`You now have access to ${boothData.name}`);
     return { success: true, boothId: boothData.id };
-    
   } catch (error) {
-    console.error('Error verifying booth PIN:', error);
-    toast.error(error instanceof Error ? error.message : 'Failed to verify booth PIN');
+    console.error('Error verifying booth access:', error);
     return { success: false };
   }
 };

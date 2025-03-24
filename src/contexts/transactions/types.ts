@@ -1,5 +1,5 @@
 
-import { Transaction, Booth, Product, CartItem, TransactionStats, DateRange } from '@/types';
+import { Booth, CartItem, Product, Transaction, DateRange, TransactionStats } from '@/types';
 
 export interface TransactionContextType {
   // Booth management
@@ -10,45 +10,49 @@ export interface TransactionContextType {
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
+  refreshUserBooths: () => Promise<Booth[]>; // Add the new function here
   
   // Product management
   loadBoothProducts: (boothId: string) => Product[];
   addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   
-  // Transaction management
-  loadBoothTransactions: (boothId: string) => Transaction[];
-  loadUserFundsTransactions: () => Transaction[];
-  loadUserTransactions: (userId: string) => Transaction[];
-  getSACTransactions: () => Transaction[];
-  getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
-  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
-  recentTransactions: Transaction[];
-  
   // Cart management
   cart: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, boothId: string, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
   incrementQuantity: (productId: string) => void;
   decrementQuantity: (productId: string) => void;
   
-  // Payment processing
-  processPayment: (boothId: string) => Promise<Transaction | null>;
-  processPurchase: (
-    boothId: string,
-    buyerId: string,
-    buyerName: string,
-    sellerId: string,
-    sellerName: string,
-    cartItems: CartItem[],
-    boothName: string
-  ) => Promise<{ success: boolean, transaction?: Transaction }>;
-  addFunds: (userId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean, updatedBalance?: number }>;
+  // Transaction management
+  loadBoothTransactions: (boothId: string) => Transaction[];
+  loadUserTransactions: (userId: string) => Transaction[];
+  loadUserFundsTransactions: (userId: string) => Transaction[];
+  getSACTransactions: () => Transaction[];
+  getTransactionStats: (transactions: Transaction[], dateRange?: DateRange) => TransactionStats;
+  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
+  recentTransactions: Transaction[];
   
-  // User management
+  // Payment processing
+  processPayment: (boothId: string) => Promise<boolean>;
+  processPurchase: (
+    boothId: string, 
+    studentId: string, 
+    studentName: string, 
+    sellerId: string, 
+    sellerName: string, 
+    items: CartItem[],
+    boothName: string
+  ) => Promise<boolean>;
+  addFunds: (studentId: string, amount: number, sacUserId: string) => Promise<{ success: boolean }>;
+  
+  // User search
   findUserByStudentNumber: (studentNumber: string) => Promise<{ id: string; name: string; balance: number } | null>;
   
   // Loading states
   isLoading: boolean;
 }
+
+// Define SAC PIN - This is for demo purposes
+export const SAC_PIN = "123456";

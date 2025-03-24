@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { CartItem, Transaction } from '@/types';

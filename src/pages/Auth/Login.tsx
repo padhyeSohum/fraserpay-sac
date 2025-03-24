@@ -12,42 +12,29 @@ import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA } from '@/utils/pwa';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { checkSessionExists } from '@/utils/auth';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
-  const { login, isAuthenticated, user, authError, clearAuthError } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Clear any auth errors when component mounts
-    clearAuthError?.();
-    
-    const checkAuth = async () => {
-      // Check if session exists (helpful for debugging)
-      const hasSession = await checkSessionExists();
-      console.log("Session check on login page:", hasSession);
+    if (isAuthenticated && user) {
+      console.log("Login page: User is authenticated, redirecting", user.role);
       
-      if (isAuthenticated && user) {
-        console.log("Login page: User is authenticated, redirecting", user.role);
-        
-        // Show PWA install prompt after login only on mobile and not already in PWA mode
-        if (isMobile && !isPWA()) {
-          setShowPWAPrompt(true);
-        }
-        
-        navigate('/dashboard', { replace: true });
+      // Show PWA install prompt after login only on mobile and not already in PWA mode
+      if (isMobile && !isPWA()) {
+        setShowPWAPrompt(true);
       }
-    };
-    
-    checkAuth();
-  }, [isAuthenticated, user, navigate, isMobile, clearAuthError]);
+      
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, isMobile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,17 +51,9 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      console.log("Attempting login with student number:", studentNumber.trim());
-      const success = await login(studentNumber.trim(), password);
-      
-      if (!success) {
-        // Toast is handled in the auth provider
-        console.error("Login failed");
-      } else {
-        console.log("Login successful in component");
-      }
+      await login(studentNumber, password);
     } catch (error) {
-      console.error('Login error in component:', error);
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "Please check your credentials and try again",
@@ -110,15 +89,6 @@ const Login = () => {
             </CardHeader>
             
             <CardContent>
-              {authError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {authError}
-                  </AlertDescription>
-                </Alert>
-              )}
-              
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="studentNumber">Student Number</Label>
