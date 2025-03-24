@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Upload } from 'lucide-react';
 import StatCards from './components/StatCards';
 import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
@@ -16,6 +16,7 @@ import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import AddUserDialog from './components/AddUserDialog';
+import BulkImportDialog from './components/BulkImportDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
@@ -52,6 +53,7 @@ const Dashboard = () => {
   const [isBoothLoading, setIsBoothLoading] = useState(false);
   const [isBoothDialogOpen, setIsBoothDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   
   const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
@@ -569,6 +571,10 @@ const Dashboard = () => {
     loadUsers();
   };
   
+  const handleBulkImportClick = () => {
+    setIsBulkImportOpen(true);
+  };
+  
   return (
     <Layout 
       title="SAC Dashboard" 
@@ -580,7 +586,7 @@ const Dashboard = () => {
           isLoading={isLoading}
         />
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
           <Button
             onClick={handleNewBoothClick}
             size="lg"
@@ -604,6 +610,15 @@ const Dashboard = () => {
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add User
+          </Button>
+          <Button
+            onClick={handleBulkImportClick}
+            size="lg"
+            className="w-full"
+            variant="default"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk Import
           </Button>
         </div>
         
@@ -693,6 +708,11 @@ const Dashboard = () => {
           isOpen={isAddUserDialogOpen}
           onOpenChange={setIsAddUserDialogOpen}
           onUserAdded={handleUserAdded}
+        />
+        
+        <BulkImportDialog
+          isOpen={isBulkImportOpen}
+          onOpenChange={setIsBulkImportOpen}
         />
       </div>
     </Layout>
