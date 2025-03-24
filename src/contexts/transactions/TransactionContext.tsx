@@ -21,6 +21,7 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const isMounted = useRef(true);
+  const { user } = useAuth();
 
   // Use our custom hooks for each feature area
   const boothManagement = useBoothManagement();
@@ -51,6 +52,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       isMounted.current = false;
     };
   }, []);
+
+  // Update booths when user changes
+  useEffect(() => {
+    if (user && isInitialized) {
+      boothManagement.loadBooths();
+    }
+  }, [user, isInitialized]);
 
   // Function to update transactions list when a new transaction is created
   const updateTransactions = (transaction: Transaction) => {

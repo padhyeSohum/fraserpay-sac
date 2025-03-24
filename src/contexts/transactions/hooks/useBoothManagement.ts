@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -68,7 +69,9 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   };
 
   const fetchAllBoothsImpl = async () => {
-    return await fetchAllBooths();
+    const fetchedBooths = await fetchAllBooths();
+    setBooths(fetchedBooths);
+    return fetchedBooths;
   };
 
   const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {

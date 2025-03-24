@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -28,7 +29,7 @@ const JoinBooth = () => {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [isLoading, setIsLoading] = useState(false);
   const { verifyBoothPin, user } = useAuth();
-  const { createBooth } = useTransactions();
+  const { createBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
 
   const joinForm = useForm<z.infer<typeof joinBoothSchema>>({
@@ -56,6 +57,9 @@ const JoinBooth = () => {
       console.log("PIN verification result:", success);
       
       if (success) {
+        // Refresh booths data after successful join
+        await fetchAllBooths();
+        
         toast.success("Successfully joined booth!");
         // Update to fetch the booth ID and navigate to it directly
         const boothAccess = user?.booths || [];
@@ -85,12 +89,16 @@ const JoinBooth = () => {
       const boothId = await createBooth(
         values.name,
         values.description || '',
-        user.id
+        user.id,
+        values.pin
       );
       
       console.log("Booth creation result:", boothId);
       
       if (boothId) {
+        // Refresh booths data after successful creation
+        await fetchAllBooths();
+        
         toast.success("Booth created successfully!");
         navigate(`/booth/${boothId}`);
       } else {
