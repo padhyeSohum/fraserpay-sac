@@ -14,11 +14,13 @@ export const useAuth = (): AuthContextType => {
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      loginWithEmail: async () => null,
-      registerWithEmail: async () => false,
+      login: async () => {},
+      register: async () => false,
       logout: async () => false,
       verifyBoothPin: async () => ({ success: false }),
       verifySACPin: async () => false,
+      joinBooth: () => {},
+      session: null,
       updateUserData: () => {},
     };
   }

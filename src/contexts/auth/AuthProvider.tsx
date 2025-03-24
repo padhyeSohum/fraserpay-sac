@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
@@ -137,16 +136,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (studentNumber: string, name: string, email: string, password: string) => {
+  const register = async (studentNumber: string, name: string, email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      await registerUser(studentNumber, name, email, password);
+      return await registerUser(studentNumber, name, email, password);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<boolean> => {
     try {
       setIsLoading(true);
       const success = await logoutUser();
@@ -155,12 +154,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(null);
         navigate('/login');
       }
+      return success;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const verifySACPin = async (pin: string) => {
+  const verifySACPin = async (pin: string): Promise<boolean> => {
     if (!user) return false;
     
     setIsLoading(true);
@@ -177,20 +177,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyBoothPin = async (pin: string): Promise<boolean> => {
-    if (!user) return false;
+  const verifyBoothPin = async (pin: string): Promise<{ success: boolean, boothId?: string }> => {
+    if (!user) return { success: false };
     
     setIsLoading(true);
     try {
-      const { success, boothId } = await verifyBoothAccess(pin, user.id, user.booths);
+      const result = await verifyBoothAccess(pin, user.id, user.booths);
       
-      if (success && boothId) {
+      if (result.success && result.boothId) {
         // Update local user state
         setUser(prev => {
           if (!prev) return null;
-          const updatedBooths = prev.booths?.includes(boothId) 
+          const updatedBooths = prev.booths?.includes(result.boothId!) 
             ? prev.booths 
-            : [...(prev.booths || []), boothId];
+            : [...(prev.booths || []), result.boothId!];
           
           return {
             ...prev,
@@ -199,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      return success;
+      return result;
     } finally {
       setIsLoading(false);
     }
