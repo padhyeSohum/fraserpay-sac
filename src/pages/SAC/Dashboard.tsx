@@ -10,6 +10,7 @@ import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
 import TransactionsTable from './components/TransactionsTable';
 import BoothLeaderboard from './components/BoothLeaderboard';
+import BoothsList from './components/BoothsList';
 import CreateBoothDialog from './components/CreateBoothDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
@@ -603,13 +604,18 @@ const Dashboard = () => {
         <StudentSearch onStudentFound={handleStudentFound} />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 space-y-6">
             <UsersTable 
               users={filteredUsers} 
               isLoading={isUserLoading} 
               searchTerm={userSearchTerm}
               onSearchChange={setUserSearchTerm}
               onUserSelect={handleUserSelected}
+            />
+            
+            <BoothsList
+              booths={booths}
+              isLoading={isBoothLoading}
             />
           </div>
           

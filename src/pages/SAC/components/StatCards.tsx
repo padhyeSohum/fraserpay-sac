@@ -44,7 +44,7 @@ const StatCards: React.FC<StatCardsProps> = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="w-full h-full">
+      <Card className="w-full">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold">Total Transactions</CardTitle>
           <CardDescription>All transactions in the system</CardDescription>
@@ -58,7 +58,7 @@ const StatCards: React.FC<StatCardsProps> = ({
         </CardContent>
       </Card>
       
-      <Card className="w-full h-full">
+      <Card className="w-full">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold">Total Booths</CardTitle>
           <CardDescription>Active booths in the system</CardDescription>
@@ -72,7 +72,7 @@ const StatCards: React.FC<StatCardsProps> = ({
         </CardContent>
       </Card>
       
-      <Card className="w-full h-full">
+      <Card className="w-full">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold">Total Users</CardTitle>
           <CardDescription>Registered users in the system</CardDescription>
@@ -86,7 +86,7 @@ const StatCards: React.FC<StatCardsProps> = ({
         </CardContent>
       </Card>
       
-      <Card className="w-full h-full">
+      <Card className="w-full">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold">Total Revenue</CardTitle>
           <CardDescription>All funds processed</CardDescription>
