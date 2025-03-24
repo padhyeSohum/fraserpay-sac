@@ -20,7 +20,6 @@ export interface UseBoothManagementReturn {
   createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
   addProductToBooth: (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   isLoading: boolean;
-  refreshUserBooths: () => Promise<Booth[]>;
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
@@ -38,10 +37,8 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     setIsLoading(true);
     
     try {
-      console.log("useBoothManagement: Loading booths for user:", user?.id);
       const fetchedBooths = await fetchAllBooths();
       setBooths(fetchedBooths);
-      console.log(`useBoothManagement: Loaded ${fetchedBooths.length} booths`);
     } catch (error) {
       console.error('Unexpected error loading booths:', error);
       toast.error('Failed to load booths');
@@ -52,16 +49,13 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   
   const loadStudentBooths = () => {
     if (!user || !user.booths || user.booths.length === 0) {
-      console.log("useBoothManagement: No booths for user");
       return [];
     }
     
-    console.log(`useBoothManagement: Filtering booths for user's booth access:`, user.booths);
     const studentBooths = booths.filter(booth => 
       user.booths?.includes(booth.id)
     );
     
-    console.log(`useBoothManagement: Found ${studentBooths.length} booths for user`);
     return studentBooths;
   };
   
@@ -70,35 +64,11 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   };
   
   const getBoothsByUserIdImpl = (userId: string) => {
-    if (!userId || !booths || booths.length === 0) {
-      return [];
-    }
-    console.log(`useBoothManagement: Getting booths for userId: ${userId}`);
     return booths.filter(booth => booth.managers.includes(userId));
   };
 
   const fetchAllBoothsImpl = async () => {
-    console.log("useBoothManagement: Fetching all booths");
-    const fetchedBooths = await fetchAllBooths();
-    setBooths(fetchedBooths);
-    console.log(`useBoothManagement: Fetched ${fetchedBooths.length} booths`);
-    return fetchedBooths;
-  };
-
-  const refreshUserBoothsImpl = async () => {
-    console.log("useBoothManagement: Refreshing user booths");
-    setIsLoading(true);
-    try {
-      const fetchedBooths = await fetchAllBooths();
-      setBooths(fetchedBooths);
-      console.log(`useBoothManagement: Refreshed ${fetchedBooths.length} booths`);
-      return fetchedBooths;
-    } catch (error) {
-      console.error('Error refreshing user booths:', error);
-      return booths; // Return current state if refresh fails
-    } finally {
-      setIsLoading(false);
-    }
+    return await fetchAllBooths();
   };
 
   const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {
@@ -146,7 +116,6 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     fetchAllBooths: fetchAllBoothsImpl,
     createBooth: createBoothImpl,
     addProductToBooth: addProductToBoothImpl,
-    isLoading,
-    refreshUserBooths: refreshUserBoothsImpl
+    isLoading
   };
 };

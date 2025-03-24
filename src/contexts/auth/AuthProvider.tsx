@@ -15,6 +15,7 @@ import {
   verifyBoothAccess 
 } from './authOperations';
 
+// Create the context with undefined initial value
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Log auth state for debugging
   useEffect(() => {
     console.log('Auth state:', { isLoading, session: session?.user?.id || null, user: user?.id || null, authInitialized });
   }, [isLoading, session, user, authInitialized]);
@@ -33,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
-    // Subscribe to auth changes
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.id);
@@ -41,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!mounted) return;
         
         if (currentSession) {
-          // We have a session, update state and get user data
           setSession(currentSession);
           
           try {
@@ -51,17 +52,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(userData);
               setIsLoading(false);
               setAuthInitialized(true);
-              
-              // Log user details for debugging
-              console.log("User data loaded:", {
-                id: userData?.id,
-                role: userData?.role,
-                booths: userData?.booths?.length || 0
-              });
             }
             
+            // Only navigate on SIGNED_IN event, not on every auth state change
             if (event === 'SIGNED_IN' && mounted) {
               console.log("User signed in, navigating based on role:", userData?.role);
+              // Let AppRoutes handle the navigation based on role
             }
           } catch (error) {
             console.error('Error in auth state change handler:', error);
@@ -71,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          // No session, clear user data
           if (mounted) {
             setUser(null);
             setSession(null);
@@ -81,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (event === 'SIGNED_OUT' && mounted) {
             console.log("User signed out, redirecting to login");
+            // Only navigate if we're not already on login or register
             if (location.pathname !== '/login' && location.pathname !== '/register') {
               navigate('/login');
             }
@@ -89,30 +85,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Initial session check
+    // Check for existing session
     const checkSession = async () => {
       try {
-        console.log("Checking initial session");
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
         if (initialSession?.user) {
-          console.log("Found initial session for user:", initialSession.user.id);
           setSession(initialSession);
           const userData = await fetchUserData(initialSession.user.id);
           if (mounted) {
             setUser(userData);
-            
-            // Log user details for debugging
-            console.log("Initial user data loaded:", {
-              id: userData?.id,
-              role: userData?.role,
-              booths: userData?.booths?.length || 0
-            });
           }
-        } else {
-          console.log("No initial session found");
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -126,14 +111,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     checkSession();
 
-    // Safety timeout to ensure auth state is eventually resolved
+    // Add timeout to ensure auth always initializes
     authTimeout = setTimeout(() => {
       if (mounted && !authInitialized) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
         setIsLoading(false);
         setAuthInitialized(true);
       }
-    }, 3000);
+    }, 3000); // 3 second timeout
 
     return () => {
       mounted = false;
@@ -146,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const loggedInUser = await loginUser(studentNumber, password);
+      // Navigation is handled in the auth state change listener
     } finally {
       setIsLoading(false);
     }
@@ -181,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const success = await verifySACAccess(pin, user.id);
       if (success) {
+        // Update local user state
         setUser(prev => prev ? { ...prev, role: 'sac' } : null);
         navigate('/sac/dashboard');
       }
@@ -190,22 +177,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyBoothPin = async (pin: string): Promise<{ success: boolean, boothId?: string }> => {
-    if (!user) return { success: false };
+  const verifyBoothPin = async (pin: string): Promise<boolean> => {
+    if (!user) return false;
     
     setIsLoading(true);
     try {
-      const result = await verifyBoothAccess(pin, user.id, user.booths);
+      const { success, boothId } = await verifyBoothAccess(pin, user.id, user.booths);
       
-      if (result.success && result.boothId) {
-        // Update user state with new booth access
+      if (success && boothId) {
+        // Update local user state
         setUser(prev => {
           if (!prev) return null;
-          
-          // Add boothId to booths array if not already present
-          const updatedBooths = prev.booths?.includes(result.boothId!) 
+          const updatedBooths = prev.booths?.includes(boothId) 
             ? prev.booths 
-            : [...(prev.booths || []), result.boothId!];
+            : [...(prev.booths || []), boothId];
           
           return {
             ...prev,
@@ -214,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      return result;
+      return success;
     } finally {
       setIsLoading(false);
     }
@@ -227,11 +212,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserData = (userData: User) => {
-    console.log("Updating user data:", {
-      id: userData.id,
-      role: userData.role,
-      booths: userData.booths?.length || 0
-    });
     setUser(userData);
   };
 

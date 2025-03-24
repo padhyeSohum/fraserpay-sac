@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
@@ -14,7 +15,7 @@ export interface UseTransactionManagementReturn {
   loadUserFundsTransactions: () => Transaction[];
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
-  getTransactionStats: (transactions: Transaction[], dateRange?: DateRange) => TransactionStats;
+  getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
   getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
 }
 
@@ -66,13 +67,14 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     return transactions;
   };
 
-  const getTransactionStats = (transactions: Transaction[], dateRange?: DateRange): TransactionStats => {
+  const getTransactionStats = (boothId: string, dateRange: DateRange): TransactionStats => {
     // Basic implementation of transaction stats
-    const boothTransactions = dateRange ? transactions.filter(t => 
+    const boothTransactions = transactions.filter(t => 
+      t.boothId === boothId && 
       t.type === 'purchase' &&
       (!dateRange.startDate || new Date(t.timestamp) >= dateRange.startDate) &&
       (!dateRange.endDate || new Date(t.timestamp) <= dateRange.endDate)
-    ) : transactions;
+    );
     
     // Calculate daily sales
     const dailySales: {[key: string]: number} = {};

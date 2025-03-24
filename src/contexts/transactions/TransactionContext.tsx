@@ -21,7 +21,6 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const isMounted = useRef(true);
-  const { user } = useAuth();
 
   // Use our custom hooks for each feature area
   const boothManagement = useBoothManagement();
@@ -36,7 +35,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     const initializeData = async () => {
       try {
-        console.log("Initializing transaction data fetch");
         await boothManagement.fetchAllBooths();
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
@@ -54,13 +52,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   }, []);
 
-  // Update booths when user changes
-  useEffect(() => {
-    if (user && isInitialized) {
-      boothManagement.loadBooths();
-    }
-  }, [user, isInitialized]);
-
   // Function to update transactions list when a new transaction is created
   const updateTransactions = (transaction: Transaction) => {
     // We don't need state here as the useTransactionManagement hook manages its own state
@@ -75,7 +66,6 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     fetchAllBooths: boothManagement.fetchAllBooths,
     createBooth: boothManagement.createBooth,
-    refreshUserBooths: boothManagement.refreshUserBooths,
     
     // Product management
     loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
@@ -100,27 +90,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     decrementQuantity: cartManagement.decrementQuantity,
     
     // Payment processing
-    processPayment: async (boothId) => {
-      const result = await paymentProcessing.processPayment(
-        boothId, 
-        cartManagement.cart, 
-        boothManagement.getBoothById,
-        updateTransactions
-      );
-      return result !== null; // Convert to boolean
-    },
-    processPurchase: async (boothId, studentId, studentName, sellerId, sellerName, items, boothName) => {
-      const result = await paymentProcessing.processPurchase(
-        boothId,
-        studentId,
-        studentName,
-        sellerId,
-        sellerName,
-        items,
-        boothName
-      );
-      return result.success;
-    },
+    processPayment: (boothId) => paymentProcessing.processPayment(
+      boothId, 
+      cartManagement.cart, 
+      boothManagement.getBoothById,
+      updateTransactions
+    ),
+    processPurchase: paymentProcessing.processPurchase,
     addFunds: paymentProcessing.addFunds,
     
     // Loading states

@@ -1,16 +1,15 @@
+
 import { Booth, Product } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const fetchAllBooths = async (): Promise<Booth[]> => {
   try {
-    console.log("Fetching all booths from database");
     const { data: boothsData, error: boothsError } = await supabase
       .from('booths')
       .select('*');
 
     if (boothsError) {
-      console.error("Error fetching booths:", boothsError);
       throw boothsError;
     }
 
@@ -19,7 +18,6 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
       .select('*');
 
     if (productsError) {
-      console.error("Error fetching products:", productsError);
       throw productsError;
     }
 
@@ -47,7 +45,6 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
         };
       });
 
-      console.log(`Fetched ${formattedBooths.length} booths`);
       return formattedBooths;
     }
     return [];
@@ -63,9 +60,6 @@ export const getBoothById = (booths: Booth[], boothId: string): Booth | undefine
 };
 
 export const getBoothsByUserId = (booths: Booth[], userId: string): Booth[] => {
-  if (!userId || !booths || booths.length === 0) {
-    return [];
-  }
   return booths.filter(booth => booth.managers.includes(userId));
 };
 
