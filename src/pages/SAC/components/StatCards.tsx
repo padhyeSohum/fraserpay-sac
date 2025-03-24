@@ -13,6 +13,7 @@ interface StatsData {
   totalBooths: number;
   totalTransactions: number;
   totalRevenue: number;
+  totalTickets?: number;
 }
 
 interface StatCardsProps {
@@ -29,7 +30,8 @@ const StatCards: React.FC<StatCardsProps> = ({
     totalUsers: stats?.totalUsers || 0,
     totalBooths: stats?.totalBooths || 0,
     totalTransactions: stats?.totalTransactions || 0,
-    totalRevenue: stats?.totalRevenue || 0
+    totalRevenue: stats?.totalRevenue || 0,
+    totalTickets: stats?.totalTickets || 0
   };
 
   // Format currency properly with two decimal places

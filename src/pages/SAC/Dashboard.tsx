@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { UserPlus } from 'lucide-react';
 import StatCards from './components/StatCards';
 import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
@@ -13,6 +14,7 @@ import CreateBoothDialog from './components/CreateBoothDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
+import AddUserDialog from './components/AddUserDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
@@ -48,6 +50,7 @@ const Dashboard = () => {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isBoothLoading, setIsBoothLoading] = useState(false);
   const [isBoothDialogOpen, setIsBoothDialogOpen] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   
   const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
@@ -550,6 +553,14 @@ const Dashboard = () => {
   const handleBoothTransactionClick = () => {
     setIsBoothTransactionOpen(true);
   };
+
+  const handleAddUserClick = () => {
+    setIsAddUserDialogOpen(true);
+  };
+
+  const handleUserAdded = () => {
+    loadUsers();
+  };
   
   return (
     <Layout 
@@ -562,7 +573,7 @@ const Dashboard = () => {
           isLoading={isLoading}
         />
         
-        <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mx-auto">
+        <div className="grid grid-cols-3 gap-4 w-full max-w-full mx-auto">
           <Button
             onClick={handleNewBoothClick}
             size="lg"
@@ -577,6 +588,15 @@ const Dashboard = () => {
             className="w-full"
           >
             Process Booth Transaction
+          </Button>
+          <Button
+            onClick={handleAddUserClick}
+            size="lg"
+            className="w-full"
+            variant="secondary"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add User
           </Button>
         </div>
         
@@ -654,6 +674,12 @@ const Dashboard = () => {
           onOpenChange={setIsBoothTransactionOpen}
           booths={booths}
           getBoothById={getBoothById}
+        />
+
+        <AddUserDialog
+          isOpen={isAddUserDialogOpen}
+          onOpenChange={setIsAddUserDialogOpen}
+          onUserAdded={handleUserAdded}
         />
       </div>
     </Layout>
