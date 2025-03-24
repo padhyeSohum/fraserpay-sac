@@ -7,10 +7,10 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (studentNumber: string, password: string) => Promise<void>;
-  register: (studentNumber: string, name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  register: (studentNumber: string, name: string, email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<boolean>;
   verifySACPin: (pin: string) => Promise<boolean>;
-  verifyBoothPin: (pin: string) => Promise<boolean>;
+  verifyBoothPin: (pin: string) => Promise<{ success: boolean, boothId?: string }>;
   joinBooth: (boothId: string) => void;
   session: Session | null;
   updateUserData: (userData: User) => void;

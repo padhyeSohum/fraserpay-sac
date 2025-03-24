@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -66,6 +67,8 @@ const JoinBooth = () => {
           toast.error("Could not determine booth ID. Redirecting to dashboard.");
           navigate('/dashboard');
         }
+      } else {
+        toast.error("Invalid booth PIN");
       }
     } catch (error) {
       console.error("Join booth error:", error);
