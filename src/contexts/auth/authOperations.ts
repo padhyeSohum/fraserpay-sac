@@ -17,12 +17,24 @@ export const loginUser = async (studentNumber: string, password: string): Promis
       .eq('student_number', studentNumber)
       .single();
     
-    if (userError || !userData) {
-      console.error('Student number lookup error:', userError || 'No user found');
-      throw new Error('Student number not found');
+    if (userError) {
+      console.error('Student number lookup error:', userError);
+      // Log more detailed error information to help troubleshoot
+      if (userError.code === 'PGRST116') {
+        console.error('No user found with student number:', studentNumber);
+        throw new Error('Student number not found. Please check your credentials.');
+      } else {
+        console.error('Database error when looking up student number:', userError.message);
+        throw new Error('Error looking up student number');
+      }
     }
     
-    console.log('Found user with student number, proceeding with auth');
+    if (!userData) {
+      console.error('No user data returned for student number:', studentNumber);
+      throw new Error('Student number not found. Please check your credentials.');
+    }
+    
+    console.log('Found user with student number, proceeding with auth', userData);
     
     // Now sign in with email and password
     const { data: authData, error } = await supabase.auth.signInWithPassword({
@@ -32,6 +44,9 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     
     if (error) {
       console.error('Auth error:', error);
+      if (error.message.includes('Invalid login credentials')) {
+        throw new Error('Incorrect password. Please try again.');
+      }
       throw error;
     }
     
@@ -46,7 +61,13 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     }
     
     // Fetch and return user data
-    return await fetchUserData(sessionData.session.user.id);
+    const userData2 = await fetchUserData(sessionData.session.user.id);
+    if (!userData2) {
+      console.error('Failed to fetch user data after successful login');
+      throw new Error('Failed to load user profile');
+    }
+    
+    return userData2;
     
   } catch (error) {
     console.error('Login error:', error);

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
@@ -183,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Login failed. Please check your credentials.");
       }
       
+      setUser(loggedInUser);
       // Navigation is handled in the auth state change listener
       return true;
     } catch (error) {

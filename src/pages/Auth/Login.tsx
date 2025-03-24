@@ -13,6 +13,7 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA } from '@/utils/pwa';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { checkSessionExists } from '@/utils/auth';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -28,16 +29,24 @@ const Login = () => {
     // Clear any auth errors when component mounts
     clearAuthError?.();
     
-    if (isAuthenticated && user) {
-      console.log("Login page: User is authenticated, redirecting", user.role);
+    const checkAuth = async () => {
+      // Check if session exists (helpful for debugging)
+      const hasSession = await checkSessionExists();
+      console.log("Session check on login page:", hasSession);
       
-      // Show PWA install prompt after login only on mobile and not already in PWA mode
-      if (isMobile && !isPWA()) {
-        setShowPWAPrompt(true);
+      if (isAuthenticated && user) {
+        console.log("Login page: User is authenticated, redirecting", user.role);
+        
+        // Show PWA install prompt after login only on mobile and not already in PWA mode
+        if (isMobile && !isPWA()) {
+          setShowPWAPrompt(true);
+        }
+        
+        navigate('/dashboard', { replace: true });
       }
-      
-      navigate('/dashboard', { replace: true });
-    }
+    };
+    
+    checkAuth();
   }, [isAuthenticated, user, navigate, isMobile, clearAuthError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,13 +64,17 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const success = await login(studentNumber, password);
+      console.log("Attempting login with student number:", studentNumber.trim());
+      const success = await login(studentNumber.trim(), password);
+      
       if (!success) {
         // Toast is handled in the auth provider
         console.error("Login failed");
+      } else {
+        console.log("Login successful in component");
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error in component:', error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "Please check your credentials and try again",
