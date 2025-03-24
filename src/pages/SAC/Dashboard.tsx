@@ -476,6 +476,7 @@ const Dashboard = () => {
 
     const studentInfo = foundStudent.name || 'Student';
     const studentId = foundStudent.studentNumber || '';
+    const qrCodeValue = foundStudent.qrCode || '';
     
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -502,6 +503,8 @@ const Dashboard = () => {
           }
           .qr-code {
             margin: 20px 0;
+            display: flex;
+            justify-content: center;
           }
           h1 {
             margin-bottom: 5px;
@@ -515,6 +518,9 @@ const Dashboard = () => {
             }
           }
         </style>
+        <script src="https://unpkg.com/qrcode.react@4.2.0/dist/qrcode.react.js"></script>
+        <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+        <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
       </head>
       <body>
         <div class="container">
@@ -524,28 +530,26 @@ const Dashboard = () => {
             <p>Balance: $${typeof foundStudent.balance === 'number' ? foundStudent.balance.toFixed(2) : '0.00'}</p>
           </div>
           <div class="qr-code">
-            ${foundStudent.qrCode ? 
+            ${qrCodeValue ? 
               `<div id="qrcode"></div>` : 
               `<p>No QR code available</p>`
             }
           </div>
           <button onclick="window.print(); window.close();">Print QR Code</button>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
         <script>
-          if (document.getElementById('qrcode')) {
-            QRCode.toCanvas(
-              document.getElementById('qrcode'), 
-              "${foundStudent.qrCode || ''}",
-              { width: 300, margin: 2 },
-              function(error) {
-                if (error) console.error(error);
-              }
-            );
+          if (document.getElementById('qrcode') && "${qrCodeValue}") {
+            var qrElement = React.createElement(QRCode.QRCodeSVG, {
+              value: "${qrCodeValue}",
+              size: 300,
+              level: "M"
+            });
+            ReactDOM.render(qrElement, document.getElementById('qrcode'));
+            
+            setTimeout(() => {
+              window.print();
+            }, 1000);
           }
-          setTimeout(() => {
-            window.print();
-          }, 500);
         </script>
       </body>
       </html>
