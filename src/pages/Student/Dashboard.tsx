@@ -31,7 +31,7 @@ const Dashboard = () => {
     try {
       const { data: freshUserData, error: userError } = await supabase
         .from('users')
-        .select('tickets')
+        .select('tickets, booth_access')
         .eq('id', user.id)
         .single();
         
@@ -43,10 +43,15 @@ const Dashboard = () => {
       if (freshUserData && user) {
         console.log("Dashboard - refreshed user data:", freshUserData);
         
-        if (freshUserData.tickets / 100 !== user.balance) {
+        const newBalance = freshUserData.tickets / 100;
+        const newBooths = freshUserData.booth_access || [];
+        
+        if (newBalance !== user.balance || 
+            JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
           updateUserData({
             ...user,
-            balance: freshUserData.tickets / 100
+            balance: newBalance,
+            booths: newBooths
           });
         }
       }
@@ -54,6 +59,18 @@ const Dashboard = () => {
       console.error('Error refreshing user data:', error);
     }
   }, [user, updateUserData]);
+
+  const refreshUserBooths = useCallback(() => {
+    if (!user) return;
+    try {
+      // Get latest booths for this user
+      const booths = getBoothsByUserId(user.id);
+      console.log("Refreshed user booths:", booths.length);
+      setUserBooths(booths);
+    } catch (error) {
+      console.error("Error refreshing user booths:", error);
+    }
+  }, [user, getBoothsByUserId]);
 
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
@@ -85,6 +102,15 @@ const Dashboard = () => {
         }
       }
       
+      // Get user booths with error handling
+      try {
+        refreshUserBooths();
+      } catch (error) {
+        console.error("Error loading user booths:", error);
+        setUserBooths([]);
+        toast.error("Failed to load your booths");
+      }
+      
       // Load transactions with error handling
       let transactions;
       try {
@@ -94,16 +120,6 @@ const Dashboard = () => {
         console.error("Error loading transactions:", error);
         setUserTransactions([]);
         toast.error("Failed to load transactions");
-      }
-      
-      // Get user booths with error handling
-      try {
-        const booths = getBoothsByUserId(user.id);
-        setUserBooths(booths);
-      } catch (error) {
-        console.error("Error loading user booths:", error);
-        setUserBooths([]);
-        toast.error("Failed to load your booths");
       }
       
       setDataInitialized(true);
@@ -119,8 +135,9 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, dataInitialized, loadUserTransactions, getBoothsByUserId, fetchAllBooths, refreshUserData, retryCount]);
+  }, [user, dataInitialized, loadUserTransactions, fetchAllBooths, refreshUserData, retryCount, refreshUserBooths, MAX_RETRIES]);
 
+  // Effect to load initial data
   useEffect(() => {
     let isMounted = true;
     
@@ -131,15 +148,24 @@ const Dashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [fetchDataWithRetry, dataInitialized, retryCount]);
+  }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
+  // Effect to set up periodic refresh of user data and booths
   useEffect(() => {
     const intervalId = setInterval(() => {
       refreshUserData();
+      refreshUserBooths();
     }, 30000);
     
     return () => clearInterval(intervalId);
-  }, [refreshUserData]);
+  }, [refreshUserData, refreshUserBooths]);
+
+  // Effect to refresh booths whenever user.booths changes
+  useEffect(() => {
+    if (user && user.booths) {
+      refreshUserBooths();
+    }
+  }, [user?.booths, refreshUserBooths]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');

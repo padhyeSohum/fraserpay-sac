@@ -357,6 +357,8 @@ const Dashboard = () => {
         throw new Error("Failed to create booth");
       }
       
+      console.log("Booth created successfully with ID:", boothId);
+      
       if (boothData.products.length > 0) {
         console.log("Adding products to booth:", boothData.products);
         
@@ -365,8 +367,9 @@ const Dashboard = () => {
         }
       }
       
-      toast.success('Booth created successfully');
       await loadBoothLeaderboard();
+      
+      toast.success('Booth created successfully');
       
     } catch (error) {
       console.error('Error creating booth:', error);

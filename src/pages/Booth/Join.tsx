@@ -28,8 +28,8 @@ const joinBoothSchema = z.object({
 const JoinBooth = () => {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyBoothPin, user } = useAuth();
-  const { createBooth } = useTransactions();
+  const { verifyBoothPin, user, updateUserData } = useAuth();
+  const { createBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
 
   const joinForm = useForm<z.infer<typeof joinBoothSchema>>({
@@ -62,6 +62,17 @@ const JoinBooth = () => {
       
       if (result.success) {
         toast.success("Successfully joined booth!");
+        
+        // After successful join, fetch the latest booth data
+        await fetchAllBooths();
+        
+        // Update the user's data to include the new booth
+        if (user && result.boothId && !user.booths.includes(result.boothId)) {
+          updateUserData({
+            ...user,
+            booths: [...user.booths, result.boothId]
+          });
+        }
         
         // Add proper boothId handling with fallback
         if (result.boothId) {
@@ -106,6 +117,18 @@ const JoinBooth = () => {
       
       if (boothId) {
         toast.success("Booth created successfully!");
+        
+        // Refresh booths data to include the new booth
+        await fetchAllBooths();
+        
+        // Update user data to include the new booth
+        if (user && !user.booths.includes(boothId)) {
+          updateUserData({
+            ...user,
+            booths: [...user.booths, boothId]
+          });
+        }
+        
         navigate(`/booth/${boothId}`);
       } else {
         toast.error("Failed to create booth");

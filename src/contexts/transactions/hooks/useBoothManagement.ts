@@ -14,7 +14,7 @@ import {
 export interface UseBoothManagementReturn {
   booths: Booth[];
   getBoothById: (id: string) => Booth | undefined;
-  loadBooths: () => void;
+  loadBooths: () => Promise<void>;
   loadStudentBooths: () => Booth[];
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
@@ -89,9 +89,12 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {
     setIsLoading(true);
     try {
+      console.log('Creating booth:', name, description, userId);
       const boothId = await createBooth(name, description, userId, customPin);
       
       if (boothId) {
+        console.log("Booth created with ID:", boothId);
+        // Immediately refresh the booths list to include the new booth
         await loadBooths();
       }
       
