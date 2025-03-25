@@ -5,11 +5,9 @@ import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { toast } from 'sonner';
 
-const App = () => {
-  // Use React.useState instead of useState directly to avoid potential reference issues
+const App: React.FC = () => {
   const [isReady, setIsReady] = React.useState(false);
   const [isInitializing, setIsInitializing] = React.useState(true);
-  // Use React.useRef instead of useRef directly
   const initAttempted = React.useRef(false);
 
   // Debug logging for initialization state
