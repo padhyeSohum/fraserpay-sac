@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -71,6 +70,13 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
     }
 
     try {
+      console.log("Creating booth with data:", {
+        name: boothName,
+        description: boothDescription,
+        pin: boothPin,
+        products: products
+      });
+      
       await onCreateBooth({
         name: boothName,
         description: boothDescription,
@@ -83,7 +89,6 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
       setBoothDescription('');
       setBoothPin('');
       setProducts([]);
-      onOpenChange(false);
     } catch (error) {
       console.error('Error creating booth:', error);
       toast.error('Failed to create booth');

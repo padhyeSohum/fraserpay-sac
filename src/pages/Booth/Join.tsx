@@ -68,6 +68,7 @@ const JoinBooth = () => {
         
         // Update the user's data to include the new booth
         if (user && result.boothId && !user.booths.includes(result.boothId)) {
+          console.log("Adding booth to user's booth list:", result.boothId);
           updateUserData({
             ...user,
             booths: [...user.booths, result.boothId]
@@ -123,6 +124,7 @@ const JoinBooth = () => {
         
         // Update user data to include the new booth
         if (user && !user.booths.includes(boothId)) {
+          console.log("Adding new booth to user's booth list:", boothId);
           updateUserData({
             ...user,
             booths: [...user.booths, boothId]

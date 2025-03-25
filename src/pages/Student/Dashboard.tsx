@@ -48,6 +48,7 @@ const Dashboard = () => {
         
         if (newBalance !== user.balance || 
             JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
+          console.log("Updating user data with new booths:", newBooths);
           updateUserData({
             ...user,
             balance: newBalance,
@@ -65,7 +66,9 @@ const Dashboard = () => {
     try {
       // Get latest booths for this user
       const booths = getBoothsByUserId(user.id);
-      console.log("Refreshed user booths:", booths.length);
+      console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
+      console.log("User booth IDs:", user.booths);
+      console.log("All booth IDs with managers:", booths.map(b => ({ id: b.id, managers: b.managers })));
       setUserBooths(booths);
     } catch (error) {
       console.error("Error refreshing user booths:", error);
@@ -84,7 +87,9 @@ const Dashboard = () => {
       // Fetch booths with retry logic
       let boothsData;
       try {
+        console.log("Dashboard: Fetching all booths...");
         boothsData = await fetchAllBooths();
+        console.log("Dashboard: Fetched all booths, count:", boothsData?.length);
         if (!boothsData) {
           throw new Error("Failed to fetch booths");
         }
@@ -163,6 +168,7 @@ const Dashboard = () => {
   // Effect to refresh booths whenever user.booths changes
   useEffect(() => {
     if (user && user.booths) {
+      console.log("Dashboard: User booths changed, refreshing...", user.booths);
       refreshUserBooths();
     }
   }, [user?.booths, refreshUserBooths]);

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
 import { toast } from 'sonner';
@@ -24,7 +24,7 @@ export interface UseBoothManagementReturn {
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUserData } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,8 +94,19 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       
       if (boothId) {
         console.log("Booth created with ID:", boothId);
+        
         // Immediately refresh the booths list to include the new booth
         await loadBooths();
+        
+        // If we have a user, update their booths list in memory
+        if (user && !user.booths.includes(boothId)) {
+          const updatedBooths = [...user.booths, boothId];
+          console.log("Updating user booths in memory:", updatedBooths);
+          updateUserData({
+            ...user,
+            booths: updatedBooths
+          });
+        }
       }
       
       return boothId;
