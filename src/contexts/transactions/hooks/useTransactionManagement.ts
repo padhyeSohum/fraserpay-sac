@@ -1,7 +1,10 @@
+
 import { useState, useCallback, useEffect } from 'react';
-import { Transaction, TransactionStats, DateRange } from '@/types';
+import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
+import { useAuth } from '@/contexts/auth';
 import { 
-  getLeaderboard as getLeaderboardService
+  getLeaderboard as getLeaderboardService,
+  getAllTransactions
 } from '../boothService';
 import { toast } from 'sonner';
 
@@ -13,12 +16,13 @@ export interface UseTransactionManagementReturn {
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
   getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
-  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number }[]>;
 }
 
-export const useTransactionManagement = (booths: any[]): UseTransactionManagementReturn => {
+export const useTransactionManagement = (booths: Booth[]): UseTransactionManagementReturn => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchTransactionsData = async () => {
@@ -26,7 +30,7 @@ export const useTransactionManagement = (booths: any[]): UseTransactionManagemen
       
       console.log('Initializing transaction data fetch');
       try {
-        const allTransactions = await fetchAllTransactions();
+        const allTransactions = await getAllTransactions();
         console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
         
