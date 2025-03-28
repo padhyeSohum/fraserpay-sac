@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ interface BoothTransactionDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   booths: any[];
-  getBoothById: (boothId: string) => any;
+  getBoothById: (id: string) => any;
 }
 
 interface Student {
@@ -145,6 +146,12 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
       return;
     }
     
+    const total = calculateTotal();
+    if (foundStudent.balance < total) {
+      toast.error(`Insufficient balance. Student has $${foundStudent.balance.toFixed(2)} but needs $${total.toFixed(2)}`);
+      return;
+    }
+    
     setIsProcessingTransaction(true);
     
     try {
@@ -202,7 +209,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
             {/* Left Side: Booth and Student Selection */}
             <div>
               <Card>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <div className="space-y-2">
                     <Label htmlFor="booth">Select Booth</Label>
                     <Select onValueChange={handleBoothChange}>
@@ -251,7 +258,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
             {/* Right Side: Cart and Transaction Details */}
             <div>
               <Card>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <h2 className="text-lg font-semibold">Cart</h2>
                   {cart.length === 0 ? (
                     <p>Cart is empty</p>

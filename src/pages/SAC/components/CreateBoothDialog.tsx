@@ -1,225 +1,229 @@
+
 import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Check, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Plus, X } from 'lucide-react';
-import { Product } from '@/types';
 
-export interface CreateBoothDialogProps {
+interface CreateBoothDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBooth: (boothData: { 
-    name: string; 
-    description: string; 
+  onCreateBooth: (data: {
+    name: string;
+    description: string;
     pin: string;
-    products: Omit<Product, 'id' | 'boothId' | 'salesCount'>[];
+    products: {
+      name: string;
+      price: number;
+      image?: string;
+    }[];
   }) => Promise<void>;
   isLoading: boolean;
 }
 
 const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
-  isOpen = false,
-  onOpenChange = () => {},
-  onCreateBooth = async () => {},
-  isLoading = false
+  isOpen,
+  onOpenChange,
+  onCreateBooth,
+  isLoading = false,
 }) => {
-  const [boothName, setBoothName] = useState('');
-  const [boothDescription, setBoothDescription] = useState('');
-  const [boothPin, setBoothPin] = useState('');
-  const [products, setProducts] = useState<{ name: string; price: number; image?: string }[]>([]);
-  const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-
-  const generateRandomPin = () => {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    setBoothPin(pin);
-  };
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [pin, setPin] = useState('');
+  const [products, setProducts] = useState<{ name: string; price: number; image?: string }[]>([
+    { name: '', price: 0 }
+  ]);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAddProduct = () => {
-    if (!productName.trim()) {
-      toast.error('Please enter a product name');
-      return;
-    }
-
-    const price = parseFloat(productPrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Please enter a valid price');
-      return;
-    }
-
-    setProducts([...products, { name: productName, price }]);
-    setProductName('');
-    setProductPrice('');
+    setProducts([...products, { name: '', price: 0 }]);
   };
 
   const handleRemoveProduct = (index: number) => {
-    setProducts(products.filter((_, i) => i !== index));
+    const updatedProducts = [...products];
+    updatedProducts.splice(index, 1);
+    setProducts(updatedProducts);
   };
 
-  const handleCreateBooth = async () => {
-    if (!boothName.trim()) {
-      toast.error('Please enter a booth name');
+  const handleProductChange = (index: number, field: 'name' | 'price', value: string | number) => {
+    const updatedProducts = [...products];
+    updatedProducts[index] = {
+      ...updatedProducts[index],
+      [field]: field === 'price' ? Number(value) : value,
+    };
+    setProducts(updatedProducts);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name) {
+      toast.error('Booth name is required');
       return;
     }
-
-    if (!boothPin || boothPin.length !== 6 || !/^\d+$/.test(boothPin)) {
-      toast.error('Please enter a valid 6-digit PIN');
+    
+    if (!pin) {
+      toast.error('PIN is required for booth access');
       return;
     }
-
+    
+    // Validate products if they're being added
+    const validProducts = products.filter(p => p.name && p.price > 0);
+    
+    setSubmitting(true);
+    
     try {
-      console.log("Creating booth with data:", {
-        name: boothName,
-        description: boothDescription,
-        pin: boothPin,
-        products: products
-      });
-      
       await onCreateBooth({
-        name: boothName,
-        description: boothDescription,
-        pin: boothPin,
-        products
+        name,
+        description,
+        pin,
+        products: validProducts,
       });
       
       // Reset form
-      setBoothName('');
-      setBoothDescription('');
-      setBoothPin('');
-      setProducts([]);
+      setName('');
+      setDescription('');
+      setPin('');
+      setProducts([{ name: '', price: 0 }]);
+      
+      // Close dialog
+      onOpenChange(false);
+      
     } catch (error) {
       console.error('Error creating booth:', error);
-      toast.error('Failed to create booth');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Booth</DialogTitle>
+          <DialogDescription>
+            Create a new booth for an organization or event
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Booth Name</Label>
             <Input
               id="name"
-              value={boothName}
-              onChange={(e) => setBoothName(e.target.value)}
-              className="col-span-3"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter booth name"
+              required
             />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Description
-            </Label>
-            <Input
-              id="description"
-              value={boothDescription}
-              onChange={(e) => setBoothDescription(e.target.value)}
-              className="col-span-3"
-              placeholder="Enter booth description"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="pin" className="text-right">
-              PIN Code
-            </Label>
-            <div className="col-span-3 flex gap-2">
-              <Input
-                id="pin"
-                value={boothPin}
-                onChange={(e) => setBoothPin(e.target.value)}
-                className="flex-1"
-                placeholder="6-digit PIN"
-                maxLength={6}
-              />
-              <Button 
-                type="button" 
-                onClick={generateRandomPin}
-                variant="outline"
-                size="sm"
-              >
-                Generate
-              </Button>
-            </div>
           </div>
           
-          <div className="border-t my-2 pt-4">
-            <h3 className="font-medium mb-2">Products</h3>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter booth description"
+              className="min-h-[100px]"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="pin">PIN (4-digits)</Label>
+            <Input
+              id="pin"
+              value={pin}
+              onChange={(e) => {
+                // Allow only numeric input and limit to 4 chars
+                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setPin(value);
+              }}
+              placeholder="Enter 4-digit PIN"
+              required
+              maxLength={4}
+            />
+            <p className="text-sm text-muted-foreground">
+              This PIN will be used by booth operators to access the booth.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label>Products</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddProduct}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Product
+              </Button>
+            </div>
             
-            <div className="space-y-2">
-              {products.map((product, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
-                  <div className="flex-1">
-                    {product.name} - ${product.price.toFixed(2)}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveProduct(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            {products.map((product, index) => (
+              <div key={index} className="flex gap-3 items-start">
+                <div className="flex-1">
+                  <Input
+                    value={product.name}
+                    onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                    placeholder="Product name"
+                  />
                 </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-2 mt-4">
-              <Label htmlFor="productName" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="productName"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                className="col-span-3"
-                placeholder="Product name"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-2 mt-2">
-              <Label htmlFor="productPrice" className="text-right">
-                Price ($)
-              </Label>
-              <div className="col-span-3 flex gap-2">
-                <Input
-                  id="productPrice"
-                  value={productPrice}
-                  onChange={(e) => setProductPrice(e.target.value)}
-                  className="flex-1"
-                  placeholder="0.00"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                />
+                <div className="w-24">
+                  <Input
+                    type="number"
+                    value={product.price || ''}
+                    onChange={(e) => handleProductChange(index, 'price', e.target.value)}
+                    placeholder="Price"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
                 <Button
                   type="button"
-                  onClick={handleAddProduct}
-                  size="sm"
-                  className="whitespace-nowrap"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveProduct(index)}
+                  disabled={products.length === 1}
                 >
-                  <Plus className="h-4 w-4 mr-1" /> Add
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
-        <DialogFooter>
-          <Button 
-            type="submit" 
-            onClick={handleCreateBooth} 
-            disabled={isLoading}
-          >
-            {isLoading ? 'Creating...' : 'Create Booth'}
-          </Button>
-        </DialogFooter>
+          
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting || isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || isLoading || !name || !pin}
+            >
+              {(submitting || isLoading) ? (
+                <>
+                  <span className="mr-2">Creating...</span>
+                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Create Booth
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

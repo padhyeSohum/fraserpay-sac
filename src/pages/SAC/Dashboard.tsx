@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Upload } from 'lucide-react';
 import StatCards from './components/StatCards';
@@ -20,6 +19,9 @@ import BulkImportDialog from './components/BulkImportDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { transformFirebaseUser } from '@/utils/firebase';
 
 export interface StatsData {
   totalUsers: number;
@@ -77,46 +79,20 @@ const Dashboard = () => {
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
   
   useEffect(() => {
-    const usersChannel = supabase
-      .channel('dashboard-users-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'users' }, 
-        (payload) => {
-          console.log('Users change detected:', payload);
+    const initializeListeners = async () => {
+      const pollInterval = setInterval(() => {
+        if (dataInitialized) {
           loadUsers();
-        }
-      )
-      .subscribe();
-      
-    const transactionsChannel = supabase
-      .channel('dashboard-transactions-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'transactions' }, 
-        (payload) => {
-          console.log('Transactions change detected:', payload);
           loadTransactions();
           loadBoothLeaderboard();
         }
-      )
-      .subscribe();
+      }, 30000);
       
-    const boothsChannel = supabase
-      .channel('dashboard-booths-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'booths' }, 
-        (payload) => {
-          console.log('Booths change detected:', payload);
-          loadBoothLeaderboard();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(usersChannel);
-      supabase.removeChannel(transactionsChannel);
-      supabase.removeChannel(boothsChannel);
+      return () => clearInterval(pollInterval);
     };
-  }, []);
+    
+    initializeListeners();
+  }, [dataInitialized]);
   
   useEffect(() => {
     let isMounted = true;
@@ -171,28 +147,29 @@ const Dashboard = () => {
   const loadUsers = async () => {
     setIsUserLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(q);
       
-      if (error) throw error;
+      const users = querySnapshot.docs.map(doc => {
+        const userData = doc.data();
+        userData.id = doc.id;
+        return userData;
+      });
       
-      if (data) {
-        console.log('SAC Dashboard: Loaded users', data.length);
-        setUsersList(data);
-        setFilteredUsers(data);
-        
-        const totalTickets = data.reduce((sum, user) => sum + (user.tickets || 0), 0) / 100;
-        
-        setStats(prev => ({
-          ...prev,
-          totalUsers: data.length,
-          totalTickets: totalTickets
-        }));
-      }
+      console.log('SAC Dashboard: Loaded users from Firebase', users.length);
+      setUsersList(users);
+      setFilteredUsers(users);
+      
+      const totalTickets = users.reduce((sum, user) => sum + (user.tickets || 0), 0) / 100;
+      
+      setStats(prev => ({
+        ...prev,
+        totalUsers: users.length,
+        totalTickets: totalTickets
+      }));
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error loading users from Firebase:', error);
       toast.error('Failed to load users');
       setUsersList([]);
       setFilteredUsers([]);
@@ -204,27 +181,28 @@ const Dashboard = () => {
   const loadTransactions = async () => {
     setIsTransactionLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const transactionsRef = collection(firestore, 'transactions');
+      const q = query(transactionsRef, orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(q);
       
-      if (error) throw error;
+      const txs = querySnapshot.docs.map(doc => {
+        const txData = doc.data();
+        txData.id = doc.id;
+        return txData;
+      });
       
-      if (data) {
-        console.log('SAC Dashboard: Loaded transactions', data.length);
-        setTransactions(data);
-        
-        const totalAmount = data.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-        
-        setStats(prev => ({
-          ...prev,
-          totalTransactions: data.length,
-          totalRevenue: totalAmount / 100
-        }));
-      }
+      console.log('SAC Dashboard: Loaded transactions from Firebase', txs.length);
+      setTransactions(txs);
+      
+      const totalAmount = txs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+      
+      setStats(prev => ({
+        ...prev,
+        totalTransactions: txs.length,
+        totalRevenue: totalAmount / 100
+      }));
     } catch (error) {
-      console.error('Error loading transactions:', error);
+      console.error('Error loading transactions from Firebase:', error);
       toast.error('Failed to load transactions');
       setTransactions([]);
     } finally {
@@ -259,16 +237,14 @@ const Dashboard = () => {
   
   const handleStudentFound = async (student: any, qrUrl: string) => {
     try {
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', student.id)
-        .single();
+      const userRef = doc(firestore, 'users', student.id);
+      const userSnap = await getDoc(userRef);
       
-      if (!error && userData) {
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
         setFoundStudent({
           ...student,
-          balance: userData.tickets / 100
+          balance: (userData.tickets || 0) / 100
         });
       } else {
         setFoundStudent(student);
@@ -284,14 +260,12 @@ const Dashboard = () => {
   
   const handleUserSelected = async (user: any) => {
     try {
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const userRef = doc(firestore, 'users', user.id);
+      const userSnap = await getDoc(userRef);
       
-      if (!error && userData) {
-        user = userData;
+      if (userSnap.exists()) {
+        user = userSnap.data();
+        user.id = userSnap.id;
       }
     } catch (error) {
       console.error('Error fetching latest user data:', error);
@@ -302,7 +276,7 @@ const Dashboard = () => {
       name: user.name,
       studentNumber: user.student_number,
       email: user.email,
-      balance: user.tickets / 100,
+      balance: (user.tickets || 0) / 100,
       qrCode: user.qr_code
     };
     
@@ -315,10 +289,9 @@ const Dashboard = () => {
       setQrCodeUrl(generateQRCode(userData));
       
       try {
-        await supabase
-          .from('users')
-          .update({ qr_code: userData })
-          .eq('id', user.id);
+        await updateDoc(doc(firestore, 'users', user.id), { 
+          qr_code: userData 
+        });
       } catch (error) {
         console.error('Error updating QR code:', error);
       }
@@ -343,14 +316,15 @@ const Dashboard = () => {
       console.log("Creating booth with data:", {
         name: boothData.name,
         description: boothData.description,
-        pin: boothData.pin
+        pin: boothData.pin,
+        products: boothData.products
       });
       
       const boothId = await createBoothFromContext(
         boothData.name,
         boothData.description || '',
         user.id,
-        boothData.pin // Pass the pin from the dialog
+        boothData.pin
       );
       
       if (!boothId) {
@@ -359,7 +333,7 @@ const Dashboard = () => {
       
       console.log("Booth created successfully with ID:", boothId);
       
-      if (boothData.products.length > 0) {
+      if (boothData.products && boothData.products.length > 0) {
         console.log("Adding products to booth:", boothData.products);
         
         for (const product of boothData.products) {
@@ -397,26 +371,24 @@ const Dashboard = () => {
     }
     
     try {
-      const amountInCents = Math.round(amount * 100);
-      
       const result = await addFunds(studentId, amount, user.id);
       
       if (result.success) {
         toast.success(`Successfully added $${amount.toFixed(2)} to account`);
         
-        const { data: updatedUserData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', studentId)
-          .single();
+        const userRef = doc(firestore, 'users', studentId);
+        const userSnap = await getDoc(userRef);
         
-        if (!error && updatedUserData && foundStudent) {
+        if (userSnap.exists() && foundStudent) {
+          const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100
+            balance: (userData.tickets || 0) / 100
           });
         }
         
+        await loadUsers();
+        await loadTransactions();
       } else {
         toast.error('Failed to add funds');
       }
@@ -442,18 +414,19 @@ const Dashboard = () => {
       if (result.success) {
         toast.success(`Successfully refunded $${amount.toFixed(2)}`);
         
-        const { data: updatedUserData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', studentId)
-          .single();
+        const userRef = doc(firestore, 'users', studentId);
+        const userSnap = await getDoc(userRef);
         
-        if (!error && updatedUserData && foundStudent) {
+        if (userSnap.exists() && foundStudent) {
+          const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUserData.tickets / 100
+            balance: (userData.tickets || 0) / 100
           });
         }
+        
+        await loadUsers();
+        await loadTransactions();
       } else {
         toast.error('Failed to process refund');
       }

@@ -3,148 +3,229 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
 import { toast } from 'sonner';
+import { firestore } from '@/integrations/firebase/client';
 import { 
-  fetchAllBooths, 
-  getBoothById, 
-  getBoothsByUserId, 
-  createBooth,
-  addProductToBooth
-} from '../boothService';
+  collection, 
+  getDocs, 
+  query, 
+  where, 
+  addDoc, 
+  doc, 
+  getDoc, 
+  orderBy,
+  serverTimestamp 
+} from 'firebase/firestore';
 
 export interface UseBoothManagementReturn {
   booths: Booth[];
   getBoothById: (id: string) => Booth | undefined;
-  loadBooths: () => Promise<void>;
-  loadStudentBooths: () => Booth[];
+  loadBooths: () => Promise<Booth[]>;
+  loadStudentBooths: (userId?: string) => Promise<Booth[]>;
   getBoothsByUserId: (userId: string) => Booth[];
-  fetchAllBooths: () => Promise<Booth[]>;
-  createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
-  addProductToBooth: (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
+  fetchAllBooths: () => Promise<void>;
+  createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   isLoading: boolean;
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
-  const { user, isAuthenticated, updateUserData } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    // Only load booths when the auth state is determined and user is authenticated
-    if (isAuthenticated) {
-      loadBooths();
-    }
-  }, [isAuthenticated]);
-
-  const loadBooths = async () => {
-    if (!isAuthenticated) return;
-    
+  
+  // Load all booths
+  const loadBooths = useCallback(async () => {
+    console.log('Loading all booths');
     setIsLoading(true);
     
     try {
-      console.log('useBoothManagement: Loading booths...');
-      const fetchedBooths = await fetchAllBooths();
-      console.log('useBoothManagement: Loaded', fetchedBooths.length, 'booths');
-      setBooths(fetchedBooths);
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsQuery = query(boothsCollection, orderBy('created_at', 'desc'));
+      const boothsSnapshot = await getDocs(boothsQuery);
+      
+      const boothsData: Booth[] = [];
+      
+      for (const boothDoc of boothsSnapshot.docs) {
+        const boothData = boothDoc.data();
+        
+        // Load booth products
+        const productsCollection = collection(firestore, 'products');
+        const productsQuery = query(productsCollection, where('booth_id', '==', boothDoc.id));
+        const productsSnapshot = await getDocs(productsQuery);
+        
+        const products = productsSnapshot.docs.map(productDoc => {
+          const productData = productDoc.data();
+          return {
+            id: productDoc.id,
+            name: productData.name,
+            price: (productData.price || 0) / 100, // Convert from cents to dollars
+            boothId: boothDoc.id,
+            image: productData.image,
+            salesCount: 0
+          };
+        });
+        
+        boothsData.push({
+          id: boothDoc.id,
+          name: boothData.name,
+          description: boothData.description || '',
+          pin: boothData.pin,
+          products: products,
+          managers: boothData.members || [],
+          totalEarnings: (boothData.sales || 0) / 100, // Convert from cents to dollars
+          createdAt: boothData.created_at
+        });
+      }
+      
+      console.log('Loaded booths:', boothsData.length);
+      return boothsData;
     } catch (error) {
-      console.error('useBoothManagement: Error loading booths:', error);
+      console.error('Error loading booths:', error);
       toast.error('Failed to load booths');
+      return [];
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [firestore]);
   
-  const loadStudentBooths = () => {
-    if (!user || !user.booths || user.booths.length === 0) {
+  // Load booths where a user is a manager
+  const loadStudentBooths = useCallback(async (userId?: string) => {
+    const userIdToUse = userId || (user ? user.id : undefined);
+    
+    if (!userIdToUse) {
+      console.warn('No user ID provided for loadStudentBooths');
       return [];
     }
     
-    const studentBooths = booths.filter(booth => 
-      user.booths?.includes(booth.id)
-    );
-    
-    return studentBooths;
-  };
-  
-  const getBoothByIdImpl = (id: string) => {
-    return booths.find(booth => booth.id === id);
-  };
-  
-  const getBoothsByUserIdImpl = (userId: string) => {
-    return booths.filter(booth => booth.managers.includes(userId));
-  };
-
-  const fetchAllBoothsImpl = async () => {
-    try {
-      console.log('Fetching all booths...');
-      const fetchedBooths = await fetchAllBooths();
-      console.log('Fetched', fetchedBooths.length, 'booths');
-      setBooths(fetchedBooths);
-      return fetchedBooths;
-    } catch (error) {
-      console.error('Error fetching all booths:', error);
-      return [];
-    }
-  };
-
-  const createBoothImpl = async (name: string, description: string, userId: string, customPin?: string) => {
+    console.log('Loading booths for user:', userIdToUse);
     setIsLoading(true);
+    
     try {
-      console.log('Creating booth:', name, description, userId);
-      const boothId = await createBooth(name, description, userId, customPin);
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsQuery = query(
+        boothsCollection, 
+        where('members', 'array-contains', userIdToUse),
+        orderBy('created_at', 'desc')
+      );
+      const boothsSnapshot = await getDocs(boothsQuery);
       
-      if (boothId && user) {
-        console.log("Booth created with ID:", boothId);
+      const boothsData: Booth[] = [];
+      
+      for (const boothDoc of boothsSnapshot.docs) {
+        const boothData = boothDoc.data();
         
-        // Immediately refresh the booths list to include the new booth
-        await loadBooths();
+        // Load booth products
+        const productsCollection = collection(firestore, 'products');
+        const productsQuery = query(productsCollection, where('booth_id', '==', boothDoc.id));
+        const productsSnapshot = await getDocs(productsQuery);
         
-        // If we have a user, update their booths list in memory
-        if (user && !user.booths.includes(boothId)) {
-          const updatedBooths = [...(user.booths || []), boothId];
-          console.log("Updating user booths in memory:", updatedBooths);
-          updateUserData({
-            ...user,
-            booths: updatedBooths
-          });
-        }
+        const products = productsSnapshot.docs.map(productDoc => {
+          const productData = productDoc.data();
+          return {
+            id: productDoc.id,
+            name: productData.name,
+            price: (productData.price || 0) / 100, // Convert from cents to dollars
+            boothId: boothDoc.id,
+            image: productData.image,
+            salesCount: 0
+          };
+        });
+        
+        boothsData.push({
+          id: boothDoc.id,
+          name: boothData.name,
+          description: boothData.description || '',
+          pin: boothData.pin,
+          products: products,
+          managers: boothData.members || [],
+          totalEarnings: (boothData.sales || 0) / 100, // Convert from cents to dollars
+          createdAt: boothData.created_at
+        });
       }
       
-      return boothId;
+      console.log('Loaded user booths:', boothsData.length);
+      return boothsData;
     } catch (error) {
-      console.error('Error in useBoothManagement.createBooth:', error);
+      console.error('Error loading user booths:', error);
+      toast.error('Failed to load your booths');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, firestore]);
+  
+  // Fetch all booths and update state
+  const fetchAllBooths = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const boothsData = await loadBooths();
+      setBooths(boothsData);
+    } catch (error) {
+      console.error('Error in fetchAllBooths:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadBooths]);
+  
+  // Effect to load booths when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAllBooths();
+    }
+  }, [isAuthenticated, fetchAllBooths]);
+  
+  // Create a new booth
+  const createBooth = async (name: string, description: string, managerId: string, pin: string): Promise<string | null> => {
+    console.log('Creating booth:', { name, description, managerId, pin });
+    setIsLoading(true);
+    
+    try {
+      // Create the booth
+      const boothData = {
+        name,
+        description,
+        members: [managerId], // Initial manager
+        pin,
+        sales: 0,
+        created_at: new Date().toISOString(),
+        created_by: managerId
+      };
+      
+      const boothRef = await addDoc(collection(firestore, 'booths'), boothData);
+      
+      // Update booth list
+      await fetchAllBooths();
+      
+      console.log('Booth created with ID:', boothRef.id);
+      toast.success('Booth created successfully');
+      
+      return boothRef.id;
+    } catch (error) {
+      console.error('Error creating booth:', error);
+      toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return null;
     } finally {
       setIsLoading(false);
     }
   };
-
-  const addProductToBoothImpl = async (boothId: string, product: Omit<import('@/types').Product, 'id' | 'boothId' | 'salesCount'>) => {
-    setIsLoading(true);
-    try {
-      const result = await addProductToBooth(boothId, product);
-      
-      if (result) {
-        await loadBooths();
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Error in useBoothManagement.addProductToBooth:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
+  // Get booth by ID
+  const getBoothById = useCallback((id: string): Booth | undefined => {
+    return booths.find(booth => booth.id === id);
+  }, [booths]);
+  
+  // Get booths by user ID
+  const getBoothsByUserId = useCallback((userId: string): Booth[] => {
+    return booths.filter(booth => booth.managers.includes(userId));
+  }, [booths]);
+  
   return {
     booths,
-    getBoothById: getBoothByIdImpl,
+    getBoothById,
     loadBooths,
     loadStudentBooths,
-    getBoothsByUserId: getBoothsByUserIdImpl,
-    fetchAllBooths: fetchAllBoothsImpl,
-    createBooth: createBoothImpl,
-    addProductToBooth: addProductToBoothImpl,
+    getBoothsByUserId,
+    fetchAllBooths,
+    createBooth,
     isLoading
   };
 };

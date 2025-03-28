@@ -1,311 +1,348 @@
 
 import React, { useState } from 'react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import CSVUploader from '@/components/CSVUploader';
-import { parseCSV, validateBoothCSV, generateBoothCSVTemplate, generateBoothWithProductsCSVTemplate, downloadCSVTemplate } from '@/utils/csvParser';
 import { Button } from '@/components/ui/button';
-import { Download, Store, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { toast } from 'sonner';
+import { Upload, X, Check, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 const MassBoothImport = () => {
-  const { user } = useAuth();
-  const [booths, setBooths] = useState<Record<string, string>[]>([]);
-  const [isUploaded, setIsUploaded] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState('basic');
-  const [processResult, setProcessResult] = useState<{
-    success: number;
-    failed: number;
-    errors: string[];
-  } | null>(null);
+  const [uploadStats, setUploadStats] = useState({
+    total: 0,
+    success: 0,
+    failed: 0,
+    skipped: 0
+  });
+  const { user } = useAuth();
 
-  const handleFileLoad = (csvData: string) => {
-    try {
-      const parsedData = parseCSV(csvData);
-      const validation = validateBoothCSV(parsedData);
-      
-      if (!validation.isValid) {
-        toast.error(validation.message || 'Invalid CSV format');
-        return;
-      }
-      
-      setBooths(parsedData);
-      setIsUploaded(true);
-      toast.success(`CSV parsed successfully. ${parsedData.length} booths found.`);
-    } catch (error) {
-      toast.error('Failed to parse CSV file');
-      console.error('Error parsing CSV:', error);
-    }
-  };
-  
-  const handleDownloadTemplate = () => {
-    const template = activeTab === 'basic'
-      ? generateBoothCSVTemplate() 
-      : generateBoothWithProductsCSVTemplate();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
     
-    const filename = activeTab === 'basic'
-      ? 'booth_template.csv'
-      : 'booth_with_products_template.csv';
-      
-    downloadCSVTemplate(template, filename);
-    toast.success('Template downloaded successfully');
-  };
-  
-  const handleImport = async () => {
-    if (!user) {
-      toast.error('You must be logged in to create booths');
+    if (!selectedFile) {
+      setFile(null);
+      setCsvData([]);
       return;
     }
     
-    if (booths.length === 0) {
-      toast.error('No booths to import');
+    if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
+      toast.error('Please select a CSV file');
+      return;
+    }
+    
+    setFile(selectedFile);
+    
+    // Parse CSV file
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const csvText = event.target?.result as string;
+        const rows = csvText.split('\n');
+        const headers = rows[0].split(',').map(h => h.trim());
+        
+        const parsedData = rows.slice(1).map(row => {
+          if (!row.trim()) return null; // Skip empty rows
+          
+          const values = row.split(',').map(v => v.trim());
+          const rowData: any = {};
+          
+          headers.forEach((header, index) => {
+            rowData[header] = values[index] || '';
+          });
+          
+          return rowData;
+        }).filter(Boolean);
+        
+        setCsvData(parsedData);
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        toast.error('Failed to parse CSV file');
+      }
+    };
+    
+    reader.readAsText(selectedFile);
+  };
+
+  const handleRemoveFile = () => {
+    setFile(null);
+    setCsvData([]);
+  };
+
+  const handleImport = async () => {
+    if (!csvData.length) {
+      toast.error('No data to import');
+      return;
+    }
+    
+    if (!user) {
+      toast.error('You must be logged in to import booths');
       return;
     }
     
     setIsProcessing(true);
-    const results = {
+    setUploadStats({
+      total: csvData.length,
       success: 0,
       failed: 0,
-      errors: [] as string[]
-    };
+      skipped: 0
+    });
     
     try {
-      for (const booth of booths) {
-        try {
-          // Check if booth with same name already exists
-          const { data: existingBooth } = await supabase
-            .from('booths')
-            .select('id')
-            .eq('name', booth.name)
-            .maybeSingle();
-          
-          if (existingBooth) {
-            results.failed++;
-            results.errors.push(`Booth with name "${booth.name}" already exists`);
-            continue;
-          }
-          
-          // Create new booth
-          const { data, error } = await supabase
-            .from('booths')
-            .insert({
-              name: booth.name,
-              description: booth.description,
-              pin: booth.pin,
-              members: [user.id],
-              sales: 0
-            })
-            .select()
-            .single();
-          
-          if (error) {
-            results.failed++;
-            results.errors.push(`Failed to create booth "${booth.name}": ${error.message}`);
-            continue;
-          }
-          
-          if (data) {
-            // Update the user's booth_access array
-            const { data: userData, error: getUserError } = await supabase
-              .from('users')
-              .select('booth_access')
-              .eq('id', user.id)
-              .single();
-            
-            if (!getUserError && userData) {
-              const updatedBoothAccess = [...(userData.booth_access || []), data.id];
-              
-              await supabase
-                .from('users')
-                .update({ booth_access: updatedBoothAccess })
-                .eq('id', user.id);
-            }
-            
-            // Add products if they exist in the CSV
-            if (activeTab === 'withProducts') {
-              const products = [];
-              
-              // Check for product1, product2, etc. pattern
-              let productIndex = 1;
-              while (booth[`product${productIndex}Name`] && booth[`product${productIndex}Price`]) {
-                const productName = booth[`product${productIndex}Name`];
-                const productPrice = parseFloat(booth[`product${productIndex}Price`]);
-                const productImage = booth[`product${productIndex}Image`] || null;
-                
-                if (productName && !isNaN(productPrice)) {
-                  products.push({
-                    name: productName,
-                    price: Math.round(productPrice * 100), // Convert to cents
-                    booth_id: data.id,
-                    image: productImage
-                  });
-                }
-                
-                productIndex++;
-              }
-              
-              if (products.length > 0) {
-                const { error: productsError } = await supabase
-                  .from('products')
-                  .insert(products);
-                
-                if (productsError) {
-                  results.errors.push(`Created booth "${booth.name}" but failed to add products: ${productsError.message}`);
-                }
-              }
-            }
-            
-            results.success++;
-          }
-        } catch (error) {
-          results.failed++;
-          results.errors.push(`Error processing booth "${booth.name}": ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+      // Process CSV data in chunks to avoid overwhelming Firebase
+      const chunkSize = 5;
+      const chunks = [];
+      
+      for (let i = 0; i < csvData.length; i += chunkSize) {
+        chunks.push(csvData.slice(i, i + chunkSize));
       }
       
-      setProcessResult(results);
+      let successCount = 0;
+      let failedCount = 0;
+      let skippedCount = 0;
       
-      if (results.failed === 0) {
-        toast.success(`Successfully imported ${results.success} booths`);
-      } else {
-        toast.warning(`Imported ${results.success} booths with ${results.failed} failures`);
+      for (const chunk of chunks) {
+        await Promise.all(chunk.map(async (row) => {
+          try {
+            // Validate required fields
+            if (!row.name || !row.pin) {
+              console.error('Missing required fields:', row);
+              skippedCount++;
+              return;
+            }
+            
+            // Check if booth already exists
+            const boothsRef = collection(firestore, 'booths');
+            const q = query(boothsRef, where('name', '==', row.name));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              console.log('Booth already exists:', row.name);
+              skippedCount++;
+              return;
+            }
+            
+            // Add booth to Firestore
+            const boothData = {
+              name: row.name,
+              description: row.description || '',
+              pin: row.pin,
+              members: [user.id], // Default member is the current user
+              sales: 0,
+              created_at: new Date().toISOString(),
+              created_by: user.id
+            };
+            
+            // Create the booth
+            const boothRef = await addDoc(collection(firestore, 'booths'), boothData);
+            
+            // If product data is available, add the product
+            if (row.product_name && row.product_price) {
+              const productPrice = parseFloat(row.product_price);
+              if (!isNaN(productPrice) && productPrice > 0) {
+                const productData = {
+                  name: row.product_name,
+                  price: Math.round(productPrice * 100), // Convert to cents
+                  booth_id: boothRef.id,
+                  created_at: new Date().toISOString()
+                };
+                
+                await addDoc(collection(firestore, 'products'), productData);
+              }
+            }
+            
+            successCount++;
+          } catch (error) {
+            console.error('Error importing booth:', error, row);
+            failedCount++;
+          }
+        }));
+        
+        // Update stats after each chunk
+        setUploadStats({
+          total: csvData.length,
+          success: successCount,
+          failed: failedCount,
+          skipped: skippedCount
+        });
+      }
+      
+      toast.success(`Imported ${successCount} booths successfully`);
+      
+      if (skippedCount > 0) {
+        toast(`Skipped ${skippedCount} booths (already exist)`);
+      }
+      
+      if (failedCount > 0) {
+        toast.error(`Failed to import ${failedCount} booths`);
       }
     } catch (error) {
-      toast.error('Failed to import booths');
       console.error('Error importing booths:', error);
+      toast.error('Error during import process');
     } finally {
       setIsProcessing(false);
     }
   };
-  
-  const reset = () => {
-    setBooths([]);
-    setIsUploaded(false);
-    setProcessResult(null);
-  };
-  
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Store className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Mass Booth Import</h2>
-        </div>
-        <Button size="sm" variant="outline" onClick={handleDownloadTemplate}>
-          <Download className="h-4 w-4 mr-2" />
-          Download Template
-        </Button>
-      </div>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="basic">Basic Booths</TabsTrigger>
-          <TabsTrigger value="withProducts">Booths with Products</TabsTrigger>
-        </TabsList>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Booth Data (CSV)</Label>
         
-        <TabsContent value="basic" className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload booths with basic information only (name, description, pin)
-          </p>
-        </TabsContent>
-        
-        <TabsContent value="withProducts" className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload booths with products (includes product1Name, product1Price, etc.)
-          </p>
-        </TabsContent>
-      </Tabs>
-      
-      {!isUploaded ? (
-        <CSVUploader 
-          onFileLoad={handleFileLoad} 
-          title={`Upload ${activeTab === 'basic' ? 'Basic' : 'Products'} CSV`}
-          description={`Upload a CSV file with booth ${activeTab === 'withProducts' ? 'and product' : ''} data to import multiple booths at once`}
-        />
-      ) : (
-        <div className="space-y-4">
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="font-medium">Ready to import {booths.length} booths</p>
-            <p className="text-sm text-muted-foreground">
-              Review the preview below before importing
-            </p>
-          </div>
-          
-          <div className="border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-muted">
-                  <tr>
-                    {Object.keys(booths[0] || {}).map((header) => (
-                      <th key={header} className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-card divide-y divide-border">
-                  {booths.slice(0, 5).map((booth, index) => (
-                    <tr key={index}>
-                      {Object.values(booth).map((value, i) => (
-                        <td key={i} className="px-4 py-2 text-sm">
-                          {value}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {!file ? (
+          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="hidden"
+              id="booth-csv-file-input"
+            />
+            <div className="flex flex-col items-center justify-center">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-2">Upload a CSV file with booth data</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                The CSV should have headers: name, description, pin, product_name, product_price
+              </p>
+              <Label
+                htmlFor="booth-csv-file-input"
+                className="cursor-pointer inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+              >
+                <Upload className="h-4 w-4" />
+                Select CSV File
+              </Label>
             </div>
-            {booths.length > 5 && (
-              <div className="px-4 py-2 text-sm text-muted-foreground bg-muted/50">
-                Showing 5 of {booths.length} booths
+          </div>
+        ) : (
+          <div className="border rounded-lg p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center">
+                <FileText className="h-5 w-5 text-muted-foreground mr-2" />
+                <span className="font-medium">{file.name}</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({(file.size / 1024).toFixed(1)} KB)
+                </span>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRemoveFile}
+                disabled={isProcessing}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {csvData.length > 0 && (
+              <>
+                <div className="text-sm mb-2">
+                  {csvData.length} booths found in CSV
+                </div>
+                
+                <div className="border rounded-md overflow-auto max-h-[300px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>PIN</TableHead>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead>Product Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {csvData.slice(0, 10).map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.name || 'N/A'}</TableCell>
+                          <TableCell>{row.description || 'N/A'}</TableCell>
+                          <TableCell>{row.pin || 'N/A'}</TableCell>
+                          <TableCell>{row.product_name || 'N/A'}</TableCell>
+                          <TableCell>{row.product_price || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))}
+                      {csvData.length > 10 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            ... and {csvData.length - 10} more rows
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                <div className="mt-4 space-y-4">
+                  {isProcessing && (
+                    <div className="text-sm">
+                      <div className="flex justify-between mb-2">
+                        <span>Processing...</span>
+                        <span>
+                          {uploadStats.success + uploadStats.failed + uploadStats.skipped} / {uploadStats.total}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ 
+                            width: `${Math.round(
+                              ((uploadStats.success + uploadStats.failed + uploadStats.skipped) / uploadStats.total) * 100
+                            )}%` 
+                          }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs mt-2 text-muted-foreground">
+                        <span>Success: {uploadStats.success}</span>
+                        <span>Skipped: {uploadStats.skipped}</span>
+                        <span>Failed: {uploadStats.failed}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={handleImport}
+                    disabled={isProcessing || csvData.length === 0}
+                    className="w-full"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Importing Booths...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Import Booths
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
             )}
           </div>
-          
-          <div className="flex space-x-3">
-            <Button 
-              onClick={handleImport} 
-              disabled={isProcessing}
-              className="w-full"
-            >
-              {isProcessing ? 'Processing...' : `Import ${booths.length} Booths`}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={reset}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-          </div>
-          
-          {processResult && processResult.errors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Import Errors</AlertTitle>
-              <AlertDescription>
-                <div className="mt-2 max-h-40 overflow-y-auto text-sm">
-                  <ul className="list-disc pl-5 space-y-1">
-                    {processResult.errors.map((error, index) => (
-                      <li key={index}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {processResult && (
-            <div className="bg-muted p-4 rounded-lg text-sm">
-              <p>Import complete: {processResult.success} successful, {processResult.failed} failed</p>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
+      
+      <div className="px-3 py-2 text-muted-foreground bg-muted/50 rounded-md text-sm space-y-2">
+        <p className="font-medium">CSV Format Instructions:</p>
+        <ul className="list-disc list-inside text-xs space-y-1">
+          <li>The first row should contain column headers</li>
+          <li>Required columns: name, pin</li>
+          <li>Optional columns: description, product_name, product_price</li>
+          <li>PIN should be a 4-digit code for booth access</li>
+          <li>If product_name and product_price are provided, a product will be created for the booth</li>
+        </ul>
+      </div>
     </div>
   );
 };
