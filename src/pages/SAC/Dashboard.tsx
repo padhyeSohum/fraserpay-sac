@@ -16,6 +16,7 @@ import FundsDialog from './components/FundsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import AddUserDialog from './components/AddUserDialog';
 import BulkImportDialog from './components/BulkImportDialog';
+import DeleteUserDialog from './components/DeleteUserDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
@@ -39,7 +40,8 @@ const Dashboard = () => {
     fetchAllBooths, 
     getBoothById, 
     createBooth: createBoothFromContext,
-    addProductToBooth: addProductToBoothFromContext 
+    addProductToBooth: addProductToBoothFromContext,
+    deleteUser
   } = useTransactions();
   
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -56,6 +58,8 @@ const Dashboard = () => {
   const [isBoothDialogOpen, setIsBoothDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   
   const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
@@ -555,6 +559,34 @@ const Dashboard = () => {
     setIsBulkImportOpen(true);
   };
   
+  const handleDeleteUser = (user: any) => {
+    setUserToDelete(user);
+    setIsDeleteUserDialogOpen(true);
+  };
+  
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      const success = await deleteUser(userToDelete.id);
+      
+      if (success) {
+        setUsersList(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+        setFilteredUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+        
+        toast.success('User deleted successfully');
+        
+        setStats(prev => ({
+          ...prev,
+          totalUsers: prev.totalUsers - 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    }
+  };
+  
   return (
     <Layout 
       title="SAC Dashboard" 
@@ -612,6 +644,7 @@ const Dashboard = () => {
               searchTerm={userSearchTerm}
               onSearchChange={setUserSearchTerm}
               onUserSelect={handleUserSelected}
+              onUserDelete={handleDeleteUser}
             />
             
             <BoothsList
@@ -693,6 +726,13 @@ const Dashboard = () => {
         <BulkImportDialog
           isOpen={isBulkImportOpen}
           onOpenChange={setIsBulkImportOpen}
+        />
+        
+        <DeleteUserDialog
+          isOpen={isDeleteUserDialogOpen}
+          onOpenChange={setIsDeleteUserDialogOpen}
+          onConfirm={confirmDeleteUser}
+          userName={userToDelete?.name || ''}
         />
       </div>
     </Layout>

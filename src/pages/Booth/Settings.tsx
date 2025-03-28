@@ -9,6 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { User } from '@/types';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
@@ -16,7 +26,7 @@ import { Plus, Trash2 } from 'lucide-react';
 const BoothSettings = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, addProductToBooth, removeProductFromBooth } = useTransactions();
+  const { getBoothById, addProductToBooth, removeProductFromBooth, deleteBooth } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -24,6 +34,8 @@ const BoothSettings = () => {
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '' });
   const [boothManagers, setBoothManagers] = useState<User[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (boothId) {
@@ -31,7 +43,6 @@ const BoothSettings = () => {
       setBooth(boothData);
       
       if (boothData) {
-        // Load booth managers
         const usersStr = localStorage.getItem('users');
         const users: User[] = usersStr ? JSON.parse(usersStr) : [];
         
@@ -42,7 +53,6 @@ const BoothSettings = () => {
   }, [boothId, getBoothById]);
 
   useEffect(() => {
-    // Check if user has access to this booth
     if (user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
@@ -80,11 +90,9 @@ const BoothSettings = () => {
       });
       
       if (success) {
-        // Refresh booth data
         const boothData = getBoothById(booth.id);
         setBooth(boothData);
         
-        // Reset form and close dialog
         setNewProduct({ name: '', price: '' });
         setShowAddProductDialog(false);
       }
@@ -101,13 +109,33 @@ const BoothSettings = () => {
       const success = await removeProductFromBooth(booth.id, productId);
       
       if (success) {
-        // Refresh booth data
         const boothData = getBoothById(booth.id);
         setBooth(boothData);
       }
     } catch (error) {
       console.error(error);
       toast.error('Failed to remove product');
+    }
+  };
+
+  const handleDeleteBooth = async () => {
+    if (!booth) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const success = await deleteBooth(booth.id);
+      
+      if (success) {
+        toast.success('Booth deleted successfully');
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error deleting booth:', error);
+      toast.error('Failed to delete booth');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -137,11 +165,20 @@ const BoothSettings = () => {
         
         <TabsContent value="settings" className="animate-fade-in mt-6">
           <div className="space-y-6">
-            {/* Booth Information */}
             <Card>
-              <CardHeader>
-                <CardTitle>Booth Information</CardTitle>
-                <CardDescription>Basic details about your booth</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Booth Information</CardTitle>
+                  <CardDescription>Basic details about your booth</CardDescription>
+                </div>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete Booth
+                </Button>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between py-2">
@@ -165,7 +202,6 @@ const BoothSettings = () => {
               </CardContent>
             </Card>
             
-            {/* Products Management */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -210,7 +246,6 @@ const BoothSettings = () => {
               </CardContent>
             </Card>
             
-            {/* Booth Managers */}
             <Card>
               <CardHeader>
                 <CardTitle>Booth Managers</CardTitle>
@@ -239,7 +274,6 @@ const BoothSettings = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Add Product Dialog */}
       <Dialog open={showAddProductDialog} onOpenChange={setShowAddProductDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -290,6 +324,35 @@ const BoothSettings = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Booth</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this booth? This action cannot be undone.
+              All products and booth data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteBooth}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                  Deleting...
+                </>
+              ) : (
+                'Delete Booth'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

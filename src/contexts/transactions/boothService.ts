@@ -1,4 +1,3 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
@@ -172,6 +171,71 @@ export const removeProductFromBooth = async (boothId: string, productId: string)
   } catch (error) {
     console.error('Error removing product from booth:', error);
     toast.error('Failed to remove product');
+    return false;
+  }
+};
+
+// Delete an entire booth and its associated products
+export const deleteBooth = async (boothId: string): Promise<boolean> => {
+  try {
+    // First delete all products associated with this booth
+    const productsRef = collection(firestore, 'products');
+    const q = query(productsRef, where('booth_id', '==', boothId));
+    const querySnapshot = await getDocs(q);
+    
+    // Delete each product
+    const productDeletions = querySnapshot.docs.map(async (doc) => {
+      await deleteDoc(doc.ref);
+    });
+    
+    // Wait for all product deletions to complete
+    await Promise.all(productDeletions);
+    
+    // Now delete the booth itself
+    const boothRef = doc(firestore, 'booths', boothId);
+    await deleteDoc(boothRef);
+    
+    toast.success('Booth deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting booth:', error);
+    toast.error('Failed to delete booth');
+    return false;
+  }
+};
+
+// Delete a user and their associated data
+export const deleteUser = async (userId: string): Promise<boolean> => {
+  try {
+    // Find booths where this user is the only manager
+    const boothsRef = collection(firestore, 'booths');
+    const boothsSnapshot = await getDocs(boothsRef);
+    
+    for (const boothDoc of boothsSnapshot.docs) {
+      const boothData = boothDoc.data();
+      const members = boothData.members || [];
+      
+      if (members.includes(userId)) {
+        // If this user is the only manager, delete the booth
+        if (members.length === 1) {
+          await deleteBooth(boothDoc.id);
+        } else {
+          // Otherwise, just remove the user from the members list
+          const updatedMembers = members.filter((id: string) => id !== userId);
+          await updateDoc(boothDoc.ref, { members: updatedMembers });
+        }
+      }
+    }
+    
+    // Delete the user
+    const userRef = doc(firestore, 'users', userId);
+    await deleteDoc(userRef);
+    
+    toast.success('User deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    toast.error('Failed to delete user');
     return false;
   }
 };

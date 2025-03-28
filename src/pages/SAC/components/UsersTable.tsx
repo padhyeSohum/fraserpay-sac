@@ -10,6 +10,8 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Trash2, UserX } from 'lucide-react';
 
 interface User {
   id: string;
@@ -27,6 +29,7 @@ export interface UsersTableProps {
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
   onUserSelect: (user: User) => void;
+  onUserDelete?: (userId: string) => void;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
@@ -34,8 +37,16 @@ const UsersTable: React.FC<UsersTableProps> = ({
   isLoading,
   searchTerm = "",
   onSearchChange = () => {},
-  onUserSelect
+  onUserSelect,
+  onUserDelete
 }) => {
+  const handleDeleteClick = (event: React.MouseEvent, userId: string) => {
+    event.stopPropagation(); // Prevent row click event
+    if (onUserDelete) {
+      onUserDelete(userId);
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -58,12 +69,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <TableHead>Student ID</TableHead>
             <TableHead>Role</TableHead>
             <TableHead className="text-right">Balance</TableHead>
+            {onUserDelete && <TableHead className="w-[80px]">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
+              <TableCell colSpan={onUserDelete ? 6 : 5} className="text-center py-8">
                 <div className="flex justify-center">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                 </div>
@@ -71,7 +83,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             </TableRow>
           ) : users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={onUserDelete ? 6 : 5} className="text-center py-8 text-muted-foreground">
                 No users found
               </TableCell>
             </TableRow>
@@ -89,6 +101,19 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 <TableCell className="text-right">
                   ${(user.tickets / 100).toFixed(2)}
                 </TableCell>
+                {onUserDelete && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDeleteClick(e, user.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Delete user"
+                    >
+                      <UserX className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}

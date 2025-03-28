@@ -13,8 +13,10 @@ import {
   doc, 
   getDoc, 
   orderBy,
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
+import { deleteBooth as deleteBoothService } from '@/contexts/transactions/boothService';
 
 export interface UseBoothManagementReturn {
   booths: Booth[];
@@ -24,6 +26,7 @@ export interface UseBoothManagementReturn {
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
+  deleteBooth: (boothId: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -210,6 +213,29 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     }
   };
   
+  // Delete a booth
+  const deleteBooth = async (boothId: string): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      const success = await deleteBoothService(boothId);
+      
+      if (success) {
+        // Update the local booths state by removing the deleted booth
+        setBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
+        toast.success('Booth deleted successfully');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error deleting booth:', error);
+      toast.error('Failed to delete booth');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Get booth by ID
   const getBoothById = useCallback((id: string): Booth | undefined => {
     return booths.find(booth => booth.id === id);
@@ -228,6 +254,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     getBoothsByUserId,
     fetchAllBooths,
     createBooth,
+    deleteBooth,
     isLoading
   };
 };

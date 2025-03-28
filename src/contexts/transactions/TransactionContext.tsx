@@ -1,155 +1,216 @@
-
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/contexts/auth';
-import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
-import { TransactionContextType } from './types';
-import { useBoothManagement } from './hooks/useBoothManagement';
-import { useProductManagement } from './hooks/useProductManagement';
-import { useTransactionManagement } from './hooks/useTransactionManagement';
-import { useCartManagement } from './hooks/useCartManagement';
-import { usePaymentProcessing } from './hooks/usePaymentProcessing';
-import { 
-  findUserByStudentNumber,
-  removeProductFromBooth as removeProductFromBoothService,
-} from './boothService';
+import React, { 
+  createContext, 
+  useContext, 
+  useState, 
+  useEffect, 
+  useCallback,
+  useMemo
+} from 'react';
 import { toast } from 'sonner';
+import { auth } from '@/integrations/firebase/client';
+import { 
+  User, 
+  Booth, 
+  Product, 
+  CartItem, 
+  Transaction, 
+  PaymentMethod,
+  DateRange
+} from '@/types';
+import { useAuth } from '@/contexts/auth';
+import { useCart } from './hooks/useCart';
+import { usePayment } from './hooks/usePayment';
+import { useTransaction } from './hooks/useTransaction';
+import { useBoothManagement } from './hooks/useBoothManagement';
 
-const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
+// Importing deleteUser from boothService
+import { 
+  createBooth as createBoothService, 
+  addProductToBooth as addProductToBoothService,
+  removeProductFromBooth as removeProductFromBoothService,
+  getUserBooths,
+  deleteUser as deleteUserService
+} from './boothService';
 
-export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { user, isAuthenticated } = useAuth();
-  const isMounted = useRef(true);
+interface TransactionContextProps {
+  cart: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: string) => void;
+  clearCart: () => void;
+  increaseQuantity: (productId: string) => void;
+  decreaseQuantity: (productId: string) => void;
+  total: number;
+  totalItems: number;
+  processPayment: (paymentMethod: PaymentMethod) => Promise<boolean>;
+  recordTransaction: (
+    buyerId: string,
+    buyerName: string,
+    products: {
+      productId: string;
+      productName: string;
+      quantity: number;
+      price: number;
+    }[],
+    amount: number,
+    paymentMethod: PaymentMethod,
+    boothId?: string,
+    boothName?: string
+  ) => Promise<boolean>;
+  addFunds: (studentId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean; message: string }>;
+  getTransactionsByDate: (dateRange: DateRange, boothId?: string) => Promise<Transaction[]>;
+  getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
+  getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
+  getBoothTransactions: (boothId: string) => Promise<Transaction[]>;
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number; }[]>;
+  findUserByStudentNumber: (studentNumber: string) => Promise<User | null>;
+  getBoothProducts: (boothId: string) => Promise<Product[]>;
+  getUserBooths: (userId: string) => Promise<Booth[]>;
+  booths: Booth[];
+  getBoothById: (id: string) => Booth | undefined;
+  loadBooths: () => Promise<Booth[]>;
+  loadStudentBooths: (userId?: string) => Promise<Booth[]>;
+  getBoothsByUserId: (userId: string) => Booth[];
+  fetchAllBooths: () => Promise<Booth[]>;
+  createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
+  deleteBooth: (boothId: string) => Promise<boolean>;
+  addProductToBooth: (boothId: string, product: { name: string; price: number; image?: string | undefined; }) => Promise<boolean>;
+  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
+  deleteUser: (userId: string) => Promise<boolean>;
+  isBoothLoading: boolean;
+}
 
-  // Use our custom hooks for each feature area
-  const boothManagement = useBoothManagement();
-  const productManagement = useProductManagement();
-  const cartManagement = useCartManagement();
-  const transactionManagement = useTransactionManagement(boothManagement.booths);
-  const paymentProcessing = usePaymentProcessing();
+interface TransactionProviderProps {
+  children: React.ReactNode;
+}
 
-  // Initialize data on mount
-  useEffect(() => {
-    isMounted.current = true;
-    
-    const initializeData = async () => {
-      try {
-        // Only fetch data if authentication is complete
-        if (isAuthenticated !== undefined) {
-          console.log('Authentication state determined, now initializing transaction data');
-          
-          try {
-            await boothManagement.fetchAllBooths();
-            
-            if (isMounted.current) {
-              setIsInitialized(true);
-            }
-          } catch (error) {
-            console.error('Failed to fetch booths during initialization:', error);
-            toast.error('Failed to load booth data. Please try refreshing the page.');
-            
-            // Still mark as initialized to avoid infinite loading
-            if (isMounted.current) {
-              setIsInitialized(true);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to initialize transaction data:', error);
-        toast.error('Failed to initialize data');
-        // Still mark as initialized to avoid infinite loading
-        if (isMounted.current) {
-          setIsInitialized(true);
-        }
-      }
-    };
+const TransactionContext = createContext<TransactionContextProps | undefined>(undefined);
 
-    if (!isInitialized) {
-      initializeData();
-    }
-    
-    return () => {
-      isMounted.current = false;
-    };
-  }, [isAuthenticated, isInitialized, boothManagement.fetchAllBooths]);
-
-  // Convert async methods to match the interfaces as needed
-  const loadStudentBooths = (): Booth[] => {
-    if (!user) return [];
-    return boothManagement.getBoothsByUserId(user.id);
-  };
-
-  // Make sure findUserByStudentNumber converts tickets to balance
-  const findUserWithBalance = async (studentNumber: string) => {
-    const user = await findUserByStudentNumber(studentNumber);
-    if (!user) return null;
-    
-    return {
-      id: user.id,
-      name: user.name,
-      balance: (user.tickets || 0) / 100
-    };
-  };
-
-  const contextValue: TransactionContextType = {
-    // Booth management
-    booths: boothManagement.booths,
-    getBoothById: boothManagement.getBoothById,
-    loadBooths: boothManagement.loadBooths,
+export const TransactionProvider: React.FC<TransactionProviderProps> = ({ children }) => {
+  const { user } = useAuth();
+  const { 
+    cart, 
+    addToCart, 
+    removeFromCart, 
+    clearCart, 
+    increaseQuantity, 
+    decreaseQuantity, 
+    total, 
+    totalItems 
+  } = useCart();
+  const { processPayment } = usePayment(cart, total, clearCart);
+  const { 
+    recordTransaction,
+    addFunds,
+    getTransactionsByDate,
+    getTransactionsByBooth,
+    getStudentTransactions,
+    getBoothTransactions,
+    getLeaderboard,
+    findUserByStudentNumber,
+    getBoothProducts,
+    getUserBooths: getUserBoothsService
+  } = useTransaction();
+  
+  const { 
+    booths, 
+    getBoothById, 
+    loadBooths, 
     loadStudentBooths,
-    getBoothsByUserId: boothManagement.getBoothsByUserId,
-    fetchAllBooths: boothManagement.fetchAllBooths,
-    createBooth: boothManagement.createBooth,
-    
-    // Product management
-    loadBoothProducts: (boothId) => productManagement.loadBoothProducts(boothId, boothManagement.booths),
-    addProductToBooth: productManagement.addProductToBooth,
-    removeProductFromBooth: productManagement.removeProductFromBooth,
-    
-    // Transaction management
-    loadBoothTransactions: (boothId) => transactionManagement.loadBoothTransactions(boothId, boothManagement.booths),
-    loadUserFundsTransactions: transactionManagement.loadUserFundsTransactions,
-    loadUserTransactions: transactionManagement.loadUserTransactions,
-    getSACTransactions: transactionManagement.getSACTransactions,
-    getTransactionStats: transactionManagement.getTransactionStats,
-    getLeaderboard: transactionManagement.getLeaderboard,
-    recentTransactions: transactionManagement.recentTransactions,
-    
-    // Cart management
-    cart: cartManagement.cart,
-    addToCart: cartManagement.addToCart,
-    removeFromCart: cartManagement.removeFromCart,
-    clearCart: cartManagement.clearCart,
-    incrementQuantity: cartManagement.incrementQuantity,
-    decrementQuantity: cartManagement.decrementQuantity,
-    
-    // Payment processing
-    processPayment: (boothId) => paymentProcessing.processPayment(
-      boothId, 
-      cartManagement.cart, 
-      boothManagement.getBoothById,
-      () => {} // Empty callback for updateTransactions
-    ),
-    processPurchase: paymentProcessing.processPurchase,
-    addFunds: paymentProcessing.addFunds,
-    
-    // User management
-    findUserByStudentNumber: findUserWithBalance,
-    
-    // Loading states
-    isLoading: boothManagement.isLoading || paymentProcessing.isLoading || !isInitialized,
+    getBoothsByUserId,
+    fetchAllBooths,
+    createBooth,
+    deleteBooth,
+    isLoading: isBoothLoading 
+  } = useBoothManagement();
+
+  const addProductToBooth = async (
+    boothId: string, 
+    product: { name: string; price: number; image?: string }
+  ): Promise<boolean> => {
+    try {
+      return await addProductToBoothService(boothId, product);
+    } catch (error) {
+      console.error('Error adding product to booth:', error);
+      toast.error('Failed to add product to booth');
+      return false;
+    }
+  };
+
+  const removeProductFromBooth = async (boothId: string, productId: string): Promise<boolean> => {
+    try {
+      return await removeProductFromBoothService(boothId, productId);
+    } catch (error) {
+      console.error('Error removing product from booth:', error);
+      toast.error('Failed to remove product from booth');
+      return false;
+    }
+  };
+
+  // Add deleteUser function
+  const deleteUser = async (userId: string): Promise<boolean> => {
+    try {
+      return await deleteUserService(userId);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+      return false;
+    }
+  };
+  
+  const getUserBooths = async (userId: string): Promise<Booth[]> => {
+    try {
+      return await getUserBoothsService(userId);
+    } catch (error) {
+      console.error('Error fetching user booths:', error);
+      toast.error('Failed to fetch user booths');
+      return [];
+    }
+  };
+  
+  const value = {
+    cart,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    increaseQuantity,
+    decreaseQuantity,
+    total,
+    totalItems,
+    processPayment,
+    recordTransaction,
+    addFunds,
+    getTransactionsByDate,
+    getTransactionsByBooth,
+    getStudentTransactions,
+    getBoothTransactions,
+    getLeaderboard,
+    findUserByStudentNumber,
+    getBoothProducts,
+    getUserBooths,
+    booths,
+    getBoothById,
+    loadBooths,
+    loadStudentBooths,
+    getBoothsByUserId,
+    fetchAllBooths,
+    createBooth,
+    deleteBooth,
+    addProductToBooth,
+    removeProductFromBooth,
+    deleteUser,
+    isBoothLoading,
   };
 
   return (
-    <TransactionContext.Provider value={contextValue}>
+    <TransactionContext.Provider value={value}>
       {children}
     </TransactionContext.Provider>
   );
 };
 
-export const useTransactions = () => {
+export const useTransactions = (): TransactionContextProps => {
   const context = useContext(TransactionContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useTransactions must be used within a TransactionProvider');
   }
   return context;
