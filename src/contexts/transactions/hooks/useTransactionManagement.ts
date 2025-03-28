@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
 import { 
   getLeaderboard as getLeaderboardService,
-  getAllTransactions
 } from '../boothService';
+import { fetchAllTransactions } from '../transactionService';
 import { toast } from 'sonner';
 
 export interface UseTransactionManagementReturn {
@@ -29,7 +30,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       
       console.log('Initializing transaction data fetch');
       try {
-        const allTransactions = await getAllTransactions();
+        const allTransactions = await fetchAllTransactions();
         console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
         

@@ -73,12 +73,30 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   }, [isAuthenticated, isInitialized, boothManagement.fetchAllBooths]);
 
+  // Convert async methods to match the interfaces as needed
+  const loadStudentBooths = (): Booth[] => {
+    if (!user) return [];
+    return boothManagement.getBoothsByUserId(user.id);
+  };
+
+  // Make sure findUserByStudentNumber converts tickets to balance
+  const findUserWithBalance = async (studentNumber: string) => {
+    const user = await findUserByStudentNumber(studentNumber);
+    if (!user) return null;
+    
+    return {
+      id: user.id,
+      name: user.name,
+      balance: (user.tickets || 0) / 100
+    };
+  };
+
   const contextValue: TransactionContextType = {
     // Booth management
     booths: boothManagement.booths,
     getBoothById: boothManagement.getBoothById,
     loadBooths: boothManagement.loadBooths,
-    loadStudentBooths: boothManagement.loadStudentBooths,
+    loadStudentBooths,
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     fetchAllBooths: boothManagement.fetchAllBooths,
     createBooth: boothManagement.createBooth,
@@ -116,7 +134,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     addFunds: paymentProcessing.addFunds,
     
     // User management
-    findUserByStudentNumber,
+    findUserByStudentNumber: findUserWithBalance,
     
     // Loading states
     isLoading: boothManagement.isLoading || paymentProcessing.isLoading || !isInitialized,
