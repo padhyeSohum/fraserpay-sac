@@ -1,38 +1,67 @@
 
 import { useState } from 'react';
-import { CartItem, PaymentMethod } from '@/types';
 import { toast } from 'sonner';
+import { firestore } from '@/integrations/firebase/client';
+import { 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  addDoc, 
+  collection,
+  serverTimestamp
+} from 'firebase/firestore';
 
-export interface UsePaymentReturn {
-  processPayment: (paymentMethod: PaymentMethod) => Promise<boolean>;
-  isProcessing: boolean;
-}
-
-export const usePayment = (
-  cart: CartItem[], 
-  total: number, 
-  clearCart: () => void
-): UsePaymentReturn => {
+export const usePayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const processPayment = async (paymentMethod: PaymentMethod): Promise<boolean> => {
-    if (cart.length === 0) {
-      toast.error('Cart is empty');
-      return false;
-    }
-
+  const processPayment = async (
+    userId: string, 
+    amount: number, 
+    description: string
+  ) => {
+    if (isProcessing) return false;
+    
     setIsProcessing(true);
-
+    
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get current user balance
+      const userRef = doc(firestore, 'users', userId);
+      const userSnap = await getDoc(userRef);
       
-      // Success
-      toast.success(`Payment of $${total.toFixed(2)} processed successfully`);
-      clearCart();
+      if (!userSnap.exists()) {
+        toast.error('User not found');
+        return false;
+      }
+      
+      const userData = userSnap.data();
+      const currentBalance = userData.tickets || 0;
+      const amountInCents = Math.round(amount * 100);
+      
+      // Check if user has enough balance
+      if (currentBalance < amountInCents) {
+        toast.error('Insufficient balance');
+        return false;
+      }
+      
+      // Update user balance
+      await updateDoc(userRef, {
+        tickets: currentBalance - amountInCents,
+        updated_at: serverTimestamp()
+      });
+      
+      // Record transaction
+      await addDoc(collection(firestore, 'transactions'), {
+        user_id: userId,
+        amount: -amount,
+        description,
+        created_at: serverTimestamp(),
+        type: 'payment'
+      });
+      
+      toast.success(`Payment of $${amount.toFixed(2)} processed successfully`);
       return true;
     } catch (error) {
-      console.error('Payment processing error:', error);
+      console.error('Error processing payment:', error);
       toast.error('Payment processing failed');
       return false;
     } finally {
@@ -40,8 +69,5 @@ export const usePayment = (
     }
   };
 
-  return {
-    processPayment,
-    isProcessing
-  };
+  return { processPayment, isProcessing };
 };

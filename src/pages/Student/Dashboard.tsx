@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -14,11 +13,11 @@ import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId, fetchAllBooths } = useTransactions();
+  const transactions = useTransactions();
   const navigate = useNavigate();
   
-  const [userTransactions, setUserTransactions] = useState<typeof recentTransactions>([]);
-  const [userBooths, setUserBooths] = useState<ReturnType<typeof getBoothsByUserId>>([]);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]);
+  const [userBooths, setUserBooths] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataInitialized, setDataInitialized] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -65,15 +64,16 @@ const Dashboard = () => {
     if (!user) return;
     try {
       // Get latest booths for this user
-      const booths = getBoothsByUserId(user.id);
+      const booths = transactions.getBoothsByUserId ? transactions.getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
       console.log("User booth IDs:", user.booths);
       console.log("All booth IDs with managers:", booths.map(b => ({ id: b.id, managers: b.managers })));
       setUserBooths(booths);
     } catch (error) {
       console.error("Error refreshing user booths:", error);
+      setUserBooths([]);
     }
-  }, [user, getBoothsByUserId]);
+  }, [user, transactions]);
 
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
@@ -88,7 +88,7 @@ const Dashboard = () => {
       let boothsData;
       try {
         console.log("Dashboard: Fetching all booths...");
-        boothsData = await fetchAllBooths();
+        boothsData = transactions.fetchAllBooths ? await transactions.fetchAllBooths() : [];
         console.log("Dashboard: Fetched all booths, count:", boothsData?.length);
         if (!boothsData) {
           throw new Error("Failed to fetch booths");
@@ -117,10 +117,11 @@ const Dashboard = () => {
       }
       
       // Load transactions with error handling
-      let transactions;
       try {
-        transactions = loadUserTransactions(user.id);
-        setUserTransactions(transactions.slice(0, 3));
+        const userTxs = transactions.loadUserTransactions ? 
+          transactions.loadUserTransactions(user.id) : 
+          [];
+        setUserTransactions(userTxs.slice(0, 3));
       } catch (error) {
         console.error("Error loading transactions:", error);
         setUserTransactions([]);
@@ -140,9 +141,8 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, dataInitialized, loadUserTransactions, fetchAllBooths, refreshUserData, retryCount, refreshUserBooths, MAX_RETRIES]);
+  }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, transactions, MAX_RETRIES]);
 
-  // Effect to load initial data
   useEffect(() => {
     let isMounted = true;
     
@@ -155,7 +155,6 @@ const Dashboard = () => {
     };
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
-  // Effect to set up periodic refresh of user data and booths
   useEffect(() => {
     const intervalId = setInterval(() => {
       refreshUserData();
@@ -165,7 +164,6 @@ const Dashboard = () => {
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
 
-  // Effect to refresh booths whenever user.booths changes
   useEffect(() => {
     if (user && user.booths) {
       console.log("Dashboard: User booths changed, refreshing...", user.booths);

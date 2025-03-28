@@ -1,27 +1,26 @@
 
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { QueryProvider } from './QueryProvider';
 import { AuthProvider } from '@/contexts/auth';
 import { TransactionProvider } from '@/contexts/transactions';
-import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/sonner';
-import QueryProvider from './QueryProvider';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
 
-// This component wraps all application providers in the correct order
+// App providers wrapper component
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <BrowserRouter>
+    <Router>
       <QueryProvider>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AuthProvider>
-            <TransactionProvider>
-              {children}
-              <Toaster richColors position="top-right" />
-            </TransactionProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <TransactionProvider>
+            {children}
+            <Toaster />
+            <SonnerToaster position="top-right" />
+          </TransactionProvider>
+        </AuthProvider>
       </QueryProvider>
-    </BrowserRouter>
+    </Router>
   );
 };
 
