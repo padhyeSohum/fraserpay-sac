@@ -3,6 +3,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 // Encode user data to QR code format - ensure consistent formatting
 export const encodeUserData = (userId: string) => {
@@ -59,6 +60,7 @@ export const getUserFromQRData = async (qrData: string) => {
   
   if (!qrData) {
     console.error('Empty QR data provided');
+    toast.error('Invalid QR code');
     return null;
   }
   
@@ -79,6 +81,7 @@ export const getUserFromQRData = async (qrData: string) => {
           userData = { id: userSnap.id, ...userSnap.data() };
         } else {
           console.log('No user found by ID');
+          toast.error('User not found');
         }
       }
       
@@ -94,16 +97,19 @@ export const getUserFromQRData = async (qrData: string) => {
           userData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
         } else {
           console.log('No user found by student number');
+          toast.error('User not found by student number');
         }
       }
       
       return userData;
     } catch (error) {
       console.error('Error fetching user from QR data:', error);
+      toast.error('Error locating user');
       return null;
     }
   }
   
+  toast.error('Invalid QR code format');
   return null;
 };
 
@@ -117,6 +123,7 @@ export const findUserByStudentNumber = async (studentNumber: string) => {
     
     if (querySnapshot.empty) {
       console.log('No user found with student number:', studentNumber);
+      toast.error('Student not found');
       return null;
     }
     
@@ -127,9 +134,9 @@ export const findUserByStudentNumber = async (studentNumber: string) => {
     return userData;
   } catch (error) {
     console.error('Error finding user by student number:', error);
+    toast.error('Error looking up student');
     return null;
   }
 };
 
 export default QRCodeComponent;
-

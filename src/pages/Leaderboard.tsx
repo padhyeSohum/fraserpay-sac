@@ -41,7 +41,7 @@ const Leaderboard = () => {
   };
 
   return (
-    <Layout title="Leaderboard">
+    <Layout title="Leaderboard" showBack>
       <div className="container mx-auto max-w-4xl py-4">
         <Card className="border shadow-sm">
           <CardHeader className="bg-card-header pb-2">

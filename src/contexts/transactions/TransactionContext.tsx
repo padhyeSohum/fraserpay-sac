@@ -12,6 +12,7 @@ import {
   findUserByStudentNumber,
   removeProductFromBooth as removeProductFromBoothService,
 } from './boothService';
+import { toast } from 'sonner';
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
@@ -36,14 +37,26 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Only fetch data if authentication is complete
         if (isAuthenticated !== undefined) {
           console.log('Authentication state determined, now initializing transaction data');
-          await boothManagement.fetchAllBooths();
           
-          if (isMounted.current) {
-            setIsInitialized(true);
+          try {
+            await boothManagement.fetchAllBooths();
+            
+            if (isMounted.current) {
+              setIsInitialized(true);
+            }
+          } catch (error) {
+            console.error('Failed to fetch booths during initialization:', error);
+            toast.error('Failed to load booth data. Please try refreshing the page.');
+            
+            // Still mark as initialized to avoid infinite loading
+            if (isMounted.current) {
+              setIsInitialized(true);
+            }
           }
         }
       } catch (error) {
         console.error('Failed to initialize transaction data:', error);
+        toast.error('Failed to initialize data');
         // Still mark as initialized to avoid infinite loading
         if (isMounted.current) {
           setIsInitialized(true);
@@ -58,7 +71,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => {
       isMounted.current = false;
     };
-  }, [isAuthenticated, isInitialized]);
+  }, [isAuthenticated, isInitialized, boothManagement.fetchAllBooths]);
 
   const contextValue: TransactionContextType = {
     // Booth management

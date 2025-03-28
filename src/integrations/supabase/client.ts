@@ -1,4 +1,7 @@
 
+// DEPRECATED: This file is kept for backward compatibility but is no longer in use.
+// The application now uses Firebase exclusively for data storage and authentication.
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { clearAppStorage } from '@/utils/storage';

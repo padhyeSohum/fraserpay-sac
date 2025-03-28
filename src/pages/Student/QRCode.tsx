@@ -9,6 +9,7 @@ import { RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { firestore } from '@/integrations/firebase/client';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 const QRCode = () => {
   const { user, updateUserData } = useAuth();
@@ -27,6 +28,7 @@ const QRCode = () => {
       
       if (!userSnap.exists()) {
         console.error('User document not found:', user.id);
+        toast.error("User data could not be found");
         return encodeUserData(user.id);
       }
       
@@ -60,6 +62,7 @@ const QRCode = () => {
       return qrCode;
     } catch (error) {
       console.error("Error refreshing user data:", error);
+      toast.error("Failed to refresh user data");
       // Fallback in case of error
       return encodeUserData(user.id);
     }
@@ -125,9 +128,11 @@ const QRCode = () => {
       setTimeout(() => {
         setQrCodeData(newQrCode);
         setIsRefreshing(false);
+        toast.success("QR code refreshed successfully");
       }, 600);
     } catch (error) {
       console.error("Error refreshing QR code:", error);
+      toast.error("Failed to refresh QR code");
       setIsRefreshing(false);
     }
   };
@@ -186,4 +191,3 @@ const QRCode = () => {
 };
 
 export default QRCode;
-
