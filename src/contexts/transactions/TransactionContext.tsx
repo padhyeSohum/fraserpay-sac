@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth, Product, Transaction, CartItem, DateRange, TransactionStats } from '@/types';
@@ -10,6 +9,8 @@ import { useCartManagement } from './hooks/useCartManagement';
 import { usePaymentProcessing } from './hooks/usePaymentProcessing';
 import { 
   findUserByStudentNumber,
+  removeProductFromBooth as removeProductFromBoothService,
+  getLeaderboard as getLeaderboardService,
 } from './boothService';
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);

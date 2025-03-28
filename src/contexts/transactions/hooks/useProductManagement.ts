@@ -1,7 +1,10 @@
 
 import { useState, useCallback } from 'react';
 import { Product } from '@/types';
-import { addProductToBooth as addProductToBoothService, removeProductFromBooth as removeProductFromBoothService } from '../boothService';
+import { 
+  addProductToBooth as addProductToBoothService, 
+  removeProductFromBooth as removeProductFromBoothService 
+} from '../boothService';
 import { toast } from 'sonner';
 
 export interface UseProductManagementReturn {
