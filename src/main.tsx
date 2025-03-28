@@ -40,7 +40,9 @@ const mountApp = () => {
     const root = createRoot(rootElement);
     
     root.render(
-      <App />
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
     );
     
     console.log('React application mounted successfully');

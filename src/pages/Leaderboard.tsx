@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Award, Medal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 const Leaderboard = () => {
   const { getLeaderboard } = useTransactions();
@@ -19,6 +20,7 @@ const Leaderboard = () => {
         setLeaderboardData(data);
       } catch (error) {
         console.error('Error fetching leaderboard data:', error);
+        toast.error('Failed to load leaderboard data');
       } finally {
         setIsLoading(false);
       }

@@ -10,18 +10,18 @@ import QueryProvider from './QueryProvider';
 // This component wraps all application providers in the correct order
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="fraser-pay-theme">
+    <BrowserRouter>
       <QueryProvider>
-        <BrowserRouter>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
             <TransactionProvider>
               {children}
               <Toaster richColors position="top-right" />
             </TransactionProvider>
           </AuthProvider>
-        </BrowserRouter>
+        </ThemeProvider>
       </QueryProvider>
-    </ThemeProvider>
+    </BrowserRouter>
   );
 };
 
