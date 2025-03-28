@@ -151,7 +151,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   // Hook compositions for different functionalities
   const productManagement = useProductManagement();
   const boothManagement = useBoothManagement();
-  const transactionManagement = useTransactionManagement();
+  const transactionManagement = useTransactionManagement(booths); // Pass booths as a parameter
   const transactionUpdates = useTransactionUpdates();
   const cartManagement = useCart();
   const paymentProcessing = usePayment();
