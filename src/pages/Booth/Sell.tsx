@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -9,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import ProductItem from '@/components/ProductItem';
 import { CartItem, Product } from '@/types';
-import { Scan, X, Check, User, Search } from 'lucide-react';
+import { Scan, X, Check, User, Search, RefreshCw } from 'lucide-react';
 import { validateQRCode, getUserFromQRData, findUserByStudentNumber } from '@/utils/qrCode';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const BoothSell = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, processPurchase } = useTransactions();
+  const { getBoothById, processPurchase, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -31,11 +30,28 @@ const BoothSell = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   const [isProcessingQR, setIsProcessingQR] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refreshBoothData = async () => {
+    if (!boothId) return;
+    
+    setIsRefreshing(true);
+    try {
+      await fetchAllBooths();
+      
+      const updatedBooth = getBoothById(boothId);
+      console.log('Refreshed booth data for sell page:', updatedBooth);
+      setBooth(updatedBooth);
+    } catch (error) {
+      console.error('Error refreshing booth data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (boothId) {
-      const boothData = getBoothById(boothId);
-      setBooth(boothData);
+      refreshBoothData();
     }
   }, [boothId, getBoothById]);
 
@@ -245,6 +261,20 @@ const BoothSell = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
+  const renderRefreshButton = () => {
+    return (
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={refreshBoothData}
+        disabled={isRefreshing}
+        className="absolute top-4 right-4"
+      >
+        <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+      </Button>
+    );
+  };
+
   if (!booth) {
     return (
       <Layout title="Booth not found" showBack>
@@ -433,6 +463,7 @@ const BoothSell = () => {
           </div>
         </TabsContent>
       </Tabs>
+      {renderRefreshButton()}
     </Layout>
   );
 };

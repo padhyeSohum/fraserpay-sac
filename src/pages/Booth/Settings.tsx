@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -26,7 +27,7 @@ import { Plus, Trash2 } from 'lucide-react';
 const BoothSettings = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, addProductToBooth, removeProductFromBooth, deleteBooth } = useTransactions();
+  const { getBoothById, addProductToBooth, removeProductFromBooth, deleteBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -36,19 +37,39 @@ const BoothSettings = () => {
   const [boothManagers, setBoothManagers] = useState<User[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (boothId) {
-      const boothData = getBoothById(boothId);
-      setBooth(boothData);
+  // Function to fetch the latest booth data
+  const refreshBoothData = async () => {
+    if (!boothId) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Force refresh booths data from Firestore
+      await fetchAllBooths();
       
-      if (boothData) {
+      // Now get the updated booth
+      const updatedBooth = getBoothById(boothId);
+      console.log('Refreshed booth data:', updatedBooth);
+      setBooth(updatedBooth);
+      
+      if (updatedBooth) {
         const usersStr = localStorage.getItem('users');
         const users: User[] = usersStr ? JSON.parse(usersStr) : [];
         
-        const managers = users.filter(u => boothData.managers.includes(u.id));
+        const managers = users.filter(u => updatedBooth.managers.includes(u.id));
         setBoothManagers(managers);
       }
+    } catch (error) {
+      console.error('Error refreshing booth data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (boothId) {
+      refreshBoothData();
     }
   }, [boothId, getBoothById]);
 
@@ -90,8 +111,8 @@ const BoothSettings = () => {
       });
       
       if (success) {
-        const boothData = getBoothById(booth.id);
-        setBooth(boothData);
+        // Force refresh the booth data after adding a product
+        await refreshBoothData();
         
         setNewProduct({ name: '', price: '' });
         setShowAddProductDialog(false);
@@ -109,8 +130,8 @@ const BoothSettings = () => {
       const success = await removeProductFromBooth(booth.id, productId);
       
       if (success) {
-        const boothData = getBoothById(booth.id);
-        setBooth(boothData);
+        // Force refresh the booth data after removing a product
+        await refreshBoothData();
       }
     } catch (error) {
       console.error(error);
