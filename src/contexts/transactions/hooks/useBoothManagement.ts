@@ -22,7 +22,7 @@ export interface UseBoothManagementReturn {
   loadBooths: () => Promise<Booth[]>;
   loadStudentBooths: (userId?: string) => Promise<Booth[]>;
   getBoothsByUserId: (userId: string) => Booth[];
-  fetchAllBooths: () => Promise<void>;
+  fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   isLoading: boolean;
 }
@@ -85,7 +85,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [firestore]);
+  }, []);
   
   // Load booths where a user is a manager
   const loadStudentBooths = useCallback(async (userId?: string) => {
@@ -151,7 +151,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, firestore]);
+  }, [user]);
   
   // Fetch all booths and update state
   const fetchAllBooths = useCallback(async () => {
@@ -159,8 +159,10 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     try {
       const boothsData = await loadBooths();
       setBooths(boothsData);
+      return boothsData; // Return the booths data to match the interface
     } catch (error) {
       console.error('Error in fetchAllBooths:', error);
+      return []; // Return empty array on error to match the interface
     } finally {
       setIsLoading(false);
     }
