@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 export interface UseTransactionManagementReturn {
   transactions: Transaction[];
   recentTransactions: Transaction[];
-  loadBoothTransactions: (boothId: string, booths: Booth[]) => Transaction[];
+  loadBoothTransactions: (boothId: string) => Transaction[];
   loadUserFundsTransactions: () => Transaction[];
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
@@ -47,7 +47,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     fetchTransactionsData();
   }, [user, isAuthenticated]);
 
-  const loadBoothTransactions = (boothId: string, booths: Booth[]) => {
+  const loadBoothTransactions = (boothId: string) => {
     return transactions.filter(t => t.boothId === boothId);
   };
 
@@ -56,7 +56,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     return transactions.filter(t => t.type === 'fund' && t.buyerId === user.id);
   };
 
-  const loadUserTransactionsImpl = (userId: string) => {
+  const loadUserTransactions = (userId: string) => {
     return transactions.filter(t => t.buyerId === userId);
   };
 
@@ -121,7 +121,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     recentTransactions,
     loadBoothTransactions,
     loadUserFundsTransactions,
-    loadUserTransactions: loadUserTransactionsImpl,
+    loadUserTransactions,
     getSACTransactions,
     getTransactionStats,
     getLeaderboard

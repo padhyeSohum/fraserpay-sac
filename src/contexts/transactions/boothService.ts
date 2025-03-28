@@ -7,83 +7,61 @@ import {
   query, 
   where, 
   addDoc, 
-  updateDoc,
+  updateDoc, 
+  arrayUnion, 
   deleteDoc,
-  orderBy 
+  arrayRemove,
+  serverTimestamp
 } from 'firebase/firestore';
-import { toast } from 'sonner';
 import { Booth, Product } from '@/types';
-import { transformFirebaseBooth, transformFirebaseProduct } from '@/utils/firebase';
+import { toast } from 'sonner';
 
-// Get a list of all booths
-export const getBooths = async (): Promise<Booth[]> => {
-  try {
-    const boothsRef = collection(firestore, 'booths');
-    const q = query(boothsRef, orderBy('created_at', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const booths: Booth[] = [];
-    
-    for (const boothDoc of querySnapshot.docs) {
-      const boothData = boothDoc.data();
-      boothData.id = boothDoc.id;
-      
-      // Fetch booth products
-      const productsRef = collection(firestore, 'products');
-      const productsQuery = query(productsRef, where('booth_id', '==', boothDoc.id));
-      const productsSnapshot = await getDocs(productsQuery);
-      
-      const products = productsSnapshot.docs.map(doc => {
-        const productData = doc.data();
-        productData.id = doc.id;
-        return productData;
-      });
-      
-      booths.push(transformFirebaseBooth(boothData, products));
-    }
-    
-    return booths;
-  } catch (error) {
-    console.error('Error fetching booths:', error);
-    toast.error('Failed to fetch booths');
-    return [];
-  }
-};
-
-// Get a specific booth by ID
-export const getBooth = async (boothId: string): Promise<Booth | null> => {
+// Add the deleteBooth function
+export const deleteBooth = async (boothId: string): Promise<boolean> => {
   try {
     const boothRef = doc(firestore, 'booths', boothId);
-    const boothSnapshot = await getDoc(boothRef);
     
-    if (!boothSnapshot.exists()) {
-      console.warn('Booth not found:', boothId);
-      return null;
+    // Get the booth data to check if it exists
+    const boothSnap = await getDoc(boothRef);
+    if (!boothSnap.exists()) {
+      console.error('Booth not found:', boothId);
+      return false;
     }
     
-    const boothData = boothSnapshot.data();
-    boothData.id = boothSnapshot.id;
+    // Delete the booth document
+    await deleteDoc(boothRef);
+    console.log('Booth deleted successfully:', boothId);
     
-    // Fetch booth products
-    const productsRef = collection(firestore, 'products');
-    const q = query(productsRef, where('booth_id', '==', boothId));
-    const productsSnapshot = await getDocs(q);
-    
-    const products = productsSnapshot.docs.map(doc => {
-      const productData = doc.data();
-      productData.id = doc.id;
-      return productData;
-    });
-    
-    return transformFirebaseBooth(boothData, products);
+    return true;
   } catch (error) {
-    console.error('Error fetching booth:', error);
-    toast.error('Failed to fetch booth details');
-    return null;
+    console.error('Error deleting booth:', error);
+    return false;
   }
 };
 
-// Create a new booth
+// Add the deleteUser function
+export const deleteUser = async (userId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(firestore, 'users', userId);
+    
+    // Get the user data to check if it exists
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      console.error('User not found:', userId);
+      return false;
+    }
+    
+    // Delete the user document
+    await deleteDoc(userRef);
+    console.log('User deleted successfully:', userId);
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return false;
+  }
+};
+
 export const createBooth = async (
   name: string, 
   description: string, 
@@ -91,16 +69,36 @@ export const createBooth = async (
   pin: string
 ): Promise<string | null> => {
   try {
+    const boothsRef = collection(firestore, 'booths');
+    
+    // Check if a booth with the same name already exists
+    const existingBoothQuery = query(boothsRef, where('name', '==', name));
+    const existingBoothSnapshot = await getDocs(existingBoothQuery);
+    
+    if (!existingBoothSnapshot.empty) {
+      toast.error('Booth name already exists. Please choose a different name.');
+      return null;
+    }
+    
     const boothData = {
       name,
       description,
-      members: [managerId],
-      pin,
-      sales: 0,
-      created_at: new Date().toISOString()
+      managers: [managerId],
+      products: [],
+      totalEarnings: 0,
+      pin: pin,
+      created_at: serverTimestamp()
     };
     
-    const docRef = await addDoc(collection(firestore, 'booths'), boothData);
+    const docRef = await addDoc(boothsRef, boothData);
+    
+    // Update the user document to include the booth ID in the booth_access array
+    const userRef = doc(firestore, 'users', managerId);
+    await updateDoc(userRef, {
+      booth_access: arrayUnion(docRef.id)
+    });
+    
+    toast.success('Booth created successfully!');
     return docRef.id;
   } catch (error) {
     console.error('Error creating booth:', error);
@@ -109,239 +107,124 @@ export const createBooth = async (
   }
 };
 
-// Add a product to a booth
 export const addProductToBooth = async (
   boothId: string, 
   product: { name: string; price: number; image?: string }
 ): Promise<boolean> => {
   try {
-    // Verify booth exists
     const boothRef = doc(firestore, 'booths', boothId);
-    const boothSnap = await getDoc(boothRef);
     
+    // Check if a product with the same name already exists in the booth
+    const boothSnap = await getDoc(boothRef);
     if (!boothSnap.exists()) {
-      console.error('Booth not found when adding product');
+      console.error('Booth not found:', boothId);
       toast.error('Booth not found');
       return false;
     }
     
-    // Create product in Firestore
-    const productData = {
+    const boothData = boothSnap.data() as Booth;
+    if (boothData.products && boothData.products.some(p => p.name === product.name)) {
+      toast.error('Product name already exists in this booth. Please choose a different name.');
+      return false;
+    }
+    
+    const productData: Product = {
+      id: `prod_${Date.now()}`,
+      boothId: boothId,
       name: product.name,
-      price: Math.round(product.price * 100), // Convert to cents for storage
-      booth_id: boothId,
-      image: product.image || '',
-      created_at: new Date().toISOString()
+      price: product.price,
+      image: product.image,
+      salesCount: 0
     };
     
-    await addDoc(collection(firestore, 'products'), productData);
-    toast.success('Product added successfully');
+    await updateDoc(boothRef, {
+      products: arrayUnion(productData)
+    });
+    
+    toast.success('Product added to booth successfully!');
     return true;
   } catch (error) {
     console.error('Error adding product to booth:', error);
-    toast.error('Failed to add product');
+    toast.error('Failed to add product to booth');
     return false;
   }
 };
 
-// Remove a product from a booth
 export const removeProductFromBooth = async (boothId: string, productId: string): Promise<boolean> => {
   try {
-    // Verify the product exists and belongs to the booth
-    const productRef = doc(firestore, 'products', productId);
-    const productSnap = await getDoc(productRef);
+    const boothRef = doc(firestore, 'booths', boothId);
     
-    if (!productSnap.exists()) {
-      console.error('Product not found when removing');
-      toast.error('Product not found');
+    // Get the booth data to check if the product exists
+    const boothSnap = await getDoc(boothRef);
+    if (!boothSnap.exists()) {
+      console.error('Booth not found:', boothId);
+      toast.error('Booth not found');
       return false;
     }
     
-    const productData = productSnap.data();
-    if (productData.booth_id !== boothId) {
-      console.error('Product does not belong to this booth');
-      toast.error('Product does not belong to this booth');
+    const boothData = boothSnap.data() as Booth;
+    if (!boothData.products || !boothData.products.some(p => p.id === productId)) {
+      toast.error('Product not found in this booth');
       return false;
     }
     
-    // Delete the product
-    await deleteDoc(productRef);
-    toast.success('Product removed successfully');
+    await updateDoc(boothRef, {
+      products: arrayRemove({ id: productId })
+    });
+    
+    toast.success('Product removed from booth successfully!');
     return true;
   } catch (error) {
     console.error('Error removing product from booth:', error);
-    toast.error('Failed to remove product');
+    toast.error('Failed to remove product from booth');
     return false;
   }
 };
 
-// Delete an entire booth and its associated products
-export const deleteBooth = async (boothId: string): Promise<boolean> => {
-  try {
-    // First delete all products associated with this booth
-    const productsRef = collection(firestore, 'products');
-    const q = query(productsRef, where('booth_id', '==', boothId));
-    const querySnapshot = await getDocs(q);
-    
-    // Delete each product
-    const productDeletions = querySnapshot.docs.map(async (doc) => {
-      await deleteDoc(doc.ref);
-    });
-    
-    // Wait for all product deletions to complete
-    await Promise.all(productDeletions);
-    
-    // Now delete the booth itself
-    const boothRef = doc(firestore, 'booths', boothId);
-    await deleteDoc(boothRef);
-    
-    toast.success('Booth deleted successfully');
-    return true;
-  } catch (error) {
-    console.error('Error deleting booth:', error);
-    toast.error('Failed to delete booth');
-    return false;
-  }
-};
-
-// Delete a user and their associated data
-export const deleteUser = async (userId: string): Promise<boolean> => {
-  try {
-    // Find booths where this user is the only manager
-    const boothsRef = collection(firestore, 'booths');
-    const boothsSnapshot = await getDocs(boothsRef);
-    
-    for (const boothDoc of boothsSnapshot.docs) {
-      const boothData = boothDoc.data();
-      const members = boothData.members || [];
-      
-      if (members.includes(userId)) {
-        // If this user is the only manager, delete the booth
-        if (members.length === 1) {
-          await deleteBooth(boothDoc.id);
-        } else {
-          // Otherwise, just remove the user from the members list
-          const updatedMembers = members.filter((id: string) => id !== userId);
-          await updateDoc(boothDoc.ref, { members: updatedMembers });
-        }
-      }
-    }
-    
-    // Delete the user
-    const userRef = doc(firestore, 'users', userId);
-    await deleteDoc(userRef);
-    
-    toast.success('User deleted successfully');
-    return true;
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    toast.error('Failed to delete user');
-    return false;
-  }
-};
-
-// Get the leaderboard of booths by earnings
-export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
-  try {
-    const boothsRef = collection(firestore, 'booths');
-    const q = query(boothsRef, orderBy('sales', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const leaderboard = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        boothId: doc.id,
-        boothName: data.name,
-        earnings: (data.sales || 0) / 100 // Convert cents to dollars
-      };
-    });
-    
-    return leaderboard;
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    toast.error('Failed to fetch leaderboard data');
-    return [];
-  }
-};
-
-// Find a user by student number
-export const findUserByStudentNumber = async (studentNumber: string) => {
-  try {
-    const usersRef = collection(firestore, 'users');
-    const q = query(usersRef, where('student_number', '==', studentNumber));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return null;
-    }
-    
-    const userData = querySnapshot.docs[0].data();
-    userData.id = querySnapshot.docs[0].id;
-    
-    return {
-      id: userData.id,
-      name: userData.name,
-      studentNumber: userData.student_number,
-      tickets: userData.tickets || 0
-    };
-  } catch (error) {
-    console.error('Error finding user by student number:', error);
-    return null;
-  }
-};
-
-// Get a specific booth's products
-export const getBoothProducts = async (boothId: string): Promise<Product[]> => {
-  try {
-    const productsRef = collection(firestore, 'products');
-    const q = query(productsRef, where('booth_id', '==', boothId));
-    const querySnapshot = await getDocs(q);
-    
-    const products = querySnapshot.docs.map(doc => {
-      const productData = doc.data();
-      productData.id = doc.id;
-      return transformFirebaseProduct(productData);
-    });
-    
-    return products;
-  } catch (error) {
-    console.error('Error fetching booth products:', error);
-    toast.error('Failed to fetch booth products');
-    return [];
-  }
-};
-
-// Get booths managed by a user
 export const getUserBooths = async (userId: string): Promise<Booth[]> => {
   try {
     const boothsRef = collection(firestore, 'booths');
-    const q = query(boothsRef, where('members', 'array-contains', userId));
+    const q = query(boothsRef, where('managers', 'array-contains', userId));
     const querySnapshot = await getDocs(q);
     
     const booths: Booth[] = [];
-    
-    for (const boothDoc of querySnapshot.docs) {
-      const boothData = boothDoc.data();
-      boothData.id = boothDoc.id;
-      
-      // Fetch booth products
-      const productsRef = collection(firestore, 'products');
-      const productsQuery = query(productsRef, where('booth_id', '==', boothDoc.id));
-      const productsSnapshot = await getDocs(productsQuery);
-      
-      const products = productsSnapshot.docs.map(doc => {
-        const productData = doc.data();
-        productData.id = doc.id;
-        return productData;
-      });
-      
-      booths.push(transformFirebaseBooth(boothData, products));
-    }
+    querySnapshot.forEach((doc) => {
+      booths.push({
+        id: doc.id,
+        ...doc.data()
+      } as Booth);
+    });
     
     return booths;
   } catch (error) {
     console.error('Error fetching user booths:', error);
     toast.error('Failed to fetch user booths');
+    return [];
+  }
+};
+
+export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
+  try {
+    const boothsRef = collection(firestore, 'booths');
+    const querySnapshot = await getDocs(boothsRef);
+    
+    const leaderboardData: { boothId: string; boothName: string; earnings: number }[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const boothData = doc.data();
+      leaderboardData.push({
+        boothId: doc.id,
+        boothName: boothData.name,
+        earnings: boothData.totalEarnings || 0
+      });
+    });
+    
+    leaderboardData.sort((a, b) => b.earnings - a.earnings);
+    
+    return leaderboardData;
+  } catch (error) {
+    console.error('Error fetching leaderboard data:', error);
+    toast.error('Failed to fetch leaderboard data');
     return [];
   }
 };
