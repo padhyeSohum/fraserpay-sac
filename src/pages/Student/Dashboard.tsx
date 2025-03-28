@@ -8,8 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
-import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
-import { collection, query, where, getDocs, doc, getDoc, limit, orderBy } from 'firebase/firestore';
+import { QrCode, ListOrdered } from 'lucide-react';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { firestore } from '@/integrations/firebase/client';
 import { toast } from 'sonner';
 import QRCodeScanner from '@/components/QRCodeScanner';
@@ -17,7 +17,7 @@ import QRCodeScanner from '@/components/QRCodeScanner';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { transactions, booths, getBoothById } = useTransactions();
+  const { booths, getBoothById, recentTransactions } = useTransactions();
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
   const [recentBooths, setRecentBooths] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -54,15 +54,15 @@ const Dashboard = () => {
     
     try {
       // First try to get booths from recent transactions
-      const boothIds = transactions
+      const boothIds = recentTransactions
         .filter(tx => tx.buyerId === user.id)
         .map(tx => tx.boothId)
-        .filter((id, index, self) => self.indexOf(id) === index)
+        .filter((id, index, self) => self.indexOf(id) === index && id !== undefined)
         .slice(0, 3);
       
       if (boothIds.length > 0) {
         const recentBoothsData = boothIds
-          .map(id => booths.find(b => b.id === id))
+          .map(id => id && booths.find(b => b.id === id))
           .filter(Boolean);
         
         if (recentBoothsData.length > 0) {
@@ -76,7 +76,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error getting recent booths:', error);
     }
-  }, [booths, transactions, user?.id]);
+  }, [booths, recentTransactions, user?.id]);
   
   useEffect(() => {
     fetchUserTransactions();
@@ -157,7 +157,7 @@ const Dashboard = () => {
                 <TransactionItem 
                   key={tx.id} 
                   transaction={tx} 
-                  showBooth 
+                  showBooth={true} 
                 />
               ))
             ) : (
