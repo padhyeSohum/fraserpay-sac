@@ -1,4 +1,7 @@
+
 import { User, Booth, Product, Transaction } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const findUserByStudentNumber = async (studentNumber: string): Promise<User | null> => {
   try {
@@ -47,35 +50,228 @@ export const addProductToBooth = async (boothId: string, product: Omit<Product, 
   }
 };
 
-// Make sure the getAllTransactions function is exported
+// Implementing the missing function for fetchAllBooths
+export const fetchAllBooths = async (): Promise<Booth[]> => {
+  try {
+    console.log('Fetching all booths from Supabase');
+    const { data, error } = await supabase
+      .from('booths')
+      .select('*');
+    
+    if (error) {
+      console.error('Error fetching booths:', error);
+      toast.error('Failed to load booths');
+      return [];
+    }
+    
+    if (!data) return [];
+    
+    // Map Supabase data to our Booth type
+    return data.map(booth => ({
+      id: booth.id,
+      name: booth.name,
+      description: booth.description,
+      pin: booth.pin,
+      managers: booth.members || [],
+      products: [],
+      totalEarnings: booth.sales ? booth.sales / 100 : 0
+    }));
+  } catch (error) {
+    console.error('Error in fetchAllBooths:', error);
+    toast.error('Failed to fetch booths');
+    return [];
+  }
+};
+
+// Implementing the missing function for getBoothById
+export const getBoothById = async (id: string): Promise<Booth | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('booths')
+      .select('*, products(*)')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching booth by ID:', error);
+      return null;
+    }
+    
+    if (!data) return null;
+    
+    // Map Supabase data to our Booth type
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      pin: data.pin,
+      managers: data.members || [],
+      products: data.products || [],
+      totalEarnings: data.sales ? data.sales / 100 : 0
+    };
+  } catch (error) {
+    console.error('Error in getBoothById:', error);
+    return null;
+  }
+};
+
+// Implementing the missing function for getBoothsByUserId
+export const getBoothsByUserId = async (userId: string): Promise<Booth[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('booths')
+      .select('*')
+      .contains('members', [userId]);
+    
+    if (error) {
+      console.error('Error fetching booths by user ID:', error);
+      return [];
+    }
+    
+    if (!data) return [];
+    
+    // Map Supabase data to our Booth type
+    return data.map(booth => ({
+      id: booth.id,
+      name: booth.name,
+      description: booth.description,
+      pin: booth.pin,
+      managers: booth.members || [],
+      products: [],
+      totalEarnings: booth.sales ? booth.sales / 100 : 0
+    }));
+  } catch (error) {
+    console.error('Error in getBoothsByUserId:', error);
+    return [];
+  }
+};
+
+// Implementing the missing function for createBooth
+export const createBooth = async (name: string, description: string, userId: string, customPin?: string): Promise<string | null> => {
+  try {
+    // Generate a PIN if not provided
+    const pin = customPin || Math.floor(1000 + Math.random() * 9000).toString();
+    
+    const { data, error } = await supabase
+      .from('booths')
+      .insert({
+        name,
+        description,
+        pin,
+        members: [userId],
+        sales: 0
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating booth:', error);
+      toast.error('Failed to create booth');
+      return null;
+    }
+    
+    console.log('Booth created:', data);
+    return data.id;
+  } catch (error) {
+    console.error('Error in createBooth:', error);
+    toast.error('Failed to create booth');
+    return null;
+  }
+};
+
+// Implementing the missing function for getAllTransactions
 export const getAllTransactions = async (): Promise<Transaction[]> => {
   try {
-    // Implementation would typically fetch from a database
-    // For now, return an empty array as a placeholder
-    return [];
+    console.log('Fetching all transactions from Supabase');
+    const { data, error } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        transaction_products(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      toast.error('Failed to load transactions');
+      return [];
+    }
+
+    if (!data) return [];
+
+    console.log('Transactions data received:', data.length, 'records');
+    const formattedTransactions: Transaction[] = data.map(t => ({
+      id: t.id,
+      timestamp: new Date(t.created_at).getTime(),
+      buyerId: t.student_id,
+      buyerName: t.student_name,
+      sellerId: t.booth_id || undefined,
+      sellerName: undefined,
+      boothId: t.booth_id || undefined,
+      boothName: t.booth_name || undefined,
+      products: t.transaction_products?.map(p => ({
+        productId: p.product_id,
+        productName: p.product_name,
+        quantity: p.quantity,
+        price: p.price / 100
+      })) || [],
+      amount: t.amount / 100,  // Convert cents to dollars
+      type: t.type as 'purchase' | 'fund' | 'refund',
+      paymentMethod: t.type === 'fund' ? 'cash' : undefined,
+      sacMemberId: t.sac_member || undefined,
+      sacMemberName: undefined
+    }));
+
+    return formattedTransactions;
   } catch (error) {
     console.error('Error fetching transactions:', error);
+    toast.error('Failed to load transactions');
     return [];
   }
 };
 
-// Make sure the getLeaderboard function is properly exported
+// Implementing the missing function for getLeaderboard
 export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
   try {
-    // Implementation would typically fetch and calculate booth earnings
-    // For now, return an empty array as a placeholder
-    return [];
+    const { data, error } = await supabase
+      .from('booths')
+      .select('id, name, sales')
+      .order('sales', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching leaderboard:', error);
+      toast.error('Failed to fetch leaderboard data');
+      return [];
+    }
+    
+    return (data || []).map(booth => ({
+      boothId: booth.id,
+      boothName: booth.name,
+      earnings: (booth.sales || 0) / 100 // Convert cents to dollars
+    }));
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
+    console.error('Error in getLeaderboard:', error);
+    toast.error('Failed to fetch leaderboard data');
     return [];
   }
 };
 
-// Make sure removeProductFromBooth is properly exported
+// Implementing the missing function for removeProductFromBooth
 export const removeProductFromBooth = async (boothId: string, productId: string): Promise<boolean> => {
   try {
-    // Implementation would typically remove a product from a booth
-    // For now, return true as a placeholder
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId)
+      .eq('booth_id', boothId);
+    
+    if (error) {
+      console.error('Error removing product:', error);
+      toast.error('Failed to remove product');
+      return false;
+    }
+    
+    console.log(`Product ${productId} removed from booth ${boothId}`);
     return true;
   } catch (error) {
     console.error('Error removing product:', error);
