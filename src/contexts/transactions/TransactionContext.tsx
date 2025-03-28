@@ -255,7 +255,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         cartManagement.clearCart();
         
         // Refresh data
-        await boothManagement.fetchAllBooths();
+        await boothManagement.fetchAllBooths().then(setBooths);
         
         toast.success(`Purchase complete: $${totalAmount.toFixed(2)}`);
         return true;
