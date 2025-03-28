@@ -147,38 +147,38 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
     }
     
     const boothDoc = querySnapshot.docs[0];
-    const boothData = {
-      id: boothDoc.id,
-      ...boothDoc.data()
-    };
+    const boothData = boothDoc.data();
+    const boothId = boothDoc.id;
     
-    console.log("Found booth:", boothData);
+    console.log("Found booth:", boothId);
     
     // Check if user already has access
-    const hasAccess = userBooths.includes(boothData.id);
+    const hasAccess = userBooths.includes(boothId);
     
     if (hasAccess) {
-      console.log("User already has access to booth:", boothData.id);
-      toast.info(`You already have access to ${boothData.name}`);
-      return { success: true, boothId: boothData.id };
+      console.log("User already has access to booth:", boothId);
+      toast.info(`You already have access to ${boothData.name || 'this booth'}`);
+      return { success: true, boothId: boothId };
     }
     
     // Add booth to user's booth access
-    const updatedBoothAccess = [...(userBooths || []), boothData.id];
+    const updatedBoothAccess = [...(userBooths || []), boothId];
     
     // Update user's booth access in Firestore
     const userRef = doc(firestore, 'users', userId);
     await updateDoc(userRef, { booth_access: updatedBoothAccess });
     
-    // Add user to booth members
-    const updatedMembers = [...(boothData.members || []), userId];
+    // Add user to booth members if members array exists
+    if (boothData.members !== undefined) {
+      const updatedMembers = [...(boothData.members || []), userId];
+      
+      const boothRef = doc(firestore, 'booths', boothId);
+      await updateDoc(boothRef, { members: updatedMembers });
+    }
     
-    const boothRef = doc(firestore, 'booths', boothData.id);
-    await updateDoc(boothRef, { members: updatedMembers });
-    
-    console.log("User successfully joined booth:", boothData.id);
-    toast.success(`You now have access to ${boothData.name}`);
-    return { success: true, boothId: boothData.id };
+    console.log("User successfully joined booth:", boothId);
+    toast.success(`You now have access to ${boothData.name || 'this booth'}`);
+    return { success: true, boothId: boothId };
     
   } catch (error) {
     console.error('Error verifying booth PIN:', error);

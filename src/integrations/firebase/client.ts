@@ -21,7 +21,7 @@ const firestore = getFirestore(app);
 // Enable local emulators for development
 if (import.meta.env.DEV) {
   try {
-    // Uncomment these lines to connect to local emulators
+    // Uncomment these lines when you're ready to use local emulators
     // connectAuthEmulator(auth, "http://localhost:9099");
     // connectFirestoreEmulator(firestore, "localhost", 8080);
     console.log("Firebase emulators connected");

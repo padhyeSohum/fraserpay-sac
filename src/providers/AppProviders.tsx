@@ -7,20 +7,21 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from './QueryProvider';
 
+// This component wraps all application providers in the correct order
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <BrowserRouter>
-      <ThemeProvider defaultTheme="light" storageKey="fraser-pay-theme">
-        <QueryProvider>
+    <ThemeProvider defaultTheme="light" storageKey="fraser-pay-theme">
+      <QueryProvider>
+        <BrowserRouter>
           <AuthProvider>
             <TransactionProvider>
               {children}
               <Toaster richColors position="top-right" />
             </TransactionProvider>
           </AuthProvider>
-        </QueryProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+        </BrowserRouter>
+      </QueryProvider>
+    </ThemeProvider>
   );
 };
 

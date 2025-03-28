@@ -104,9 +104,11 @@ const App: React.FC = () => {
   }
   
   return (
-    <AppProviders>
-      <AppRoutes />
-    </AppProviders>
+    <React.StrictMode>
+      <AppProviders>
+        <AppRoutes />
+      </AppProviders>
+    </React.StrictMode>
   );
 };
 

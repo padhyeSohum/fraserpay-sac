@@ -1,54 +1,80 @@
-
-import { Booth, Product } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
+  query, 
+  where, 
   getDocs, 
   doc, 
   getDoc, 
-  query, 
-  where, 
-  addDoc, 
+  setDoc, 
   updateDoc,
-  serverTimestamp
+  addDoc, 
+  serverTimestamp 
 } from 'firebase/firestore';
-import { toast } from 'sonner';
-import { transformFirebaseBooth } from '@/utils/firebase';
+import { Booth, Product, Transaction } from '@/types';
+import { 
+  transformFirebaseBooth, 
+  transformFirebaseProduct, 
+  transformFirebaseTransaction 
+} from '@/utils/firebase';
 
-export const fetchAllBooths = async (): Promise<Booth[]> => {
+// Fetches all booths from Firestore
+export const fetchBooths = async (): Promise<Booth[]> => {
   try {
-    // Get all booths
+    console.log("Fetching all booths...");
     const boothsRef = collection(firestore, 'booths');
     const boothsSnapshot = await getDocs(boothsRef);
     
-    // Get all products
-    const productsRef = collection(firestore, 'products');
-    const productsSnapshot = await getDocs(productsRef);
+    const booths: Booth[] = [];
     
-    const productsData = productsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    if (boothsSnapshot.empty) {
-      return [];
+    // Process each booth
+    for (const boothDoc of boothsSnapshot.docs) {
+      const boothId = boothDoc.id;
+      
+      // Fetch products for this booth
+      const productsRef = collection(firestore, 'products');
+      const productsQuery = query(productsRef, where('booth_id', '==', boothId));
+      const productsSnapshot = await getDocs(productsQuery);
+      
+      const boothWithProducts = transformFirebaseBooth(
+        { id: boothId, ...boothDoc.data() },
+        productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      );
+      
+      booths.push(boothWithProducts);
     }
-
-    const formattedBooths: Booth[] = boothsSnapshot.docs.map(doc => {
-      const boothData = {
-        id: doc.id,
-        ...doc.data()
-      };
-      
-      const boothProducts = productsData.filter(p => p.booth_id === doc.id) || [];
-      
-      return transformFirebaseBooth(boothData, boothProducts);
-    });
-
-    return formattedBooths;
+    
+    console.log(`Fetched ${booths.length} booths`);
+    return booths;
   } catch (error) {
-    console.error('Error fetching booths:', error);
-    toast.error('Failed to load booths');
+    console.error("Error fetching booths:", error);
+    return [];
+  }
+};
+
+// Fetch transactions for a specific booth
+export const fetchBoothTransactions = async (boothId: string): Promise<Transaction[]> => {
+  try {
+    console.log(`Fetching transactions for booth: ${boothId}`);
+    const transactionsRef = collection(firestore, 'transactions');
+    const transactionsQuery = query(transactionsRef, where('booth_id', '==', boothId));
+    const transactionsSnapshot = await getDocs(transactionsQuery);
+    
+    const transactions: Transaction[] = [];
+    
+    for (const transactionDoc of transactionsSnapshot.docs) {
+      const transaction = transformFirebaseTransaction({ 
+        id: transactionDoc.id, 
+        ...transactionDoc.data() 
+      });
+      
+      transactions.push(transaction);
+    }
+    
+    console.log(`Fetched ${transactions.length} transactions for booth ${boothId}`);
+    return transactions;
+  } catch (error) {
+    console.error(`Error fetching transactions for booth ${boothId}:`, error);
     return [];
   }
 };
