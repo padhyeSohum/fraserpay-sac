@@ -1,4 +1,3 @@
-
 import React, { 
   createContext, 
   useContext, 
@@ -232,7 +231,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({ childr
         boothName,
         amount: totalAmount,
         type: 'purchase',
-        paymentMethod: 'balance',
+        paymentMethod: 'cash',
         products: cartItems.map(item => ({
           productId: item.product.id,
           productName: item.product.name,

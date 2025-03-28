@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { Transaction, User, Product, PaymentMethod } from '@/types';
 import { toast } from 'sonner';
@@ -155,7 +154,6 @@ export const useTransaction = (): UseTransactionReturn => {
         studentNumber: userData.student_number,
         role: userData.role,
         balance: (userData.tickets || 0) / 100, // Convert to dollars
-        photoURL: userData.photoURL,
         booths: userData.booth_access || []
       };
     } catch (error) {
