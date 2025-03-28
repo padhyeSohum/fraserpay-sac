@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ const Leaderboard = () => {
   const { getLeaderboard } = useTransactions();
   const [leaderboardData, setLeaderboardData] = useState<{ boothId: string; boothName: string; earnings: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
@@ -42,8 +44,12 @@ const Leaderboard = () => {
     }
   };
 
+  const handleBackClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
-    <Layout title="Leaderboard" showBack>
+    <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
       <div className="container mx-auto max-w-4xl py-4">
         <Card className="border shadow-sm">
           <CardHeader className="bg-card-header pb-2">
