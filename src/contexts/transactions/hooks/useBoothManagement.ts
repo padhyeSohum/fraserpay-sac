@@ -92,7 +92,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       console.log('Creating booth:', name, description, userId);
       const boothId = await createBooth(name, description, userId, customPin);
       
-      if (boothId) {
+      if (boothId && user) {
         console.log("Booth created with ID:", boothId);
         
         // Immediately refresh the booths list to include the new booth
@@ -100,7 +100,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         
         // If we have a user, update their booths list in memory
         if (user && !user.booths.includes(boothId)) {
-          const updatedBooths = [...user.booths, boothId];
+          const updatedBooths = [...(user.booths || []), boothId];
           console.log("Updating user booths in memory:", updatedBooths);
           updateUserData({
             ...user,

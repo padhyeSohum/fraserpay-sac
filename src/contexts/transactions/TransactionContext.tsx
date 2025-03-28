@@ -9,10 +9,6 @@ import { useTransactionManagement } from './hooks/useTransactionManagement';
 import { useCartManagement } from './hooks/useCartManagement';
 import { usePaymentProcessing } from './hooks/usePaymentProcessing';
 import { 
-  fetchAllBooths, 
-  getBoothById, 
-  getBoothsByUserId, 
-  createBooth,
   findUserByStudentNumber,
 } from './boothService';
 

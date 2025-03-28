@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
@@ -17,9 +18,10 @@ import {
   transformFirebaseProduct, 
   transformFirebaseTransaction 
 } from '@/utils/firebase';
+import { toast } from 'sonner';
 
 // Fetches all booths from Firestore
-export const fetchBooths = async (): Promise<Booth[]> => {
+export const fetchAllBooths = async (): Promise<Booth[]> => {
   try {
     console.log("Fetching all booths...");
     const boothsRef = collection(firestore, 'booths');
@@ -52,41 +54,69 @@ export const fetchBooths = async (): Promise<Booth[]> => {
   }
 };
 
-// Fetch transactions for a specific booth
-export const fetchBoothTransactions = async (boothId: string): Promise<Transaction[]> => {
+// Get a specific booth by ID
+export const getBoothById = async (boothId: string): Promise<Booth | null> => {
   try {
-    console.log(`Fetching transactions for booth: ${boothId}`);
-    const transactionsRef = collection(firestore, 'transactions');
-    const transactionsQuery = query(transactionsRef, where('booth_id', '==', boothId));
-    const transactionsSnapshot = await getDocs(transactionsQuery);
+    const boothRef = doc(firestore, 'booths', boothId);
+    const boothSnap = await getDoc(boothRef);
     
-    const transactions: Transaction[] = [];
-    
-    for (const transactionDoc of transactionsSnapshot.docs) {
-      const transaction = transformFirebaseTransaction({ 
-        id: transactionDoc.id, 
-        ...transactionDoc.data() 
-      });
-      
-      transactions.push(transaction);
+    if (!boothSnap.exists()) {
+      return null;
     }
     
-    console.log(`Fetched ${transactions.length} transactions for booth ${boothId}`);
-    return transactions;
+    // Fetch products for this booth
+    const productsRef = collection(firestore, 'products');
+    const productsQuery = query(productsRef, where('booth_id', '==', boothId));
+    const productsSnapshot = await getDocs(productsQuery);
+    
+    const booth = transformFirebaseBooth(
+      { id: boothId, ...boothSnap.data() },
+      productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    );
+    
+    return booth;
   } catch (error) {
-    console.error(`Error fetching transactions for booth ${boothId}:`, error);
+    console.error("Error fetching booth by ID:", error);
+    toast.error('Could not load booth details');
+    return null;
+  }
+};
+
+// Get booths by user ID (booths user is a manager of)
+export const getBoothsByUserId = async (userId: string): Promise<Booth[]> => {
+  try {
+    const boothsRef = collection(firestore, 'booths');
+    const boothsQuery = query(boothsRef, where('members', 'array-contains', userId));
+    const boothsSnapshot = await getDocs(boothsQuery);
+    
+    const booths: Booth[] = [];
+    
+    // Process each booth
+    for (const boothDoc of boothsSnapshot.docs) {
+      const boothId = boothDoc.id;
+      
+      // Fetch products for this booth
+      const productsRef = collection(firestore, 'products');
+      const productsQuery = query(productsRef, where('booth_id', '==', boothId));
+      const productsSnapshot = await getDocs(productsQuery);
+      
+      const boothWithProducts = transformFirebaseBooth(
+        { id: boothId, ...boothDoc.data() },
+        productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      );
+      
+      booths.push(boothWithProducts);
+    }
+    
+    return booths;
+  } catch (error) {
+    console.error("Error fetching booths by user ID:", error);
+    toast.error('Could not load your booths');
     return [];
   }
 };
 
-export const getBoothById = (booths: Booth[], boothId: string): Booth | undefined => {
-  return booths.find(b => b.id === boothId);
-};
-
-export const getBoothsByUserId = (booths: Booth[], userId: string): Booth[] => {
-  return booths.filter(booth => booth.managers.includes(userId));
-};
-
+// Create a new booth
 export const createBooth = async (
   name: string, 
   description: string, 
@@ -94,19 +124,12 @@ export const createBooth = async (
   customPin?: string
 ): Promise<string | null> => {
   try {
-    console.log("Creating booth:", { name, description, userId, customPin });
-    
-    // Generate a random PIN if one was not provided
+    // Generate a random 6-digit PIN if not provided
     const pin = customPin || Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Ensure userId is valid before proceeding
-    if (!userId) {
-      console.error("Invalid userId for booth creation");
-      throw new Error("User ID is required to create a booth");
-    }
-    
-    // Create the booth in Firestore with the user as a member
-    const boothRef = await addDoc(collection(firestore, 'booths'), {
+    // Create booth document
+    const boothsRef = collection(firestore, 'booths');
+    const newBoothRef = await addDoc(boothsRef, {
       name,
       description,
       pin,
@@ -115,118 +138,92 @@ export const createBooth = async (
       created_at: serverTimestamp()
     });
     
-    console.log("Booth created successfully with ID:", boothRef.id);
+    // Update the document with its ID (for easier access)
+    await updateDoc(newBoothRef, {
+      id: newBoothRef.id
+    });
     
-    // Get the user's current booth_access array
+    // Update user's booth access if needed
     const userRef = doc(firestore, 'users', userId);
-    const userDoc = await getDoc(userRef);
+    const userSnap = await getDoc(userRef);
     
-    if (!userDoc.exists()) {
-      console.error("User not found");
-      // Continue even if this fails, as the booth was created successfully
-    } else {
-      const userData = userDoc.data();
-      // Create a new array with the existing booths plus the new one
-      const updatedBoothAccess = [...(userData.booth_access || []), boothRef.id];
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const userBooths = userData.booth_access || [];
       
-      // Update the user's booth_access array
-      await updateDoc(userRef, { booth_access: updatedBoothAccess });
-      
-      console.log("Updated user booth access successfully:", updatedBoothAccess);
+      if (!userBooths.includes(newBoothRef.id)) {
+        await updateDoc(userRef, {
+          booth_access: [...userBooths, newBoothRef.id]
+        });
+      }
     }
     
-    toast.success(`Booth "${name}" created successfully!`);
-    
-    return boothRef.id;
+    toast.success('Booth created successfully!');
+    return newBoothRef.id;
   } catch (error) {
-    console.error('Error creating booth:', error);
-    toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    console.error("Error creating booth:", error);
+    toast.error('Failed to create booth');
     return null;
   }
 };
 
-export const addProductToBooth = async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>): Promise<boolean> => {
+// Add a product to a booth
+export const addProductToBooth = async (
+  boothId: string,
+  product: Omit<Product, 'id' | 'boothId' | 'salesCount'>
+): Promise<boolean> => {
   try {
+    const productsRef = collection(firestore, 'products');
+    
+    // Convert price to cents for storage
     const priceInCents = Math.round(product.price * 100);
     
-    await addDoc(collection(firestore, 'products'), {
+    // Create the product
+    const newProductRef = await addDoc(productsRef, {
       name: product.name,
       price: priceInCents,
       booth_id: boothId,
-      image: product.image,
+      image: product.image || '',
       created_at: serverTimestamp()
     });
     
-    toast.success(`Added product: ${product.name}`);
-    
-    return true;
-  } catch (error) {
-    console.error('Error adding product:', error);
-    toast.error('Failed to add product: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    return false;
-  }
-};
-
-export const removeProductFromBooth = async (boothId: string, productId: string): Promise<boolean> => {
-  try {
-    // Find the product that belongs to the specified booth
-    const productsRef = collection(firestore, 'products');
-    const q = query(
-      productsRef, 
-      where('id', '==', productId), 
-      where('booth_id', '==', boothId)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      throw new Error('Product not found or does not belong to this booth');
-    }
-    
-    // Delete the product
-    const productDoc = querySnapshot.docs[0];
-    await updateDoc(doc(firestore, 'products', productDoc.id), {
-      deleted: true,
-      deleted_at: serverTimestamp()
+    // Update with its own ID
+    await updateDoc(newProductRef, {
+      id: newProductRef.id
     });
     
+    toast.success('Product added successfully!');
     return true;
   } catch (error) {
-    console.error('Error removing product:', error);
-    toast.error('Failed to remove product');
+    console.error("Error adding product:", error);
+    toast.error('Failed to add product');
     return false;
   }
 };
 
-export const getLeaderboard = (booths: Booth[]) => {
-  const boothEarnings = booths.map(booth => ({
-    boothId: booth.id,
-    boothName: booth.name,
-    earnings: booth.totalEarnings
-  }));
-  
-  return boothEarnings.sort((a, b) => b.earnings - a.earnings);
-};
-
-export const findUserByStudentNumber = async (studentNumber: string): Promise<{ id: string; name: string; balance: number } | null> => {
+// Find a user by student number
+export const findUserByStudentNumber = async (studentNumber: string): Promise<any> => {
   try {
     const usersRef = collection(firestore, 'users');
     const q = query(usersRef, where('student_number', '==', studentNumber));
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
+      toast.error('Student not found');
       return null;
     }
     
     const userData = querySnapshot.docs[0].data();
+    const userId = querySnapshot.docs[0].id;
     
     return {
-      id: querySnapshot.docs[0].id,
-      name: userData.name,
-      balance: userData.tickets / 100 // Convert from cents to dollars
+      id: userId,
+      ...userData,
+      balance: userData.tickets ? userData.tickets / 100 : 0 // Convert cents to dollars
     };
   } catch (error) {
-    console.error('Error finding user:', error);
+    console.error("Error finding user:", error);
+    toast.error('Failed to find student');
     return null;
   }
 };
