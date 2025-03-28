@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { QueryProvider } from './QueryProvider';
+import QueryProvider from './QueryProvider'; // Fixed import statement
 import { AuthProvider } from '@/contexts/auth';
 import { TransactionProvider } from '@/contexts/transactions';
 import { Toaster } from '@/components/ui/toaster';
