@@ -38,6 +38,7 @@ const BoothSettings = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
 
   // Function to fetch the latest booth data
   const refreshBoothData = async () => {
@@ -104,7 +105,10 @@ const BoothSettings = () => {
       return;
     }
     
+    setIsAddingProduct(true);
+    
     try {
+      console.log('Adding product to booth:', { boothId: booth.id, product: newProduct });
       const success = await addProductToBooth(booth.id, {
         name: newProduct.name,
         price
@@ -120,6 +124,8 @@ const BoothSettings = () => {
     } catch (error) {
       console.error(error);
       toast.error('Failed to add product');
+    } finally {
+      setIsAddingProduct(false);
     }
   };
 
@@ -239,7 +245,7 @@ const BoothSettings = () => {
                 </Button>
               </CardHeader>
               <CardContent>
-                {booth.products.length > 0 ? (
+                {booth.products && booth.products.length > 0 ? (
                   <div className="space-y-2">
                     {booth.products.map(product => (
                       <div key={product.id} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
@@ -336,11 +342,25 @@ const BoothSettings = () => {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddProductDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddProductDialog(false)}
+              disabled={isAddingProduct}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAddProduct}>
-              Add Product
+            <Button 
+              onClick={handleAddProduct}
+              disabled={isAddingProduct}
+            >
+              {isAddingProduct ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                  Adding...
+                </>
+              ) : (
+                'Add Product'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

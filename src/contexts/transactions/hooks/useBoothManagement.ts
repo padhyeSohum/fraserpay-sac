@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -50,29 +49,26 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       for (const boothDoc of boothsSnapshot.docs) {
         const boothData = boothDoc.data();
         
-        // Load booth products
-        const productsCollection = collection(firestore, 'products');
-        const productsQuery = query(productsCollection, where('booth_id', '==', boothDoc.id));
-        const productsSnapshot = await getDocs(productsQuery);
+        // Check if the booth already has products in the document
+        const products = boothData.products || [];
         
-        const products = productsSnapshot.docs.map(productDoc => {
-          const productData = productDoc.data();
-          return {
-            id: productDoc.id,
-            name: productData.name,
-            price: (productData.price || 0) / 100, // Convert from cents to dollars
-            boothId: boothDoc.id,
-            image: productData.image,
-            salesCount: 0
-          };
-        });
+        // Map the products to our Product type
+        const mappedProducts = products.map((prod: any) => ({
+          id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          boothId: boothDoc.id,
+          description: prod.description || '',
+          image: prod.image || '',
+          salesCount: prod.salesCount || 0
+        }));
         
         boothsData.push({
           id: boothDoc.id,
           name: boothData.name,
           description: boothData.description || '',
           pin: boothData.pin,
-          products: products,
+          products: mappedProducts,
           managers: boothData.members || [],
           totalEarnings: (boothData.sales || 0) / 100, // Convert from cents to dollars
           createdAt: boothData.created_at

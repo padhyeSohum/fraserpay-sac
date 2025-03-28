@@ -74,13 +74,16 @@ export const useProductManagement = (): UseProductManagementReturn => {
         image: product.image || ''
       };
       
-      // Get the current products array to verify if we need to create it
+      // Get the current products array from booth document
       const boothData = boothDoc.data();
       const currentProducts = boothData.products || [];
       
+      // Add new product to the products array
+      const updatedProducts = [...currentProducts, newProduct];
+      
       // Update the booth document with the updated products array
       await updateDoc(boothRef, {
-        products: [...currentProducts, newProduct]
+        products: updatedProducts
       });
       
       console.log('Product added successfully:', newProduct);
