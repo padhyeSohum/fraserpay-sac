@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -67,8 +66,6 @@ const Dashboard = () => {
       // Get latest booths for this user
       const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
-      console.log("User booth IDs:", user.booths);
-      console.log("All booth IDs with managers:", booths.map(b => ({ id: b.id, managers: b.managers })));
       setUserBooths(booths);
     } catch (error) {
       console.error("Error refreshing user booths:", error);
@@ -134,13 +131,32 @@ const Dashboard = () => {
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
   useEffect(() => {
+    // Initial refresh for immediate data
+    refreshUserData();
+    refreshUserBooths();
+    
+    // Set up polling interval for regular updates
     const intervalId = setInterval(() => {
       refreshUserData();
       refreshUserBooths();
-    }, 30000);
+    }, 15000); // Refresh every 15 seconds
     
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
+
+  useEffect(() => {
+    // Listen for any new transactions and refresh booths
+    const handleTransactionUpdate = () => {
+      refreshUserBooths();
+    };
+    
+    // Set up a recurring check 
+    const transactionCheckId = setInterval(handleTransactionUpdate, 5000);
+    
+    return () => {
+      clearInterval(transactionCheckId);
+    };
+  }, [refreshUserBooths, recentTransactions]);
 
   useEffect(() => {
     if (user && user.booths) {

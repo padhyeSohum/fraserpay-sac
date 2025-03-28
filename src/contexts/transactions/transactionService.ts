@@ -261,7 +261,7 @@ export const processPurchase = async (
     
     console.log('Transaction products recorded:', cartItems.length);
     
-    // Finally update booth sales
+    // Update booth sales - Important change here
     const boothRef = doc(firestore, 'booths', boothId);
     const boothSnap = await getDoc(boothRef);
     
@@ -271,7 +271,8 @@ export const processPurchase = async (
       const newSales = currentSales + totalAmountInCents;
       
       await updateDoc(boothRef, {
-        sales: newSales
+        sales: newSales,
+        updated_at: new Date().toISOString() // Add timestamp to trigger updates
       });
       
       console.log('Booth sales updated:', {
@@ -323,4 +324,3 @@ export const processPurchase = async (
     return { success: false };
   }
 };
-

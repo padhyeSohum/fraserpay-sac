@@ -1,14 +1,14 @@
-
 import { useState, useCallback } from 'react';
 import { Product } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 export interface UseProductManagementReturn {
   loadBoothProducts: (boothId: string, booths: Array<any>) => Product[];
   addProductToBooth: (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => Promise<boolean>;
   removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
+  updateBoothTotals: (boothId: string, amount: number) => Promise<boolean>;
 }
 
 export const useProductManagement = (): UseProductManagementReturn => {
@@ -28,7 +28,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
   const addProductToBoothImpl = useCallback(async (boothId: string, product: Omit<Product, 'id' | 'boothId' | 'salesCount'>) => {
     console.log('Adding product to booth:', { boothId, product });
     
-    // Prevent multiple concurrent calls
     if (isProcessing) {
       console.warn('Product operation already in progress, please wait');
       toast.error('An operation is already in progress. Please wait.');
@@ -50,7 +49,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Get the booth document from Firestore
       const boothRef = doc(firestore, 'booths', boothId);
       const boothDoc = await getDoc(boothRef);
       
@@ -60,10 +58,8 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Generate a unique ID for the product
       const productId = Date.now().toString(36) + Math.random().toString(36).substring(2);
       
-      // Create the new product with all required fields
       const newProduct = {
         id: productId,
         name: product.name,
@@ -74,14 +70,11 @@ export const useProductManagement = (): UseProductManagementReturn => {
         image: product.image || ''
       };
       
-      // Get the current products array from booth document
       const boothData = boothDoc.data();
       const currentProducts = boothData.products || [];
       
-      // Add new product to the products array
       const updatedProducts = [...currentProducts, newProduct];
       
-      // Update the booth document with the updated products array
       await updateDoc(boothRef, {
         products: updatedProducts
       });
@@ -102,7 +95,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
   const removeProductFromBoothImpl = useCallback(async (boothId: string, productId: string) => {
     console.log('Removing product from booth:', { boothId, productId });
     
-    // Prevent multiple concurrent calls
     if (isProcessing) {
       console.warn('Product operation already in progress, please wait');
       toast.error('An operation is already in progress. Please wait.');
@@ -124,7 +116,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Get the booth document from Firestore
       const boothRef = doc(firestore, 'booths', boothId);
       const boothDoc = await getDoc(boothRef);
       
@@ -137,7 +128,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
       const boothData = boothDoc.data();
       const products = boothData.products || [];
       
-      // Filter out the product to remove
       const updatedProducts = products.filter((p: any) => p.id !== productId);
       
       if (products.length === updatedProducts.length) {
@@ -146,7 +136,6 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Update the booth document with the updated products array
       await updateDoc(boothRef, {
         products: updatedProducts
       });
@@ -164,9 +153,51 @@ export const useProductManagement = (): UseProductManagementReturn => {
     }
   }, [isProcessing]);
 
+  const updateBoothTotals = useCallback(async (boothId: string, amount: number): Promise<boolean> => {
+    console.log('Updating booth totals:', { boothId, amount });
+    
+    if (!boothId) {
+      console.error('Invalid booth ID');
+      return false;
+    }
+    
+    try {
+      const boothRef = doc(firestore, 'booths', boothId);
+      const boothDoc = await getDoc(boothRef);
+      
+      if (!boothDoc.exists()) {
+        console.error('Booth not found');
+        return false;
+      }
+      
+      const boothData = boothDoc.data();
+      const currentSales = boothData.sales || 0;
+      const amountInCents = Math.round(amount * 100);
+      const newSales = currentSales + amountInCents;
+      
+      console.log('Updating booth sales:', {
+        currentSales: currentSales / 100,
+        amount,
+        amountInCents,
+        newSales: newSales / 100
+      });
+      
+      await updateDoc(boothRef, {
+        sales: newSales
+      });
+      
+      console.log('Booth sales updated successfully:', newSales / 100);
+      return true;
+    } catch (error) {
+      console.error('Error updating booth sales:', error);
+      return false;
+    }
+  }, []);
+
   return {
     loadBoothProducts,
     addProductToBooth: addProductToBoothImpl,
-    removeProductFromBooth: removeProductFromBoothImpl
+    removeProductFromBooth: removeProductFromBoothImpl,
+    updateBoothTotals
   };
 };
