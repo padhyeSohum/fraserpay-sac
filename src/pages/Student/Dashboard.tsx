@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -13,7 +14,7 @@ import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const transactions = useTransactions();
+  const { recentTransactions, loadUserTransactions, getBoothsByUserId } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
@@ -64,7 +65,7 @@ const Dashboard = () => {
     if (!user) return;
     try {
       // Get latest booths for this user
-      const booths = transactions.getBoothsByUserId ? transactions.getBoothsByUserId(user.id) : [];
+      const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
       console.log("User booth IDs:", user.booths);
       console.log("All booth IDs with managers:", booths.map(b => ({ id: b.id, managers: b.managers })));
@@ -73,7 +74,7 @@ const Dashboard = () => {
       console.error("Error refreshing user booths:", error);
       setUserBooths([]);
     }
-  }, [user, transactions]);
+  }, [user, getBoothsByUserId]);
 
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
@@ -83,29 +84,6 @@ const Dashboard = () => {
       setLoadError(null);
       
       await refreshUserData();
-      
-      // Fetch booths with retry logic
-      let boothsData;
-      try {
-        console.log("Dashboard: Fetching all booths...");
-        boothsData = transactions.fetchAllBooths ? await transactions.fetchAllBooths() : [];
-        console.log("Dashboard: Fetched all booths, count:", boothsData?.length);
-        if (!boothsData) {
-          throw new Error("Failed to fetch booths");
-        }
-      } catch (error) {
-        console.error("Error fetching booths:", error);
-        if (retryCount < MAX_RETRIES) {
-          setRetryCount(prev => prev + 1);
-          toast.error(`Failed to load booths. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return;
-        } else {
-          setLoadError("Failed to load booths after multiple attempts");
-          toast.error("Failed to load booths after multiple attempts. Please refresh the page.");
-        }
-      }
       
       // Get user booths with error handling
       try {
@@ -118,8 +96,8 @@ const Dashboard = () => {
       
       // Load transactions with error handling
       try {
-        const userTxs = transactions.loadUserTransactions ? 
-          transactions.loadUserTransactions(user.id) : 
+        const userTxs = loadUserTransactions ? 
+          loadUserTransactions(user.id) : 
           [];
         setUserTransactions(userTxs.slice(0, 3));
       } catch (error) {
@@ -141,7 +119,7 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, transactions, MAX_RETRIES]);
+  }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, loadUserTransactions, MAX_RETRIES]);
 
   useEffect(() => {
     let isMounted = true;
@@ -170,6 +148,14 @@ const Dashboard = () => {
       refreshUserBooths();
     }
   }, [user?.booths, refreshUserBooths]);
+
+  useEffect(() => {
+    // Update transactions when recentTransactions changes
+    if (user && loadUserTransactions) {
+      const userTxs = loadUserTransactions(user.id);
+      setUserTransactions(userTxs.slice(0, 3));
+    }
+  }, [recentTransactions, user, loadUserTransactions]);
 
   const handleViewQRCode = () => {
     navigate('/qr-code');
@@ -318,7 +304,11 @@ const Dashboard = () => {
           ) : userTransactions.length > 0 ? (
             <div className="space-y-3">
               {userTransactions.map(transaction => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
+                <TransactionItem 
+                  key={transaction.id} 
+                  transaction={transaction} 
+                  showBooth={true}
+                />
               ))}
             </div>
           ) : (

@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QrCode, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { encodeUserData, generateQRCode, getUserFromQRData } from '@/utils/qrCode';
 import QRCodeScanner from '@/components/QRCodeScanner';
 
@@ -28,51 +29,49 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     setIsSearching(true);
     
     try {
-      console.log('Searching for student:', studentSearchTerm);
-      let { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .or(`student_number.ilike.%${studentSearchTerm}%,name.ilike.%${studentSearchTerm}%,email.ilike.%${studentSearchTerm}%`)
-        .limit(1);
+      console.log('Searching for student in Firebase:', studentSearchTerm);
+      const usersRef = collection(firestore, 'users');
       
-      if (error) {
-        console.error('Error searching for student:', error);
-        toast.error('Error searching for student');
-        setIsSearching(false);
-        return;
-      }
+      // Create a query to search by student number, name, or email
+      const q = query(
+        usersRef,
+        where('student_number', '==', studentSearchTerm)
+      );
       
-      if (userData && userData.length > 0) {
-        const student = userData[0];
-        console.log('Found student:', student);
+      // For case-insensitive name/email search, we need separate queries
+      const querySnapshot = await getDocs(q);
+      
+      // If no results with exact student number, try name and email
+      if (querySnapshot.empty) {
+        console.log('No exact match on student number, searching by name and email');
+        // We need to get all users and filter manually for partial matches
+        const allUsersSnapshot = await getDocs(collection(firestore, 'users'));
         
-        const foundStudent = {
-          id: student.id,
-          name: student.name,
-          studentNumber: student.student_number,
-          email: student.email,
-          balance: student.tickets / 100,
-          qrCode: student.qr_code
-        };
+        const matchingUsers = allUsersSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          const searchTermLower = studentSearchTerm.toLowerCase();
+          
+          return (
+            (data.name && data.name.toLowerCase().includes(searchTermLower)) ||
+            (data.email && data.email.toLowerCase().includes(searchTermLower))
+          );
+        });
         
-        // Generate QR code
-        let qrCodeData = student.qr_code || encodeUserData(student.id);
-        console.log('Generating QR code with data:', qrCodeData);
-        let qrCodeSvg = generateQRCode(qrCodeData);
-        
-        // Update the user's QR code if needed
-        if (!student.qr_code) {
-          console.log('Updating user QR code in Supabase');
-          await supabase
-            .from('users')
-            .update({ qr_code: qrCodeData })
-            .eq('id', student.id);
+        if (matchingUsers.length > 0) {
+          const userData = matchingUsers[0].data();
+          userData.id = matchingUsers[0].id;
+          
+          handleStudentFound(userData);
+        } else {
+          console.log('No student found with search term:', studentSearchTerm);
+          toast.error('No student found with that ID, name, or email');
         }
-        
-        onStudentFound(foundStudent, qrCodeSvg);
       } else {
-        console.log('No student found with search term:', studentSearchTerm);
-        toast.error('No student found with that ID, name, or email');
+        // Found by student number
+        const userData = querySnapshot.docs[0].data();
+        userData.id = querySnapshot.docs[0].id;
+        
+        handleStudentFound(userData);
       }
     } catch (error) {
       console.error('Error in student search:', error);
@@ -115,15 +114,6 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
         // Generate QR code SVG
         let qrCodeSvg = generateQRCode(decodedText);
         
-        // If user doesn't have a QR code saved, update it
-        if (!userData.qr_code) {
-          const standardQrCode = encodeUserData(userData.id);
-          await supabase
-            .from('users')
-            .update({ qr_code: standardQrCode })
-            .eq('id', userData.id);
-        }
-        
         toast.success(`Found student: ${userData.name}`);
         onStudentFound(foundStudent, qrCodeSvg);
       } else {
@@ -138,6 +128,25 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
         setIsProcessing(false);
       }, 1000);
     }
+  };
+
+  const handleStudentFound = (userData: any) => {
+    const foundStudent = {
+      id: userData.id,
+      name: userData.name,
+      studentNumber: userData.student_number,
+      email: userData.email,
+      balance: userData.tickets / 100,
+      qrCode: userData.qr_code
+    };
+    
+    // Generate or use existing QR code
+    let qrCodeData = userData.qr_code || encodeUserData(userData.id);
+    let qrCodeSvg = generateQRCode(qrCodeData);
+    
+    console.log('Found student:', foundStudent);
+    
+    onStudentFound(foundStudent, qrCodeSvg);
   };
 
   return (

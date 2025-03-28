@@ -1,10 +1,8 @@
 
 import { useState, useCallback } from 'react';
 import { Product } from '@/types';
-import { 
-  addProductToBooth as addProductToBoothService, 
-  removeProductFromBooth as removeProductFromBoothService 
-} from '../boothService';
+import { firestore } from '@/integrations/firebase/client';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 export interface UseProductManagementReturn {
@@ -52,17 +50,39 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Call the service function to add the product
-      const result = await addProductToBoothService(boothId, product);
-      console.log('Product add result:', result);
+      // Get the booth document from Firestore
+      const boothRef = doc(firestore, 'booths', boothId);
+      const boothDoc = await getDoc(boothRef);
       
-      if (result) {
-        toast.success('Product added successfully');
-      } else {
-        toast.error('Failed to add product');
+      if (!boothDoc.exists()) {
+        console.error('Booth not found');
+        toast.error('Booth not found');
+        return false;
       }
       
-      return result;
+      // Generate a unique ID for the product
+      const productId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      
+      // Create the new product with all required fields
+      const newProduct = {
+        id: productId,
+        name: product.name,
+        price: product.price,
+        boothId: boothId,
+        salesCount: 0,
+        description: product.description || '',
+        image: product.image || ''
+      };
+      
+      // Update the booth document to add the new product
+      await updateDoc(boothRef, {
+        products: arrayUnion(newProduct)
+      });
+      
+      console.log('Product added successfully:', newProduct);
+      toast.success('Product added successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error adding product:', error);
       toast.error('Error adding product: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -97,17 +117,37 @@ export const useProductManagement = (): UseProductManagementReturn => {
         return false;
       }
       
-      // Call the service function to remove the product
-      const result = await removeProductFromBoothService(boothId, productId);
-      console.log('Product remove result:', result);
+      // Get the booth document from Firestore
+      const boothRef = doc(firestore, 'booths', boothId);
+      const boothDoc = await getDoc(boothRef);
       
-      if (result) {
-        toast.success('Product removed successfully');
-      } else {
-        toast.error('Failed to remove product');
+      if (!boothDoc.exists()) {
+        console.error('Booth not found');
+        toast.error('Booth not found');
+        return false;
       }
       
-      return result;
+      const boothData = boothDoc.data();
+      const products = boothData.products || [];
+      
+      // Filter out the product to remove
+      const updatedProducts = products.filter((p: any) => p.id !== productId);
+      
+      if (products.length === updatedProducts.length) {
+        console.warn('Product not found in booth');
+        toast.error('Product not found in booth');
+        return false;
+      }
+      
+      // Update the booth document with the updated products array
+      await updateDoc(boothRef, {
+        products: updatedProducts
+      });
+      
+      console.log('Product removed successfully');
+      toast.success('Product removed successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error removing product:', error);
       toast.error('Error removing product: ' + (error instanceof Error ? error.message : 'Unknown error'));

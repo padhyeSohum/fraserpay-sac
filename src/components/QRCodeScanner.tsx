@@ -28,9 +28,14 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
     
     // Only initialize the scanner if the DOM element exists
     if (document.getElementById(scannerDivId)) {
-      const scanner = new Html5Qrcode(scannerDivId);
-      scannerRef.current = scanner;
-      startScanning(scanner);
+      try {
+        const scanner = new Html5Qrcode(scannerDivId);
+        scannerRef.current = scanner;
+        startScanning(scanner);
+      } catch (err) {
+        console.error('Error initializing scanner:', err);
+        setError('Failed to initialize camera. Please try again.');
+      }
     } else {
       console.error('Scanner DOM element not found');
     }
@@ -40,11 +45,15 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
       // Set mounted ref to false to prevent state updates after unmount
       isMountedRef.current = false;
       
-      if (scannerRef.current && isScanning) {
-        console.log('Cleaning up scanner');
-        scannerRef.current
-          .stop()
-          .catch((err) => console.error('Error stopping scanner:', err));
+      try {
+        if (scannerRef.current && isScanning) {
+          console.log('Cleaning up scanner');
+          scannerRef.current
+            .stop()
+            .catch((err) => console.error('Error stopping scanner:', err));
+        }
+      } catch (err) {
+        console.error('Error during scanner cleanup:', err);
       }
     };
   }, []);
@@ -96,7 +105,9 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   };
 
   const stopScanning = () => {
-    if (scannerRef.current && isScanning && isMountedRef.current) {
+    if (!scannerRef.current || !isScanning || !isMountedRef.current) return;
+    
+    try {
       console.log('Stopping QR code scanner');
       scannerRef.current
         .stop()
@@ -108,12 +119,18 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
         .catch((err) => {
           console.error('Error stopping scanner:', err);
         });
+    } catch (err) {
+      console.error('Error during scanner stop:', err);
     }
   };
 
   const handleClose = () => {
-    stopScanning();
-    onClose();
+    try {
+      stopScanning();
+      onClose();
+    } catch (err) {
+      console.error('Error handling close:', err);
+    }
   };
 
   return (
