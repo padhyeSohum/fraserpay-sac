@@ -6,8 +6,9 @@ import Layout from '@/components/Layout';
 import { encodeUserData } from '@/utils/qrCode';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
+import { firestore } from '@/integrations/firebase/client';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const QRCode = () => {
   const { user, updateUserData } = useAuth();
@@ -20,46 +21,43 @@ const QRCode = () => {
     if (!user) return false;
     
     try {
-      // Refresh user data to get the latest balance
-      const { data: freshUserData, error: userError } = await supabase
-        .from('users')
-        .select('tickets, qr_code')
-        .eq('id', user.id)
-        .single();
-        
-      if (!userError && freshUserData) {
-        console.log("QR Code - refreshed user data:", freshUserData);
-        
-        // Check if the balance changed
-        const newBalance = freshUserData.tickets / 100;
-        if (newBalance !== user.balance) {
-          // Update user context with fresh balance
-          updateUserData({
-            ...user,
-            balance: newBalance
-          });
-        }
-        
-        // Use the stored QR code or generate a new one
-        let qrCode = freshUserData.qr_code;
-        
-        // If no QR code exists, generate a new one using the standardized format
-        if (!qrCode) {
-          qrCode = encodeUserData(user.id);
-          
-          // Store the new QR code in the database
-          console.log("Storing new QR code in database:", qrCode);
-          await supabase
-            .from('users')
-            .update({ qr_code: qrCode })
-            .eq('id', user.id);
-        }
-        
-        return qrCode;
+      // Refresh user data to get the latest balance from Firebase
+      const userRef = doc(firestore, 'users', user.id);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        console.error('User document not found:', user.id);
+        return encodeUserData(user.id);
       }
       
-      // Default fallback - use the user ID to create QR data
-      return encodeUserData(user.id);
+      const userData = userSnap.data();
+      console.log("QR Code - refreshed user data:", userData);
+      
+      // Check if the balance changed
+      const newBalance = (userData.tickets || 0) / 100;
+      if (newBalance !== user.balance) {
+        // Update user context with fresh balance
+        updateUserData({
+          ...user,
+          balance: newBalance
+        });
+      }
+      
+      // Use the stored QR code or generate a new one
+      let qrCode = userData.qr_code;
+      
+      // If no QR code exists, generate a new one using the standardized format
+      if (!qrCode) {
+        qrCode = encodeUserData(user.id);
+        
+        // Store the new QR code in the database
+        console.log("Storing new QR code in database:", qrCode);
+        await updateDoc(userRef, { 
+          qr_code: qrCode 
+        });
+      }
+      
+      return qrCode;
     } catch (error) {
       console.error("Error refreshing user data:", error);
       // Fallback in case of error
@@ -95,7 +93,11 @@ const QRCode = () => {
     
     // Set up automatic refresh interval
     const intervalId = setInterval(() => {
-      if (user) refreshUserData();
+      if (user) refreshUserData().then(qrData => {
+        if (qrData && isMounted) {
+          setQrCodeData(qrData);
+        }
+      });
     }, 30000); // Refresh every 30 seconds
     
     return () => {
@@ -113,11 +115,11 @@ const QRCode = () => {
       // Generate a new QR code
       const newQrCode = encodeUserData(user.id);
       
-      // Update the QR code in the database
-      await supabase
-        .from('users')
-        .update({ qr_code: newQrCode })
-        .eq('id', user.id);
+      // Update the QR code in Firebase
+      const userRef = doc(firestore, 'users', user.id);
+      await updateDoc(userRef, { 
+        qr_code: newQrCode 
+      });
       
       // Add a small delay for UI feedback
       setTimeout(() => {
@@ -184,3 +186,4 @@ const QRCode = () => {
 };
 
 export default QRCode;
+

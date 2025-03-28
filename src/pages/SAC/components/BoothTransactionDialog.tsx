@@ -9,7 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/auth';
-import { supabase } from '@/integrations/supabase/client';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { processPurchase } from '@/contexts/transactions/transactionService';
 import { CartItem, Product } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -70,29 +71,26 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
     setFoundStudent(null);
     
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('student_number', studentNumber)
-        .single();
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('student_number', '==', studentNumber));
+      const querySnapshot = await getDocs(q);
       
-      if (error) {
-        console.error('Error finding student:', error);
+      if (querySnapshot.empty) {
         toast.error('Student not found');
+        setIsStudentLoading(false);
         return;
       }
       
-      if (data) {
-        setFoundStudent({
-          id: data.id,
-          name: data.name,
-          studentNumber: data.student_number,
-          email: data.email,
-          balance: data.tickets / 100 // Fix for issue #2 - convert to dollars
-        });
-      } else {
-        toast.error('Student not found');
-      }
+      const userData = querySnapshot.docs[0].data();
+      userData.id = querySnapshot.docs[0].id;
+      
+      setFoundStudent({
+        id: userData.id,
+        name: userData.name,
+        studentNumber: userData.student_number,
+        email: userData.email,
+        balance: (userData.tickets || 0) / 100 // Convert to dollars
+      });
     } catch (error) {
       console.error('Error finding student:', error);
       toast.error('Failed to find student');
@@ -167,16 +165,14 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
       );
       
       if (result.success) {
-        const { data: updatedUser, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', foundStudent.id)
-          .single();
-          
-        if (!error && updatedUser) {
+        const userRef = doc(firestore, 'users', foundStudent.id);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: updatedUser.tickets / 100 // Fix for issue #2 - convert to dollars
+            balance: (userData.tickets || 0) / 100 // Convert to dollars
           });
         }
         

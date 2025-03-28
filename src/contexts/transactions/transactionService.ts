@@ -1,51 +1,44 @@
 
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { transformFirebaseTransaction } from '@/utils/firebase';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
-    console.log('Fetching all transactions from Supabase');
-    const { data, error } = await supabase
-      .from('transactions')
-      .select(`
-        *,
-        transaction_products(*)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+    console.log('Fetching all transactions from Firebase');
+    const transactionsRef = collection(firestore, 'transactions');
+    const q = query(transactionsRef, orderBy('created_at', 'desc'));
+    const transactionsSnapshot = await getDocs(q);
+    
+    if (transactionsSnapshot.empty) {
+      return [];
     }
-
-    if (data) {
-      console.log('Transactions data received:', data.length, 'records');
-      const formattedTransactions: Transaction[] = data.map(t => ({
-        id: t.id,
-        timestamp: new Date(t.created_at).getTime(),
-        buyerId: t.student_id,
-        buyerName: t.student_name,
-        sellerId: t.booth_id || undefined,
-        sellerName: undefined,
-        boothId: t.booth_id || undefined,
-        boothName: t.booth_name || undefined,
-        products: t.transaction_products?.map(p => ({
-          productId: p.product_id,
-          productName: p.product_name,
-          quantity: p.quantity,
-          price: p.price / 100
-        })) || [],
-        amount: t.amount / 100,  // Convert cents to dollars
-        type: t.type as 'purchase' | 'fund' | 'refund',
-        paymentMethod: t.type === 'fund' ? 'cash' : undefined,
-        sacMemberId: t.sac_member || undefined,
-        sacMemberName: undefined
-      }));
-
-      return formattedTransactions;
+    
+    const transactions: Transaction[] = [];
+    
+    for (const transactionDoc of transactionsSnapshot.docs) {
+      const transactionData = transactionDoc.data();
+      transactionData.id = transactionDoc.id;
+      
+      // Fetch transaction products
+      const transactionProductsRef = collection(firestore, 'transaction_products');
+      const q = query(transactionProductsRef, where('transaction_id', '==', transactionDoc.id));
+      const transactionProductsSnapshot = await getDocs(q);
+      
+      const transactionProducts = transactionProductsSnapshot.docs.map(doc => {
+        const productData = doc.data();
+        productData.id = doc.id;
+        return productData;
+      });
+      
+      // Transform to our Transaction type
+      transactions.push(transformFirebaseTransaction(transactionData, transactionProducts));
     }
-    return [];
+    
+    console.log('Transactions data received:', transactions.length, 'records');
+    return transactions;
   } catch (error) {
     console.error('Error fetching transactions:', error);
     toast.error('Failed to load transactions');
@@ -66,123 +59,74 @@ export const addFunds = async (
     console.log("Starting addFunds process:", { amount, userId, sacMemberId });
     
     // Fetch the current user data to get their existing balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tickets, name, student_number')
-      .eq('id', userId)
-      .single();
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
     
-    if (userError) {
-      console.error("Error fetching user:", userError);
+    if (!userSnap.exists()) {
+      console.error("User not found with ID:", userId);
       toast.error('User not found');
       return { success: false };
     }
     
+    const userData = userSnap.data();
     console.log("User data fetched:", userData);
     
-    // Convert dollars to cents for storage in database
+    // Convert dollars to cents for storage in Firestore
     const amountInCents = Math.round(amount * 100);
     
     // Calculate the new balance
-    const newBalance = (userData.tickets || 0) + amountInCents;
+    const currentBalance = userData.tickets || 0;
+    const newBalance = currentBalance + amountInCents;
     console.log("Balance calculation:", { 
-      currentBalance: userData.tickets || 0, 
+      currentBalance, 
       amountToAdd: amountInCents, 
       newBalance,
       studentNumber: userData.student_number
     });
     
-    // Use the security definer function to update user balance
-    console.log("Calling update_user_balance RPC with:", { user_id: userId, new_balance: newBalance });
-    const { data: updateResult, error: updateError } = await supabase
-      .rpc('update_user_balance', {
-        user_id: userId,
-        new_balance: newBalance
-      });
+    // Update the user's balance
+    await updateDoc(userRef, {
+      tickets: newBalance
+    });
     
-    if (updateError) {
-      console.error("Error updating user balance:", updateError);
-      toast.error('Failed to update balance');
-      return { success: false };
-    }
-    
-    console.log("User balance updated, RPC result:", updateResult);
     console.log("User balance updated to:", newBalance);
     
     // Now create the transaction record
-    const { data: transactionData, error: transactionError } = await supabase
-      .from('transactions')
-      .insert({
-        student_id: userId,
-        student_name: userData.name,
-        amount: amountInCents,
-        type: amount >= 0 ? 'fund' : 'refund',
-        sac_member: sacMemberId
-      })
-      .select()
-      .single();
+    const transactionsRef = collection(firestore, 'transactions');
+    const transactionData = {
+      student_id: userId,
+      student_name: userData.name,
+      amount: amountInCents,
+      type: amount >= 0 ? 'fund' : 'refund',
+      sac_member: sacMemberId,
+      created_at: new Date().toISOString()
+    };
     
-    if (transactionError) {
-      console.error("Error creating transaction:", transactionError);
-      toast.error('Failed to record transaction');
-      
-      // If transaction recording fails, we should still return success since the balance was updated
-      // but log this issue for reconciliation
-      console.warn("Balance updated but transaction recording failed:", {
-        userId,
-        amount,
-        newBalance
-      });
-      
-      return { 
-        success: true, 
-        updatedBalance: newBalance / 100 // Convert back to dollars for UI
-      };
-    }
+    const transactionRef = await addDoc(transactionsRef, transactionData);
     
-    console.log("Transaction record created:", transactionData);
+    console.log("Transaction record created with ID:", transactionRef.id);
     
     // Verify the update was successful by fetching the user again
-    const { data: updatedUser, error: verifyError } = await supabase
-      .from('users')
-      .select('tickets, name')
-      .eq('id', userId)
-      .single();
-      
-    if (verifyError) {
-      console.error("Error verifying balance update:", verifyError);
-      console.warn('Balance updated but verification failed');
-    } else {
-      console.log("Balance update verified:", {
-        previousBalance: userData.tickets || 0,
-        newBalance: updatedUser.tickets,
-        expectedBalance: newBalance
+    const updatedUserSnap = await getDoc(userRef);
+    const updatedUserData = updatedUserSnap.data();
+    
+    if (updatedUserData.tickets !== newBalance) {
+      console.error("Balance mismatch after update!", {
+        expected: newBalance,
+        actual: updatedUserData.tickets
       });
       
-      if (updatedUser.tickets !== newBalance) {
-        console.error("Balance mismatch after update!", {
-          expected: newBalance,
-          actual: updatedUser.tickets
-        });
-        
-        // Try one more time to ensure the balance is correct
-        console.log("Trying one more time to update balance");
-        const { error: retryError } = await supabase
-          .rpc('update_user_balance', {
-            user_id: userId,
-            new_balance: newBalance
-          });
-          
-        if (retryError) {
-          console.error("Error in retry update:", retryError);
-        }
-      }
+      // Try one more time to ensure the balance is correct
+      console.log("Trying one more time to update balance");
+      await updateDoc(userRef, {
+        tickets: newBalance
+      });
     }
     
     // Add the new transaction to the local state
     const newTransaction: Transaction = {
-      id: transactionData.id,
-      timestamp: new Date(transactionData.created_at).getTime(),
+      id: transactionRef.id,
+      timestamp: new Date().getTime(),
       buyerId: userId,
       buyerName: userData.name,
       amount: Math.abs(amount),
@@ -198,7 +142,7 @@ export const addFunds = async (
     return { 
       success: true, 
       transaction: newTransaction, 
-      updatedBalance: updatedUser ? updatedUser.tickets / 100 : newBalance / 100 // Convert back to dollars for UI
+      updatedBalance: newBalance / 100 // Convert back to dollars for UI
     };
   } catch (error) {
     console.error('Error processing funds:', error);
@@ -239,188 +183,122 @@ export const processPurchase = async (
     });
     
     // Fetch current user balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tickets')
-      .eq('id', buyerId)
-      .single();
+    const userRef = doc(firestore, 'users', buyerId);
+    const userSnap = await getDoc(userRef);
     
-    if (userError) {
-      console.error('Error fetching user balance:', userError);
-      toast.error('Could not verify user balance');
+    if (!userSnap.exists()) {
+      console.error('User not found with ID:', buyerId);
+      toast.error('User not found');
       return { success: false };
     }
     
-    console.log('User current balance:', userData.tickets / 100);
+    const userData = userSnap.data();
+    console.log('User current balance:', (userData.tickets || 0) / 100);
     
-    if (userData.tickets < totalAmountInCents) {
+    if ((userData.tickets || 0) < totalAmountInCents) {
       console.error('Insufficient balance:', {
-        currentBalance: userData.tickets / 100,
+        currentBalance: (userData.tickets || 0) / 100,
         requiredAmount: totalAmount
       });
       toast.error('Insufficient balance');
       return { success: false };
     }
     
-    const newBalance = userData.tickets - totalAmountInCents;
+    const newBalance = (userData.tickets || 0) - totalAmountInCents;
     console.log('Calculated new balance:', newBalance / 100);
     
-    // Use security definer function to update user balance
-    console.log('Calling update_user_balance RPC with:', { 
-      user_id: buyerId, 
-      new_balance: newBalance 
+    // Update the user's balance
+    await updateDoc(userRef, {
+      tickets: newBalance
     });
     
-    const { data: updateResult, error: updateError } = await supabase
-      .rpc('update_user_balance', {
-        user_id: buyerId,
-        new_balance: newBalance
-      });
-    
-    if (updateError) {
-      console.error('Error updating user balance:', updateError);
-      toast.error('Failed to update user balance');
-      return { success: false };
-    }
-    
-    console.log('User balance updated, RPC result:', updateResult);
     console.log('User balance updated to:', newBalance / 100);
     
     // Verify the user balance was updated correctly
-    const { data: verifiedUser, error: verifyError } = await supabase
-      .from('users')
-      .select('tickets')
-      .eq('id', buyerId)
-      .single();
+    const updatedUserSnap = await getDoc(userRef);
+    const updatedUserData = updatedUserSnap.data();
     
-    if (verifyError) {
-      console.error('Error verifying balance update:', verifyError);
-      // Continue with recording the transaction, but log the verification failure
-    } else if (verifiedUser.tickets !== newBalance) {
+    if (updatedUserData.tickets !== newBalance) {
       console.error('Balance verification failed:', {
         expected: newBalance / 100,
-        actual: verifiedUser.tickets / 100
+        actual: updatedUserData.tickets / 100
       });
       
-      // If verification failed, try one more time to update the balance using the RPC function
+      // If verification failed, try one more time to update the balance
       console.log('Trying one more time to update balance');
-      const { error: retryError } = await supabase
-        .rpc('update_user_balance', {
-          user_id: buyerId,
-          new_balance: newBalance
-        });
-        
-      if (retryError) {
-        console.error('Error in retry update:', retryError);
-        // Continue with transaction record, but log the retry failure
-      } else {
-        console.log('Balance update retry attempted');
-      }
-    } else {
-      console.log('Balance verification successful:', verifiedUser.tickets / 100);
+      await updateDoc(userRef, {
+        tickets: newBalance
+      });
     }
     
     // Now create the transaction record
-    const { data: transactionData, error: transactionError } = await supabase
-      .from('transactions')
-      .insert({
-        student_id: buyerId,
-        student_name: buyerName,
-        booth_id: boothId,
-        booth_name: boothName,
-        amount: totalAmountInCents,
-        type: 'purchase'
-      })
-      .select()
-      .single();
+    const transactionsRef = collection(firestore, 'transactions');
+    const transactionData = {
+      student_id: buyerId,
+      student_name: buyerName,
+      booth_id: boothId,
+      booth_name: boothName,
+      amount: totalAmountInCents,
+      type: 'purchase',
+      created_at: new Date().toISOString()
+    };
     
-    if (transactionError) {
-      console.error('Error creating transaction record:', transactionError);
-      toast.error('Failed to record transaction');
-      // Critical error: funds were deducted but transaction not recorded
-      // We should attempt to refund the user
-      console.log('Attempting to restore original balance:', userData.tickets / 100);
-      await supabase
-        .rpc('update_user_balance', {
-          user_id: buyerId,
-          new_balance: userData.tickets
-        });
-      console.error('Transaction failed, attempted to restore user balance');
-      return { success: false };
-    }
-    
-    console.log('Transaction record created:', transactionData);
+    const transactionRef = await addDoc(transactionsRef, transactionData);
+    console.log('Transaction record created with ID:', transactionRef.id);
     
     // Create transaction products records
-    const transactionProducts = cartItems.map(item => ({
-      transaction_id: transactionData.id,
-      product_id: item.product.id,
-      product_name: item.product.name,
-      quantity: item.quantity,
-      price: Math.round(item.product.price * 100)
-    }));
+    const transactionProductsRef = collection(firestore, 'transaction_products');
     
-    const { error: productsError } = await supabase
-      .from('transaction_products')
-      .insert(transactionProducts);
-    
-    if (productsError) {
-      console.error('Error creating transaction products records:', productsError);
-      // We'll still continue since the main transaction record was created
-    } else {
-      console.log('Transaction products recorded:', transactionProducts.length);
+    for (const item of cartItems) {
+      await addDoc(transactionProductsRef, {
+        transaction_id: transactionRef.id,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        quantity: item.quantity,
+        price: Math.round(item.product.price * 100)
+      });
     }
     
-    // Finally update booth sales
-    const { data: boothData, error: boothError } = await supabase
-      .from('booths')
-      .select('sales')
-      .eq('id', boothId)
-      .single();
+    console.log('Transaction products recorded:', cartItems.length);
     
-    if (!boothError && boothData) {
+    // Finally update booth sales
+    const boothRef = doc(firestore, 'booths', boothId);
+    const boothSnap = await getDoc(boothRef);
+    
+    if (boothSnap.exists()) {
+      const boothData = boothSnap.data();
       const currentSales = boothData.sales || 0;
       const newSales = currentSales + totalAmountInCents;
       
-      const { error: updateBoothError } = await supabase
-        .from('booths')
-        .update({ sales: newSales })
-        .eq('id', boothId);
+      await updateDoc(boothRef, {
+        sales: newSales
+      });
       
-      if (updateBoothError) {
-        console.error('Error updating booth sales:', updateBoothError);
-      } else {
-        console.log('Booth sales updated:', {
-          previousSales: currentSales / 100,
-          newSales: newSales / 100
-        });
-      }
+      console.log('Booth sales updated:', {
+        previousSales: currentSales / 100,
+        newSales: newSales / 100
+      });
     }
     
     // Do one final verification check of the user's balance
-    const { data: finalCheck } = await supabase
-      .from('users')
-      .select('tickets')
-      .eq('id', buyerId)
-      .single();
-      
-    if (finalCheck && finalCheck.tickets !== newBalance) {
+    const finalCheckSnap = await getDoc(userRef);
+    const finalCheckData = finalCheckSnap.data();
+    
+    if (finalCheckData && finalCheckData.tickets !== newBalance) {
       console.error('Final balance check failed:', {
         expected: newBalance / 100,
-        actual: finalCheck.tickets / 100
+        actual: finalCheckData.tickets / 100
       });
       // Make one last attempt to ensure the balance is correct
       console.log('Making final attempt to ensure correct balance');
-      await supabase
-        .rpc('update_user_balance', {
-          user_id: buyerId,
-          new_balance: newBalance
-        });
+      await updateDoc(userRef, {
+        tickets: newBalance
+      });
     }
     
     const newTransaction: Transaction = {
-      id: transactionData.id,
-      timestamp: new Date(transactionData.created_at).getTime(),
+      id: transactionRef.id,
+      timestamp: new Date().getTime(),
       buyerId,
       buyerName,
       sellerId,
@@ -445,3 +323,4 @@ export const processPurchase = async (
     return { success: false };
   }
 };
+

@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { supabase } from '@/integrations/supabase/client';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 
 // Encode user data to QR code format - ensure consistent formatting
 export const encodeUserData = (userId: string) => {
@@ -69,35 +70,30 @@ export const getUserFromQRData = async (qrData: string) => {
       
       // First try looking up by ID if the format suggests it's a UUID
       if (validation.type === 'user' || validation.type === 'uuid') {
-        console.log('Querying Supabase for user ID:', validation.userId);
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', validation.userId)
-          .single();
+        console.log('Querying Firebase for user ID:', validation.userId);
+        const userRef = doc(firestore, 'users', validation.userId);
+        const userSnap = await getDoc(userRef);
         
-        if (!error && data) {
-          console.log('User found by ID:', data);
-          userData = data;
-        } else if (error) {
-          console.log('Error or no user found by ID:', error);
+        if (userSnap.exists()) {
+          console.log('User found by ID:', userSnap.data());
+          userData = { id: userSnap.id, ...userSnap.data() };
+        } else {
+          console.log('No user found by ID');
         }
       }
       
       // If no user found and it looks like a student number, try that lookup
       if (!userData && (validation.type === 'student_number' || /^\d+$/.test(validation.userId))) {
         console.log('Looking up by student number:', validation.userId);
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('student_number', validation.userId)
-          .single();
-          
-        if (!error && data) {
-          console.log('User found by student number:', data);
-          userData = data;
-        } else if (error) {
-          console.log('Error or no user found by student number:', error);
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('student_number', '==', validation.userId));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          console.log('User found by student number:', querySnapshot.docs[0].data());
+          userData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+        } else {
+          console.log('No user found by student number');
         }
       }
       
@@ -115,19 +111,20 @@ export const getUserFromQRData = async (qrData: string) => {
 export const findUserByStudentNumber = async (studentNumber: string) => {
   console.log('Looking up user by student number:', studentNumber);
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('student_number', studentNumber)
-      .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('student_number', '==', studentNumber));
+    const querySnapshot = await getDocs(q);
     
-    if (error) {
-      console.error('Error finding user by student number:', error);
+    if (querySnapshot.empty) {
+      console.log('No user found with student number:', studentNumber);
       return null;
     }
     
-    console.log('User found by student number:', data);
-    return data;
+    const userData = querySnapshot.docs[0].data();
+    userData.id = querySnapshot.docs[0].id;
+    
+    console.log('User found by student number:', userData);
+    return userData;
   } catch (error) {
     console.error('Error finding user by student number:', error);
     return null;
@@ -135,3 +132,4 @@ export const findUserByStudentNumber = async (studentNumber: string) => {
 };
 
 export default QRCodeComponent;
+
