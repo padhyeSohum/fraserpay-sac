@@ -1,4 +1,3 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
@@ -10,7 +9,8 @@ import {
   setDoc, 
   updateDoc,
   addDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc 
 } from 'firebase/firestore';
 import { Booth, Product, Transaction } from '@/types';
 import { 
@@ -201,6 +201,27 @@ export const addProductToBooth = async (
   }
 };
 
+// Remove a product from a booth
+export const removeProductFromBooth = async (
+  boothId: string,
+  productId: string
+): Promise<boolean> => {
+  try {
+    // Get reference to the product document
+    const productRef = doc(firestore, 'products', productId);
+    
+    // Delete the product document
+    await deleteDoc(productRef);
+    
+    toast.success('Product removed successfully!');
+    return true;
+  } catch (error) {
+    console.error("Error removing product:", error);
+    toast.error('Failed to remove product');
+    return false;
+  }
+};
+
 // Find a user by student number
 export const findUserByStudentNumber = async (studentNumber: string): Promise<any> => {
   try {
@@ -225,5 +246,26 @@ export const findUserByStudentNumber = async (studentNumber: string): Promise<an
     console.error("Error finding user:", error);
     toast.error('Failed to find student');
     return null;
+  }
+};
+
+// Get booth leaderboard data
+export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
+  try {
+    // Fetch all booths
+    const booths = await fetchAllBooths();
+    
+    // Calculate earnings for each booth
+    const leaderboardData = booths.map(booth => ({
+      boothId: booth.id,
+      boothName: booth.name,
+      earnings: booth.totalEarnings || 0
+    }));
+    
+    // Sort by earnings in descending order
+    return leaderboardData.sort((a, b) => b.earnings - a.earnings);
+  } catch (error) {
+    console.error("Error getting leaderboard data:", error);
+    return [];
   }
 };
