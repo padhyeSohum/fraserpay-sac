@@ -51,13 +51,14 @@ export interface TransactionContextProps {
   getBoothsByUserId: (userId: string) => Booth[];
   joinBooth: (pinCode: string, userId: string) => Promise<boolean>;
   fetchAllBooths: () => Promise<Booth[]>;
-  deleteBooth: (boothId: string, userId: string) => Promise<boolean>;
+  deleteBooth: (boothId: string) => Promise<boolean>;
   booths: Booth[];
   
   // Product management
-  addProductToBooth: (boothId: string, product: Partial<Product>) => Promise<string>;
+  addProductToBooth: (boothId: string, product: Partial<Product>) => Promise<boolean>;
   deleteProduct: (boothId: string, productId: string) => Promise<boolean>;
   updateProduct: (boothId: string, productId: string, updates: Partial<Product>) => Promise<boolean>;
+  removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   
   // Transaction management
   recordTransaction: (buyerId: string, buyerName: string, products: { productId: string; productName: string; quantity: number; price: number; }[], amount: number, paymentMethod: PaymentMethod, boothId?: string, boothName?: string) => Promise<boolean>;
@@ -100,9 +101,10 @@ const defaultContext: TransactionContextProps = {
   deleteBooth: async () => false,
   booths: [],
   
-  addProductToBooth: async () => "",
+  addProductToBooth: async () => false,
   deleteProduct: async () => false,
   updateProduct: async () => false,
+  removeProductFromBooth: async () => false,
   
   recordTransaction: async () => false,
   addFunds: async () => ({ success: false, message: "" }),
@@ -148,9 +150,9 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   
   // Hook compositions for different functionalities
   const productManagement = useProductManagement();
-  const boothManagement = useBoothManagement(booths, setBooths);
-  const transactionManagement = useTransactionManagement(setRecentTransactions);
-  const transactionUpdates = useTransactionUpdates(booths, setBooths);
+  const boothManagement = useBoothManagement();
+  const transactionManagement = useTransactionManagement();
+  const transactionUpdates = useTransactionUpdates();
   const cartManagement = useCart();
   const paymentProcessing = usePayment();
   const transactionHook = useTransaction();
@@ -163,6 +165,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       try {
         const fetchedBooths = await boothManagement.fetchAllBooths();
         console.log("Loaded booths:", fetchedBooths.length);
+        setBooths(fetchedBooths);
         setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing transaction context:", error);
@@ -298,8 +301,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     return recentTransactions.filter(tx => 
       tx.buyerId === userId || tx.sellerId === userId
     ).sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0);
-      const dateB = new Date(b.createdAt || 0);
+      const dateA = new Date(a.timestamp || 0);
+      const dateB = new Date(b.timestamp || 0);
       return dateB.getTime() - dateA.getTime();
     });
   };
@@ -311,10 +314,49 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     return recentTransactions.filter(tx => 
       tx.boothId === boothId
     ).sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0);
-      const dateB = new Date(b.createdAt || 0);
+      const dateA = new Date(a.timestamp || 0);
+      const dateB = new Date(b.timestamp || 0);
       return dateB.getTime() - dateA.getTime();
     });
+  };
+  
+  // Implementing joinBooth function since it's missing from the useBoothManagement hook
+  const joinBooth = async (pinCode: string, userId: string): Promise<boolean> => {
+    // Implementing a stub for joinBooth since it's not in useBoothManagement
+    try {
+      const boothsCollection = collection(firestore, 'booths');
+      const q = query(boothsCollection, where('pin', '==', pinCode));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        toast.error('Invalid PIN code');
+        return false;
+      }
+      
+      const boothId = querySnapshot.docs[0].id;
+      const boothRef = doc(firestore, 'booths', boothId);
+      
+      // Add user to booth managers
+      await updateDoc(boothRef, {
+        managers: arrayUnion(userId)
+      });
+      
+      // Add booth to user's booth_access array
+      const userRef = doc(firestore, 'users', userId);
+      await updateDoc(userRef, {
+        booth_access: arrayUnion(boothId)
+      });
+      
+      // Refresh booths
+      await boothManagement.fetchAllBooths().then(setBooths);
+      
+      toast.success('Successfully joined booth');
+      return true;
+    } catch (error) {
+      console.error('Error joining booth:', error);
+      toast.error('Failed to join booth');
+      return false;
+    }
   };
   
   const contextValue = useMemo(() => ({
@@ -322,15 +364,23 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     createBooth: boothManagement.createBooth,
     getBoothById: boothManagement.getBoothById,
     getBoothsByUserId: boothManagement.getBoothsByUserId,
-    joinBooth: boothManagement.joinBooth,
+    joinBooth,
     fetchAllBooths: boothManagement.fetchAllBooths,
     deleteBooth: boothManagement.deleteBooth,
     booths,
     
     // Product management
     addProductToBooth: productManagement.addProductToBooth,
-    deleteProduct: productManagement.deleteProduct,
-    updateProduct: productManagement.updateProduct,
+    removeProductFromBooth: productManagement.removeProductFromBooth,
+    // Add these methods to match the interface
+    deleteProduct: async (boothId: string, productId: string) => {
+      return productManagement.removeProductFromBooth(boothId, productId);
+    },
+    updateProduct: async (boothId: string, productId: string, updates: Partial<Product>) => {
+      // Add a stub for updateProduct since it's not available in useProductManagement
+      console.warn('updateProduct is not implemented');
+      return false;
+    },
     
     // Transaction hooks
     recordTransaction: transactionHook.recordTransaction,
