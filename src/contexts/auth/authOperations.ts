@@ -11,13 +11,34 @@ import { User } from '@/types';
 import { fetchUserData } from './authUtils';
 import { SAC_PIN } from './types';
 
+// Maximum retry attempts for network operations
+const MAX_RETRIES = 3;
+
+// Helper function to retry operations on network failure
+const withRetry = async <T>(operation: () => Promise<T>, retries = MAX_RETRIES): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error: any) {
+    if (error.code === 'auth/network-request-failed' && retries > 0) {
+      console.log(`Network request failed, retrying... (${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`);
+      // Wait for a moment before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return withRetry(operation, retries - 1);
+    }
+    throw error;
+  }
+};
+
 // Login functionality
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
     // First, find the user by student number
     const usersRef = collection(firestore, 'users');
     const q = query(usersRef, where('student_number', '==', studentNumber));
-    const querySnapshot = await getDocs(q);
+    
+    const querySnapshot = await withRetry(async () => {
+      return await getDocs(q);
+    });
     
     if (querySnapshot.empty) {
       throw new Error('Student number not found');
@@ -26,7 +47,9 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     const userData = querySnapshot.docs[0].data();
     
     // Now sign in with email and password
-    const userCredential = await signInWithEmailAndPassword(auth, userData.email, password);
+    const userCredential = await withRetry(async () => {
+      return await signInWithEmailAndPassword(auth, userData.email, password);
+    });
     
     if (!userCredential.user) {
       throw new Error('Failed to authenticate user');
@@ -37,8 +60,12 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     // Fetch and return user data
     return await fetchUserData(userCredential.user.uid);
     
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Login failed');
+  } catch (error: any) {
+    if (error.code === 'auth/network-request-failed') {
+      toast.error('Network connection error. Please check your internet connection and try again.');
+    } else {
+      toast.error(error instanceof Error ? error.message : 'Login failed');
+    }
     console.error(error);
     return null;
   }
@@ -58,8 +85,8 @@ export const registerUser = async (
     const emailQuery = query(usersRef, where('email', '==', email));
     
     const [studentSnapshot, emailSnapshot] = await Promise.all([
-      getDocs(studentQuery),
-      getDocs(emailQuery)
+      withRetry(async () => await getDocs(studentQuery)),
+      withRetry(async () => await getDocs(emailQuery))
     ]);
     
     if (!studentSnapshot.empty || !emailSnapshot.empty) {
@@ -67,7 +94,9 @@ export const registerUser = async (
     }
     
     // Register user with Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await withRetry(async () => {
+      return await createUserWithEmailAndPassword(auth, email, password);
+    });
     
     if (!userCredential.user) {
       throw new Error('Failed to create account');
@@ -77,24 +106,30 @@ export const registerUser = async (
     const qrCode = `USER:${userCredential.user.uid}`;
     
     // Create user profile in Firestore users collection
-    await setDoc(doc(firestore, 'users', userCredential.user.uid), {
-      name,
-      email,
-      student_number: studentNumber,
-      role: 'student',
-      tickets: 0,
-      booth_access: [], // Ensure this is an empty array, not undefined
-      qr_code: qrCode || "", // Ensure qr_code is never null or undefined
-      created_at: new Date().toISOString()
+    await withRetry(async () => {
+      return await setDoc(doc(firestore, 'users', userCredential.user.uid), {
+        name,
+        email,
+        student_number: studentNumber,
+        role: 'student',
+        tickets: 0,
+        booth_access: [], // Ensure this is an empty array, not undefined
+        qr_code: qrCode || "", // Ensure qr_code is never null or undefined
+        created_at: new Date().toISOString()
+      });
     });
     
     toast.success('Registration successful!');
     return true;
     
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Registration failed');
+  } catch (error: any) {
+    if (error.code === 'auth/network-request-failed') {
+      toast.error('Network connection error. Please check your internet connection and try again.');
+    } else {
+      toast.error(error instanceof Error ? error.message : 'Registration failed');
+    }
     console.error(error);
-    return false;
+    throw error; // Re-throw to allow the calling code to handle it
   }
 };
 
@@ -116,7 +151,9 @@ export const verifySACAccess = async (pin: string, userId: string): Promise<bool
     try {
       // Update user role to SAC in Firestore
       const userRef = doc(firestore, 'users', userId);
-      await updateDoc(userRef, { role: 'sac' });
+      await withRetry(async () => {
+        return await updateDoc(userRef, { role: 'sac' });
+      });
       
       toast.success('SAC access granted');
       return true;
@@ -139,7 +176,10 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
     // Find booth with matching PIN
     const boothsRef = collection(firestore, 'booths');
     const q = query(boothsRef, where('pin', '==', pin));
-    const querySnapshot = await getDocs(q);
+    
+    const querySnapshot = await withRetry(async () => {
+      return await getDocs(q);
+    });
     
     if (querySnapshot.empty) {
       console.error("No booth found with that PIN");
@@ -166,14 +206,18 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
     
     // Update user's booth access in Firestore
     const userRef = doc(firestore, 'users', userId);
-    await updateDoc(userRef, { booth_access: updatedBoothAccess });
+    await withRetry(async () => {
+      return await updateDoc(userRef, { booth_access: updatedBoothAccess });
+    });
     
     // Add user to booth members if members array exists
     if (boothData.members !== undefined) {
       const updatedMembers = [...(boothData.members || []), userId];
       
       const boothRef = doc(firestore, 'booths', boothId);
-      await updateDoc(boothRef, { members: updatedMembers });
+      await withRetry(async () => {
+        return await updateDoc(boothRef, { members: updatedMembers });
+      });
     }
     
     console.log("User successfully joined booth:", boothId);

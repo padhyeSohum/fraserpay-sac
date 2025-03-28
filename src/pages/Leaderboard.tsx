@@ -1,86 +1,83 @@
 
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useTransactions } from '@/contexts/transactions';
-import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, Award, Medal } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const Leaderboard = () => {
   const { getLeaderboard } = useTransactions();
-  const navigate = useNavigate();
-  
-  const leaderboard = getLeaderboard();
+  const [leaderboardData, setLeaderboardData] = useState<{ boothId: string; boothName: string; earnings: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getLeaderboard();
+        setLeaderboardData(data);
+      } catch (error) {
+        console.error('Error fetching leaderboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLeaderboardData();
+  }, [getLeaderboard]);
+
+  const getIcon = (position: number) => {
+    switch (position) {
+      case 0:
+        return <Trophy className="h-8 w-8 text-amber-500" />;
+      case 1:
+        return <Award className="h-8 w-8 text-slate-400" />;
+      case 2:
+        return <Medal className="h-8 w-8 text-amber-700" />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Layout title="Leaderboard" showBack>
-      <div className="space-y-6 animate-fade-in">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold mb-2">Charity Week Leaderboard</h1>
-          <p className="text-muted-foreground">
-            Current standings of all booths
-          </p>
-        </div>
-        
-        <div className="space-y-4">
-          {leaderboard.map((entry, index) => (
-            <Card 
-              key={entry.boothId}
-              className={`overflow-hidden border-none shadow-md ${
-                index === 0 
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-white' 
-                  : index === 1 
-                    ? 'bg-gradient-to-r from-gray-300 to-gray-200' 
-                    : index === 2 
-                      ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white' 
-                      : 'bg-white'
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold mr-3 ${
-                        index === 0 
-                          ? 'bg-yellow-300 text-yellow-800' 
-                          : index === 1 
-                            ? 'bg-gray-100 text-gray-800' 
-                            : index === 2 
-                              ? 'bg-amber-500 text-amber-900' 
-                              : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                    
-                    <div>
-                      <div className={`font-semibold ${index < 3 ? 'text-white' : ''}`}>
-                        {entry.boothName}
+    <Layout title="Leaderboard">
+      <div className="container mx-auto max-w-4xl py-4">
+        <Card className="border shadow-sm">
+          <CardHeader className="bg-card-header pb-2">
+            <CardTitle className="text-2xl font-bold text-center">Booth Leaderboard</CardTitle>
+            <CardDescription className="text-center">Top performing booths by earnings</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? (
+              <div className="flex justify-center p-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : leaderboardData.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No booth data available yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {leaderboardData.map((booth, index) => (
+                  <div key={booth.boothId}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center justify-center w-8">
+                          {getIcon(index)}
+                          {index > 2 && <span className="font-semibold text-muted-foreground">{index + 1}</span>}
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{booth.boothName}</h3>
+                        </div>
                       </div>
-                      
-                      <div className={`text-sm ${
-                        index === 0 
-                          ? 'text-yellow-100' 
-                          : index === 1 
-                            ? 'text-gray-600' 
-                            : index === 2 
-                              ? 'text-amber-200' 
-                              : 'text-muted-foreground'
-                      }`}>
-                        Ranking: #{index + 1}
-                      </div>
+                      <div className="font-semibold">${booth.earnings.toFixed(2)}</div>
                     </div>
+                    {index < leaderboardData.length - 1 && <Separator className="mt-4" />}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          
-          {leaderboard.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No booths have made sales yet</p>
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

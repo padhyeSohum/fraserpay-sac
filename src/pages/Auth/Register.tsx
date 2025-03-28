@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, AlertTriangle } from 'lucide-react';
 
 const Register = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -18,12 +19,14 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNetworkError(false);
     
     if (!studentNumber || !name || !email || !password || !confirmPassword) {
       toast({
@@ -62,16 +65,28 @@ const Register = () => {
       setEmail('');
       setPassword('');
       setConfirmPassword('');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "There was an error creating your account",
-        variant: "destructive"
-      });
+      // Check for network error specifically
+      if (error.code === 'auth/network-request-failed') {
+        setNetworkError(true);
+      } else {
+        toast({
+          title: "Registration failed",
+          description: error instanceof Error ? error.message : "There was an error creating your account",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const retryConnection = () => {
+    setNetworkError(false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const logo = (
@@ -99,7 +114,25 @@ const Register = () => {
             </CardHeader>
             
             <CardContent>
-              {success ? (
+              {networkError ? (
+                <div className="space-y-4">
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-700">
+                      <p className="font-semibold mb-2">Network connection error</p>
+                      <p>Unable to connect to authentication server. Please check your internet connection and try again.</p>
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={retryConnection}
+                      className="bg-brand-600 hover:bg-brand-700"
+                    >
+                      Retry Connection
+                    </Button>
+                  </div>
+                </div>
+              ) : success ? (
                 <div className="space-y-4">
                   <Alert className="bg-green-50 border-green-200">
                     <InfoIcon className="h-4 w-4 text-green-600" />

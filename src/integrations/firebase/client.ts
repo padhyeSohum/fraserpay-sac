@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCfUi-2emJm69P27RxWsKgm9Cipm-XHi74",
   authDomain: "fraserpay-sac.firebaseapp.com",
   projectId: "fraserpay-sac",
-  storageBucket: "fraserpay-sac.firebasestorage.app",
+  storageBucket: "fraserpay-sac.appspot.com", // Fixed storage bucket URL
   messagingSenderId: "1076398745844",
   appId: "1:1076398745844:web:7aa0f09d05611d96a496a1"
 };
@@ -18,13 +18,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-// Enable local emulators for development
+// Enable local emulators for development - using conditional checks to prevent connection errors
 if (import.meta.env.DEV) {
   try {
-    // Uncomment these lines to use local emulators
-    connectAuthEmulator(auth, "http://localhost:9099");
-    connectFirestoreEmulator(firestore, "localhost", 8080);
-    console.log("Firebase emulators connected");
+    // Check if we're running locally and not in a deployed environment
+    if (window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1') {
+      // Uncomment these lines to use local emulators
+      // connectAuthEmulator(auth, "http://localhost:9099");
+      // connectFirestoreEmulator(firestore, "localhost", 8080);
+      console.log("Firebase emulators connection ready");
+    } else {
+      console.log("Not connecting to emulators in non-localhost environment");
+    }
   } catch (error) {
     console.error("Error connecting to Firebase emulators:", error);
   }
