@@ -1,12 +1,13 @@
 
 import { toast } from 'sonner';
-import { supabase, clearSupabaseAuth } from '@/integrations/supabase/client';
+import { auth, clearFirebaseAuth } from '@/integrations/firebase/client';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 // Utility to force reset authentication state - useful when stuck
 export const resetAuthState = async () => {
   try {
     console.log("Resetting authentication state...");
-    await clearSupabaseAuth();
+    await clearFirebaseAuth();
     
     // Force page reload to clear any in-memory state
     window.location.href = '/login';
@@ -19,12 +20,12 @@ export const resetAuthState = async () => {
   }
 };
 
-// Check if Supabase session exists (for debugging)
+// Check if Firebase auth session exists (for debugging)
 export const checkSessionExists = async () => {
   try {
-    const { data } = await supabase.auth.getSession();
-    console.log("Current session:", data.session ? "Exists" : "None");
-    return !!data.session;
+    const currentUser = auth.currentUser;
+    console.log("Current session:", currentUser ? "Exists" : "None");
+    return !!currentUser;
   } catch (error) {
     console.error("Error checking session:", error);
     return false;
@@ -35,17 +36,12 @@ export const checkSessionExists = async () => {
 export const manualSignIn = async (email: string, password: string) => {
   try {
     // First clear any existing auth state
-    await clearSupabaseAuth();
+    await clearFirebaseAuth();
     
     // Then attempt to sign in
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
-    if (error) throw error;
-    
-    console.log("Manual sign in successful:", data);
+    console.log("Manual sign in successful:", userCredential.user);
     return true;
   } catch (error) {
     console.error("Manual sign in failed:", error);

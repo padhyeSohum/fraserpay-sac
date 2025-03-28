@@ -1,41 +1,26 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { auth, firestore } from '@/integrations/firebase/client';
+import { doc, getDoc } from 'firebase/firestore';
 import { User, UserRole } from '@/types';
+import { transformFirebaseUser } from '@/utils/firebase';
 
-// Transform user data from Supabase to our app's User type
-export const transformUserData = (userData: any): User => {
-  return {
-    id: userData.id,
-    studentNumber: userData.student_number,
-    name: userData.name, 
-    email: userData.email,
-    role: userData.role as UserRole,
-    balance: userData.tickets / 100, // Convert from cents to dollars
-    favoriteProducts: [],
-    booths: userData.booth_access || []
-  };
-};
-
-// Fetch user data from Supabase
+// Fetch user data from Firestore
 export const fetchUserData = async (userId: string): Promise<User | null> => {
   try {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
     
-    if (userError) {
-      console.error('Error fetching user data:', userError);
+    if (!userSnap.exists()) {
+      console.error('No user data found for ID:', userId);
       return null;
     }
     
-    if (userData) {
-      return transformUserData(userData);
-    }
+    const userData = {
+      id: userSnap.id,
+      ...userSnap.data()
+    };
     
-    return null;
+    return transformFirebaseUser(userData);
   } catch (error) {
     console.error('Unexpected error fetching user data:', error);
     return null;

@@ -4,6 +4,7 @@ import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { toast } from 'sonner';
+import { auth } from './integrations/firebase/client';
 
 const App: React.FC = () => {
   const [isReady, setIsReady] = React.useState(false);
@@ -41,7 +42,10 @@ const App: React.FC = () => {
         // Step 1: Measure app performance
         measurePerformance();
         
-        // Step 2: Preload critical resources with timeout
+        // Step 2: Verify Firebase is initialized
+        console.log('Firebase Auth initialized:', !!auth);
+        
+        // Step 3: Preload critical resources with timeout
         try {
           await Promise.race([
             preloadCriticalResources([
@@ -56,7 +60,7 @@ const App: React.FC = () => {
           // Continue with app initialization despite preloading issues
         }
         
-        // Step 3: Register connectivity listeners
+        // Step 4: Register connectivity listeners
         registerConnectivityListeners(
           // Online callback
           () => {

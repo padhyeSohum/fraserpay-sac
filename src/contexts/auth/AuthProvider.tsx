@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
-import { Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/integrations/firebase/client';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { toast } from 'sonner';
 import { AuthContextType } from './types';
 import { fetchUserData } from './authUtils';
@@ -19,7 +19,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
@@ -27,88 +27,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Log auth state for debugging
   useEffect(() => {
-    console.log('Auth state:', { isLoading, session: session?.user?.id || null, user: user?.id || null, authInitialized });
-  }, [isLoading, session, user, authInitialized]);
+    console.log('Auth state:', { 
+      isLoading, 
+      authUser: authUser?.uid || null, 
+      user: user?.id || null, 
+      authInitialized 
+    });
+  }, [isLoading, authUser, user, authInitialized]);
 
   useEffect(() => {
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log("Auth state changed:", event, currentSession?.user?.id);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser?.uid);
+      
+      if (!mounted) return;
+      
+      if (firebaseUser) {
+        setAuthUser(firebaseUser);
         
-        if (!mounted) return;
-        
-        if (currentSession) {
-          setSession(currentSession);
+        try {
+          const userData = await fetchUserData(firebaseUser.uid);
           
-          try {
-            const userData = await fetchUserData(currentSession.user.id);
-            
-            if (mounted) {
-              setUser(userData);
-              setIsLoading(false);
-              setAuthInitialized(true);
-            }
-            
-            // Only navigate on SIGNED_IN event, not on every auth state change
-            if (event === 'SIGNED_IN' && mounted) {
-              console.log("User signed in, navigating based on role:", userData?.role);
-              // Let AppRoutes handle the navigation based on role
-            }
-          } catch (error) {
-            console.error('Error in auth state change handler:', error);
-            if (mounted) {
-              setIsLoading(false);
-              setAuthInitialized(true);
-            }
-          }
-        } else {
           if (mounted) {
-            setUser(null);
-            setSession(null);
+            setUser(userData);
             setIsLoading(false);
             setAuthInitialized(true);
           }
-          
-          if (event === 'SIGNED_OUT' && mounted) {
-            console.log("User signed out, redirecting to login");
-            // Only navigate if we're not already on login or register
-            if (location.pathname !== '/login' && location.pathname !== '/register') {
-              navigate('/login');
-            }
-          }
-        }
-      }
-    );
-
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-        
-        if (initialSession?.user) {
-          setSession(initialSession);
-          const userData = await fetchUserData(initialSession.user.id);
+        } catch (error) {
+          console.error('Error in auth state change handler:', error);
           if (mounted) {
-            setUser(userData);
+            setIsLoading(false);
+            setAuthInitialized(true);
           }
         }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
+      } else {
         if (mounted) {
+          setUser(null);
+          setAuthUser(null);
           setIsLoading(false);
           setAuthInitialized(true);
         }
+        
+        // Only navigate if we're not already on login or register
+        if (location.pathname !== '/login' && location.pathname !== '/register') {
+          console.log("User signed out, redirecting to login");
+          navigate('/login');
+        }
       }
-    };
-    
-    checkSession();
+    });
 
     // Add timeout to ensure auth always initializes
     authTimeout = setTimeout(() => {
@@ -122,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       mounted = false;
       clearTimeout(authTimeout);
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [navigate, location.pathname]);
 
@@ -151,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const success = await logoutUser();
       if (success) {
         setUser(null);
-        setSession(null);
+        setAuthUser(null);
         navigate('/login');
       }
       return success;
@@ -227,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifySACPin,
         verifyBoothPin,
         joinBooth,
-        session,
+        session: authUser,
         updateUserData
       }}
     >
