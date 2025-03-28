@@ -3,14 +3,14 @@ import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
-// Firebase configuration - replace with your own config 
+// Firebase configuration with your actual credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyBYp-nGW6VZ5thQQeIU01YJ5-WqefvXU9c",
-  authDomain: "fraser-pay-demo.firebaseapp.com",
-  projectId: "fraser-pay-demo",
-  storageBucket: "fraser-pay-demo.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:1234567890abcdef"
+  apiKey: "AIzaSyCfUi-2emJm69P27RxWsKgm9Cipm-XHi74",
+  authDomain: "fraserpay-sac.firebaseapp.com",
+  projectId: "fraserpay-sac",
+  storageBucket: "fraserpay-sac.firebasestorage.app",
+  messagingSenderId: "1076398745844",
+  appId: "1:1076398745844:web:7aa0f09d05611d96a496a1"
 };
 
 // Initialize Firebase
