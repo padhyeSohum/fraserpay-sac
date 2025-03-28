@@ -22,7 +22,7 @@ export interface TransactionContextType {
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
   getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
-  getLeaderboard: () => { boothId: string; boothName: string; earnings: number }[];
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number }[]>;
   recentTransactions: Transaction[];
   
   // Cart management

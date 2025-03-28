@@ -2,6 +2,7 @@
 import { User, Booth, Product, Transaction } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { transformDatabaseBooth, transformDatabaseProduct } from '@/utils/supabase';
 
 export const findUserByStudentNumber = async (studentNumber: string): Promise<User | null> => {
   try {
@@ -74,7 +75,8 @@ export const fetchAllBooths = async (): Promise<Booth[]> => {
       pin: booth.pin,
       managers: booth.members || [],
       products: [],
-      totalEarnings: booth.sales ? booth.sales / 100 : 0
+      totalEarnings: booth.sales ? booth.sales / 100 : 0,
+      transactions: []
     }));
   } catch (error) {
     console.error('Error in fetchAllBooths:', error);
@@ -100,14 +102,24 @@ export const getBoothById = async (id: string): Promise<Booth | null> => {
     if (!data) return null;
     
     // Map Supabase data to our Booth type
+    const products = data.products ? data.products.map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      price: product.price / 100,
+      boothId: product.booth_id,
+      image: product.image,
+      salesCount: 0
+    })) : [];
+    
     return {
       id: data.id,
       name: data.name,
-      description: data.description,
+      description: data.description || '',
       pin: data.pin,
+      products,
       managers: data.members || [],
-      products: data.products || [],
-      totalEarnings: data.sales ? data.sales / 100 : 0
+      totalEarnings: data.sales ? data.sales / 100 : 0,
+      transactions: []
     };
   } catch (error) {
     console.error('Error in getBoothById:', error);
@@ -134,11 +146,12 @@ export const getBoothsByUserId = async (userId: string): Promise<Booth[]> => {
     return data.map(booth => ({
       id: booth.id,
       name: booth.name,
-      description: booth.description,
+      description: booth.description || '',
       pin: booth.pin,
       managers: booth.members || [],
       products: [],
-      totalEarnings: booth.sales ? booth.sales / 100 : 0
+      totalEarnings: booth.sales ? booth.sales / 100 : 0,
+      transactions: []
     }));
   } catch (error) {
     console.error('Error in getBoothsByUserId:', error);

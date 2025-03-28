@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
