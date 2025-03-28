@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -13,6 +14,7 @@ import { validateQRCode, getUserFromQRData, findUserByStudentNumber } from '@/ut
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import QRCodeScanner from '@/components/QRCodeScanner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BoothSell = () => {
   const { boothId } = useParams<{ boothId: string }>();
@@ -97,6 +99,7 @@ const BoothSell = () => {
     }
     
     setIsProcessingQR(true);
+    setScanning(false);
     
     try {
       console.log('Processing QR code:', decodedText);
@@ -115,8 +118,6 @@ const BoothSell = () => {
       
       if (userData) {
         console.log('User data found:', userData);
-        setScanning(false); // Close scanner after successful scan
-        
         setCustomer({
           id: userData.id,
           name: userData.name,
@@ -241,16 +242,6 @@ const BoothSell = () => {
     setStudentNumber('');
   };
 
-  const handleCloseScanner = () => {
-    try {
-      setScanning(false);
-    } catch (error) {
-      console.error('Error closing scanner:', error);
-      // Just ensure the scanner state is set to false
-      setScanning(false);
-    }
-  };
-
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
@@ -339,7 +330,7 @@ const BoothSell = () => {
                   scanning ? (
                     <QRCodeScanner 
                       onScan={handleQRCodeScanned} 
-                      onClose={handleCloseScanner}
+                      onClose={() => setScanning(false)}
                     />
                   ) : (
                     <>

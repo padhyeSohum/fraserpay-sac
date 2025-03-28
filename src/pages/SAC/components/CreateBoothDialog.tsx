@@ -65,8 +65,8 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
       return;
     }
     
-    if (!pin || pin.length !== 6) {
-      toast.error('PIN must be 6 digits');
+    if (!pin) {
+      toast.error('PIN is required for booth access');
       return;
     }
     
@@ -133,18 +133,18 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="pin">PIN (6-digits)</Label>
+            <Label htmlFor="pin">PIN (4-digits)</Label>
             <Input
               id="pin"
               value={pin}
               onChange={(e) => {
-                // Allow only numeric input and limit to 6 chars
-                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                // Allow only numeric input and limit to 4 chars
+                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
                 setPin(value);
               }}
-              placeholder="Enter 6-digit PIN"
+              placeholder="Enter 4-digit PIN"
               required
-              maxLength={6}
+              maxLength={4}
             />
             <p className="text-sm text-muted-foreground">
               This PIN will be used by booth operators to access the booth.
@@ -208,7 +208,7 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={submitting || isLoading || !name || pin.length !== 6}
+              disabled={submitting || isLoading || !name || !pin}
             >
               {(submitting || isLoading) ? (
                 <>

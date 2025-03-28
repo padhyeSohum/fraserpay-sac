@@ -8,11 +8,10 @@ import { HelpCircle } from 'lucide-react';
 interface TransactionItemProps {
   transaction: Transaction;
   showSupport?: boolean;
-  showBooth?: boolean;
 }
 
-const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupport = false, showBooth = false }) => {
-  const { timestamp, buyerName, amount, type, products, boothName } = transaction;
+const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupport = false }) => {
+  const { timestamp, buyerName, amount, type, products } = transaction;
   
   const formattedTime = formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(timestamp).toLocaleString();
@@ -40,11 +39,6 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, showSupp
           <div className="text-xs text-muted-foreground" title={formattedDate}>
             {formattedTime}
           </div>
-          {showBooth && boothName && (
-            <div className="text-xs text-muted-foreground">
-              Booth: {boothName}
-            </div>
-          )}
           {renderProductList()}
         </div>
         
