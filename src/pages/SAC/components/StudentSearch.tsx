@@ -96,13 +96,14 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     }
     
     setIsProcessing(true);
-    setIsScanning(false);
     
     try {
       // Case insensitive handling of QR code format
       const userData = await getUserFromQRData(decodedText);
       
       if (userData) {
+        setIsScanning(false); // Close scanner after successful scan
+        
         const foundStudent = {
           id: userData.id,
           name: userData.name,
@@ -140,6 +141,16 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
     }
   };
 
+  const handleCloseScanner = () => {
+    try {
+      setIsScanning(false);
+    } catch (error) {
+      console.error('Error closing scanner:', error);
+      // Just ensure the scanner state is set to false
+      setIsScanning(false);
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
@@ -152,7 +163,7 @@ const StudentSearch: React.FC<StudentSearchProps> = ({ onStudentFound }) => {
         {isScanning ? (
           <QRCodeScanner 
             onScan={handleQRCodeScanned} 
-            onClose={() => setIsScanning(false)}
+            onClose={handleCloseScanner}
           />
         ) : (
           <div className="flex flex-col sm:flex-row gap-2">

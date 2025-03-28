@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -26,7 +27,7 @@ import { Plus, Trash2 } from 'lucide-react';
 const BoothSettings = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, addProductToBooth, removeProductFromBooth, deleteBooth } = useTransactions();
+  const { getBoothById, addProductToBooth, deleteProduct, deleteBooth } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -84,6 +85,7 @@ const BoothSettings = () => {
     }
     
     try {
+      console.log('Adding product to booth:', booth.id, newProduct);
       const success = await addProductToBooth(booth.id, {
         name: newProduct.name,
         price
@@ -95,9 +97,10 @@ const BoothSettings = () => {
         
         setNewProduct({ name: '', price: '' });
         setShowAddProductDialog(false);
+        toast.success('Product added successfully');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error adding product:', error);
       toast.error('Failed to add product');
     }
   };
@@ -106,14 +109,15 @@ const BoothSettings = () => {
     if (!booth) return;
     
     try {
-      const success = await removeProductFromBooth(booth.id, productId);
+      const success = await deleteProduct(booth.id, productId);
       
       if (success) {
         const boothData = getBoothById(booth.id);
         setBooth(boothData);
+        toast.success('Product removed successfully');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error removing product:', error);
       toast.error('Failed to remove product');
     }
   };

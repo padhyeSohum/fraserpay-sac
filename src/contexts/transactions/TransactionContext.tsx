@@ -39,7 +39,9 @@ import {
   updateDoc,
   serverTimestamp,
   arrayUnion,
-  deleteDoc
+  deleteDoc,
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -166,6 +168,10 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         const fetchedBooths = await boothManagement.fetchAllBooths();
         console.log("Loaded booths:", fetchedBooths.length);
         setBooths(fetchedBooths);
+        
+        // Also fetch recent transactions for the dashboard
+        await fetchRecentTransactions();
+        
         setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing transaction context:", error);
@@ -174,6 +180,37 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     initializeData();
   }, [isInitialized, boothManagement]);
+  
+  // Fetch recent transactions
+  const fetchRecentTransactions = async () => {
+    try {
+      const transactionsRef = collection(firestore, 'transactions');
+      const q = query(transactionsRef, orderBy('created_at', 'desc'), limit(20));
+      const querySnapshot = await getDocs(q);
+      
+      const transactions = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          buyerId: data.buyer_id,
+          buyerName: data.buyer_name,
+          sellerId: data.seller_id,
+          sellerName: data.seller_name,
+          boothId: data.booth_id,
+          boothName: data.booth_name,
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          products: data.products || [],
+          timestamp: data.created_at?.toDate() || new Date(),
+          type: data.type || 'purchase'
+        } as Transaction;
+      });
+      
+      setRecentTransactions(transactions);
+    } catch (error) {
+      console.error('Error fetching recent transactions:', error);
+    }
+  };
   
   // Process a purchase transaction
   const processPurchase = async (
@@ -256,6 +293,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         
         // Refresh data
         await boothManagement.fetchAllBooths().then(setBooths);
+        await fetchRecentTransactions();
         
         toast.success(`Purchase complete: $${totalAmount.toFixed(2)}`);
         return true;
