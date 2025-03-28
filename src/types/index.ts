@@ -29,6 +29,7 @@ export interface Product {
   name: string;
   price: number;
   boothId: string;
+  description?: string;
   image?: string;
   salesCount?: number;
 }
