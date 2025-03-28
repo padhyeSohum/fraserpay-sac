@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { isPWA, showInstallPrompt } from "@/utils/pwa";
+import { isPWA, setupInstallPrompt, showInstallPrompt } from "@/utils/pwa";
 
 interface PWAInstallPromptProps {
   onClose: () => void;
@@ -22,28 +22,23 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
       return;
     }
 
-    // Setup install prompt event capture
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
-      e.preventDefault();
-      // Store the event so it can be triggered later
-      setDeferredPrompt(e);
-      setCanInstall(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as any);
-
+    console.log("PWA install prompt component mounted");
+    
+    // Setup the install prompt handler
+    setupInstallPrompt(setCanInstall, setDeferredPrompt);
+    
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as any);
+      console.log("PWA install prompt component unmounted");
     };
   }, [isMobile, onClose]);
 
   // If no install is possible or not on mobile, don't render anything
-  if (!isMobile || !canInstall || isPWA()) {
+  if (!canInstall) {
     return null;
   }
 
   const handleInstall = async () => {
+    console.log("Install button clicked, deferredPrompt:", deferredPrompt);
     if (deferredPrompt) {
       const installed = await showInstallPrompt(deferredPrompt);
       if (installed) {
@@ -51,6 +46,8 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
         setDeferredPrompt(null);
       }
       onClose();
+    } else {
+      console.warn("No deferred prompt available when install button clicked");
     }
   };
 

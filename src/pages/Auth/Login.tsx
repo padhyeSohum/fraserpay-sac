@@ -11,7 +11,7 @@ import Layout from '@/components/Layout';
 import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { isPWA } from '@/utils/pwa';
+import { isPWA, showInstallBanner } from '@/utils/pwa';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -23,18 +23,21 @@ const Login = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Effect to show PWA install banner on mobile devices
+  useEffect(() => {
+    // Only show on mobile and when not already in PWA mode
+    if (!isMobile || isPWA()) return;
+    
+    console.log("Login page: Setting up PWA install banner");
+    return showInstallBanner(setShowPWAPrompt, 2000);
+  }, [isMobile]);
+  
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
-      
-      // Show PWA install prompt after login only on mobile and not already in PWA mode
-      if (isMobile && !isPWA()) {
-        setShowPWAPrompt(true);
-      }
-      
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate, isMobile]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

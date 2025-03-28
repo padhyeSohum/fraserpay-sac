@@ -5,34 +5,46 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  '/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png'
 ];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing Service Worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
+        console.log('[Service Worker] Caching app shell');
         return cache.addAll(STATIC_ASSETS);
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('[Service Worker] Install completed');
+        return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('[Service Worker] Install failed:', error);
+      })
   );
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating Service Worker...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log('[Service Worker] Activation completed');
+      return self.clients.claim();
+    })
   );
 });
 
