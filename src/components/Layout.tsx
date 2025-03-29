@@ -47,6 +47,7 @@ const Layout: React.FC<LayoutProps> = ({
     }
   };
 
+  // Define container class based on fullWidth prop
   const containerClass = fullWidth ? 'container-fluid px-4' : 'container';
 
   return (

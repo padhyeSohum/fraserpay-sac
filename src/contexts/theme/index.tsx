@@ -1,48 +1,69 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface ThemeContextType {
-  theme: string;
-  setTheme: (theme: string) => void;
+type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeContextProps {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
+const ThemeContext = createContext<ThemeContextProps>({
   theme: 'light',
   setTheme: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
-export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<string>('light');
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Get stored theme preference or default to system
+    const savedTheme = localStorage.getItem('theme') as Theme;
+    return savedTheme || 'system';
+  });
 
+  // Update theme when it changes
   useEffect(() => {
-    // Check if user has a preference stored
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  const setThemeValue = (newTheme: string) => {
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    const root = window.document.documentElement;
     
-    // Update document classes
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
+    // Remove previous theme classes
+    root.classList.remove('light', 'dark');
+    
+    // Handle system preference
+    if (theme === 'system') {
+      const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+      
+      root.classList.add(systemPreference);
+      localStorage.removeItem('theme');
     } else {
-      document.documentElement.classList.remove('dark');
+      // Apply chosen theme
+      root.classList.add(theme);
+      localStorage.setItem('theme', theme);
     }
+  }, [theme]);
+
+  // Listen for system preference changes
+  useEffect(() => {
+    if (theme !== 'system') return;
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = () => {
+      const root = window.document.documentElement;
+      root.classList.remove('light', 'dark');
+      root.classList.add(mediaQuery.matches ? 'dark' : 'light');
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
+
+  const value = {
+    theme,
+    setTheme,
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme: setThemeValue }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

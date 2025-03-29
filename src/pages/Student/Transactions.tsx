@@ -21,19 +21,25 @@ const Transactions = () => {
       try {
         if (!user) return;
         
-        // Refresh transactions from Firebase first if available
+        // Safely check if refreshTransactions exists and is a function
         if (typeof refreshTransactions === 'function') {
-          await refreshTransactions();
+          try {
+            await refreshTransactions();
+          } catch (refreshError) {
+            console.error('Error refreshing transactions:', refreshError);
+            // Continue with loading available transactions even if refresh fails
+          }
         }
         
         // Load the user transactions
         const userTransactions = loadUserTransactions(user.id);
-        console.log(`Loaded ${userTransactions.length} transactions for user ${user.id}`);
+        console.log(`Loaded ${userTransactions?.length || 0} transactions for user ${user.id}`);
         
-        setTransactions(userTransactions);
+        setTransactions(userTransactions || []);
       } catch (error) {
         console.error('Error loading transactions:', error);
         toast.error('Failed to load transactions');
+        setTransactions([]);
       } finally {
         setIsLoading(false);
       }
@@ -47,7 +53,9 @@ const Transactions = () => {
         // Use a simpler update method for polling to avoid loading indicators
         try {
           const userTransactions = loadUserTransactions(user.id);
-          setTransactions(userTransactions);
+          if (userTransactions) {
+            setTransactions(userTransactions);
+          }
         } catch (error) {
           console.error('Error in transaction polling:', error);
         }
