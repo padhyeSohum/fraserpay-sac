@@ -105,9 +105,7 @@ const BoothJoin: React.FC = () => {
         
         <div className="text-center">
           <h3 className="text-base font-medium mb-2">Need to Create a New Booth?</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            If you need to create a new booth, please contact your SAC representative.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Find the SAC booth and ask a SAC member there to help you out. </p>
           <Button variant="link" onClick={() => navigate('/dashboard')}>
             Return to Dashboard
           </Button>
