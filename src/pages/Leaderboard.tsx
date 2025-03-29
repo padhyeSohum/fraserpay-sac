@@ -1,25 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import { useTransactions } from '@/contexts/transactions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp } from 'lucide-react';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, Award, Medal } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
 const Leaderboard = () => {
   const { getLeaderboard } = useTransactions();
-  const navigate = useNavigate();
-  
-  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<{ boothId: string; boothName: string; earnings: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchLeaderboardData = async () => {
-      setIsLoading(true);
       try {
+        setIsLoading(true);
         const data = await getLeaderboard();
         setLeaderboardData(data);
       } catch (error) {
@@ -29,58 +27,61 @@ const Leaderboard = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchLeaderboardData();
-    
-    // Refresh leaderboard data every 30 seconds
-    const interval = setInterval(fetchLeaderboardData, 30000);
-    return () => clearInterval(interval);
   }, [getLeaderboard]);
-  
+
+  const getIcon = (position: number) => {
+    switch (position) {
+      case 0:
+        return <Trophy className="h-8 w-8 text-amber-500" />;
+      case 1:
+        return <Award className="h-8 w-8 text-slate-400" />;
+      case 2:
+        return <Medal className="h-8 w-8 text-amber-700" />;
+      default:
+        return null;
+    }
+  };
+
+  const handleBackClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
-    <Layout title="Leaderboard" showBack>
-      <div className="space-y-6">
-        <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-brand-500" />
-              <CardTitle>Booth Leaderboard</CardTitle>
-            </div>
+    <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
+      <div className="container mx-auto max-w-4xl py-4">
+        <Card className="border shadow-sm">
+          <CardHeader className="bg-card-header pb-2">
+            <CardTitle className="text-2xl font-bold text-center">Booth Leaderboard</CardTitle>
+            <CardDescription className="text-center">Top performing booths by earnings</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {isLoading ? (
-              <div className="space-y-2">
-                {Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex justify-between py-3">
-                    <Skeleton className="h-6 w-1/3" />
-                    <Skeleton className="h-6 w-1/5" />
+              <div className="flex justify-center p-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : leaderboardData.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No booth data available yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {leaderboardData.map((booth, index) => (
+                  <div key={booth.boothId}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center justify-center w-8">
+                          {getIcon(index)}
+                          {index > 2 && <span className="font-semibold text-muted-foreground">{index + 1}</span>}
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{booth.boothName}</h3>
+                        </div>
+                      </div>
+                      <div className="font-semibold">${booth.earnings.toFixed(2)}</div>
+                    </div>
+                    {index < leaderboardData.length - 1 && <Separator className="mt-4" />}
                   </div>
                 ))}
-              </div>
-            ) : leaderboardData.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rank</TableHead>
-                    <TableHead>Booth</TableHead>
-                    <TableHead className="text-right">Total Sales</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leaderboardData.map((booth, index) => (
-                    <TableRow key={booth.boothId} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell>{booth.boothName}</TableCell>
-                      <TableCell className="text-right">${booth.earnings.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No booths to display</p>
               </div>
             )}
           </CardContent>

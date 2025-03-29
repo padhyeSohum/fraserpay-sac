@@ -1,4 +1,3 @@
-
 import React, { 
   createContext, 
   useContext, 
@@ -40,6 +39,7 @@ import {
   serverTimestamp,
   arrayUnion,
   deleteDoc,
+  onSnapshot,
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -48,7 +48,6 @@ import { fetchAllTransactions } from './transactionService';
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
   getBoothById: (boothId: string) => Booth | undefined;
-  fetchBoothById: (boothId: string) => Promise<Booth | null>; // New direct fetch method
   getBoothsByUserId: (userId: string) => Booth[];
   joinBooth: (pinCode: string, userId: string) => Promise<boolean>;
   fetchAllBooths: () => Promise<Booth[]>;
@@ -72,7 +71,6 @@ export interface TransactionContextProps {
   getUserBooths: (userId: string) => Promise<any[]>;
   loadUserTransactions: (userId: string) => Transaction[];
   loadBoothTransactions: (boothId: string) => Transaction[];
-  refreshTransactions: () => Promise<Transaction[]>;
   
   deleteUser: (userId: string) => Promise<boolean>;
   
@@ -85,14 +83,12 @@ export interface TransactionContextProps {
   processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
   
   recentTransactions: Transaction[];
-  
-  removeBoothFromUser: (userId: string, boothId: string) => Promise<boolean>;
+  isLoading: boolean;
 }
 
 const defaultContext: TransactionContextProps = {
   createBooth: async () => "",
   getBoothById: () => undefined,
-  fetchBoothById: async () => null,
   getBoothsByUserId: () => [],
   joinBooth: async () => false,
   fetchAllBooths: async () => [],
@@ -116,7 +112,6 @@ const defaultContext: TransactionContextProps = {
   getUserBooths: async () => [],
   loadUserTransactions: () => [],
   loadBoothTransactions: () => [],
-  refreshTransactions: async () => [],
   
   deleteUser: async () => false,
   
@@ -129,8 +124,7 @@ const defaultContext: TransactionContextProps = {
   processPurchase: async () => false,
   
   recentTransactions: [],
-  
-  removeBoothFromUser: async () => false,
+  isLoading: false
 };
 
 const TransactionContext = createContext<TransactionContextProps>(defaultContext);
@@ -148,6 +142,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [booths, setBooths] = useState<Booth[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const productManagement = useProductManagement();
   const boothManagement = useBoothManagement();
@@ -161,34 +156,53 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     const initializeData = async () => {
       if (isInitialized) return;
       
+      setIsLoading(true);
       try {
+        console.log("Initializing transaction context data...");
+        
         const fetchedBooths = await boothManagement.fetchAllBooths();
         console.log("Loaded booths:", fetchedBooths.length);
         setBooths(fetchedBooths);
         
-        // Also fetch transactions
-        const transactions = await fetchAllTransactions();
-        setRecentTransactions(transactions);
+        const allTransactions = await fetchAllTransactions();
+        console.log("Loaded transactions:", allTransactions.length);
+        setRecentTransactions(allTransactions);
         
         setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing transaction context:", error);
+        toast.error("Error loading transaction data");
+      } finally {
+        setIsLoading(false);
       }
     };
     
     initializeData();
   }, [isInitialized, boothManagement]);
   
-  const refreshTransactions = async (): Promise<Transaction[]> => {
-    try {
-      const transactions = await fetchAllTransactions();
-      setRecentTransactions(transactions);
-      return transactions;
-    } catch (error) {
-      console.error("Error refreshing transactions:", error);
-      return [];
-    }
-  };
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    console.log("Setting up transaction listener...");
+    const transactionsRef = collection(firestore, 'transactions');
+    const q = query(transactionsRef, orderBy('created_at', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) return;
+      
+      try {
+        console.log("Transaction update detected, refreshing data...");
+        const updatedTransactions = await fetchAllTransactions();
+        setRecentTransactions(updatedTransactions);
+      } catch (error) {
+        console.error("Error refreshing transactions:", error);
+      }
+    }, (error) => {
+      console.error("Error in transaction listener:", error);
+    });
+    
+    return () => unsubscribe();
+  }, [isInitialized]);
   
   const processPurchase = async (
     boothId: string,
@@ -338,55 +352,35 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const joinBooth = async (pinCode: string, userId: string): Promise<boolean> => {
-    if (!pinCode || !userId) {
-      toast.error('Missing pin code or user ID');
-      return false;
-    }
-    
     try {
-      console.log(`Attempting to join booth with PIN: ${pinCode} for user: ${userId}`);
       const boothsCollection = collection(firestore, 'booths');
       const q = query(boothsCollection, where('pin', '==', pinCode));
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        console.log('No booth found with the provided PIN');
         toast.error('Invalid PIN code');
         return false;
       }
       
       const boothId = querySnapshot.docs[0].id;
-      const boothData = querySnapshot.docs[0].data();
-      console.log(`Found booth: ${boothId}, ${boothData.name}`);
-      
-      // Check if user already has access
-      if (boothData.managers && boothData.managers.includes(userId)) {
-        console.log('User already has access to this booth');
-        toast.info('You already have access to this booth');
-        return true;
-      }
-      
       const boothRef = doc(firestore, 'booths', boothId);
+      
       await updateDoc(boothRef, {
-        managers: arrayUnion(userId),
-        updated_at: serverTimestamp()
+        managers: arrayUnion(userId)
       });
       
       const userRef = doc(firestore, 'users', userId);
       await updateDoc(userRef, {
-        booth_access: arrayUnion(boothId),
-        updated_at: serverTimestamp()
+        booth_access: arrayUnion(boothId)
       });
       
-      // Update local state
-      const updatedBooths = await boothManagement.fetchAllBooths();
-      setBooths(updatedBooths);
+      await boothManagement.fetchAllBooths().then(setBooths);
       
-      toast.success(`Successfully joined ${boothData.name}`);
+      toast.success('Successfully joined booth');
       return true;
     } catch (error) {
       console.error('Error joining booth:', error);
-      toast.error('Failed to join booth. Please try again.');
+      toast.error('Failed to join booth');
       return false;
     }
   };
@@ -394,7 +388,6 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const contextValue = useMemo(() => ({
     createBooth: boothManagement.createBooth,
     getBoothById: boothManagement.getBoothById,
-    fetchBoothById: boothManagement.fetchBoothById,
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     joinBooth,
     fetchAllBooths: boothManagement.fetchAllBooths,
@@ -424,21 +417,19 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     loadUserTransactions,
     loadBoothTransactions,
-    refreshTransactions,
     
     deleteUser,
     
-    cart: cartManagement.cart,
-    addToCart: cartManagement.addToCart,
-    removeFromCart: cartManagement.removeFromCart,
-    clearCart: cartManagement.clearCart,
-    updateQuantity: cartManagement.updateQuantity,
+    cart: cartManagement.cart || [],
+    addToCart: cartManagement.addToCart || (() => {}),
+    removeFromCart: cartManagement.removeFromCart || (() => {}),
+    clearCart: cartManagement.clearCart || (() => {}),
+    updateQuantity: cartManagement.updateQuantity || (() => {}),
     
     processPurchase,
     
     recentTransactions,
-    
-    removeBoothFromUser: boothManagement.removeBoothFromUser,
+    isLoading
   }), [
     booths, 
     recentTransactions,
@@ -446,12 +437,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     productManagement, 
     transactionHook,
     cartManagement,
-    refreshTransactions,
-    joinBooth,
-    loadUserTransactions,
-    loadBoothTransactions,
-    deleteUser,
-    processPurchase
+    isLoading
   ]);
   
   return (

@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -10,7 +9,6 @@ import Register from "@/pages/Auth/Register";
 import Dashboard from "@/pages/Student/Dashboard";
 import QRCode from "@/pages/Student/QRCode";
 import Settings from "@/pages/Student/Settings";
-import Transactions from "@/pages/Student/Transactions";
 
 // Booth Pages
 import BoothJoin from "@/pages/Booth/Join";
@@ -46,11 +44,6 @@ export const routes = [
   { 
     path: "/settings", 
     element: <Settings />,
-    protected: true 
-  },
-  { 
-    path: "/transactions", 
-    element: <Transactions />,
     protected: true 
   },
   
@@ -94,6 +87,11 @@ export const routes = [
   { 
     path: "/leaderboard", 
     element: <Leaderboard />,
+    protected: true 
+  },
+  { 
+    path: "/transactions", 
+    element: <Navigate to="/dashboard" replace />,
     protected: true 
   },
   

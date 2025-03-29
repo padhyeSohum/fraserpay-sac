@@ -1,63 +1,60 @@
 
 import React from 'react';
+import { Booth } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface BoothCardProps {
-  booth: {
-    id: string;
-    name: string;
-    description?: string;
-    totalEarnings?: number;
-  };
-  userRole?: 'manager' | 'admin' | 'viewer';
+  booth: Booth;
+  userRole?: 'seller' | 'manager';
   earnings?: number;
   onClick?: () => void;
-  onRemove?: () => void;
+  showProductCount?: boolean;
 }
 
-const BoothCard: React.FC<BoothCardProps> = ({
-  booth,
-  userRole = 'viewer',
+const BoothCard: React.FC<BoothCardProps> = ({ 
+  booth, 
+  userRole,
   earnings = 0,
   onClick,
-  onRemove
+  showProductCount = false
 }) => {
-  const handleRemoveClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card click
-    if (onRemove) {
-      onRemove();
-    }
-  };
-
+  const { name, description, products = [] } = booth;
+  
   return (
     <Card 
-      className="relative overflow-hidden border border-border/50 shadow-sm cursor-pointer transition-all hover:shadow-md"
+      className="border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
       onClick={onClick}
     >
       <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold">{booth.name}</h3>
-            {booth.description && (
-              <p className="text-sm text-muted-foreground truncate">{booth.description}</p>
-            )}
-            <p className="mt-2 text-sm font-medium">
-              Total Sales: ${(booth.totalEarnings || earnings).toFixed(2)}
-            </p>
+        <div className="flex justify-between items-center mb-1">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-medium">
+              {name.charAt(0)}
+            </div>
+            <h3 className="font-medium">{name}</h3>
           </div>
           
-          {onRemove && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleRemoveClick}
-              className="text-muted-foreground hover:text-destructive"
-              aria-label="Remove booth"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          {userRole && (
+            <Badge variant="secondary" className="text-xs capitalize">
+              {userRole}
+            </Badge>
+          )}
+        </div>
+        
+        {description && (
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{description}</p>
+        )}
+        
+        <div className="flex justify-between items-center mt-2">
+          <div className="text-sm text-muted-foreground">
+            {showProductCount ? `${products.length} products` : `$${earnings.toFixed(2)} earned`}
+          </div>
+          
+          {showProductCount && products.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Top: {products.sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))[0].name}
+            </div>
           )}
         </div>
       </CardContent>

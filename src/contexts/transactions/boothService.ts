@@ -6,7 +6,6 @@ import {
   getDocs, 
   query, 
   where, 
-  orderBy, 
   addDoc, 
   updateDoc, 
   arrayUnion, 
@@ -204,35 +203,28 @@ export const getUserBooths = async (userId: string): Promise<Booth[]> => {
   }
 };
 
-// Add the getLeaderboard function to fetch booth earnings data
 export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
   try {
-    console.log('Fetching leaderboard data from Firebase');
-    
     const boothsRef = collection(firestore, 'booths');
     const querySnapshot = await getDocs(boothsRef);
     
-    if (querySnapshot.empty) {
-      console.log('No booths found for leaderboard');
-      return [];
-    }
+    const leaderboardData: { boothId: string; boothName: string; earnings: number }[] = [];
     
-    const leaderboard = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
+    querySnapshot.forEach((doc) => {
+      const boothData = doc.data();
+      leaderboardData.push({
         boothId: doc.id,
-        boothName: data.name || 'Unknown Booth',
-        earnings: (data.sales || 0) / 100 // Convert cents to dollars
-      };
+        boothName: boothData.name,
+        earnings: boothData.totalEarnings || 0
+      });
     });
     
-    // Sort by earnings (descending)
-    leaderboard.sort((a, b) => b.earnings - a.earnings);
+    leaderboardData.sort((a, b) => b.earnings - a.earnings);
     
-    console.log('Leaderboard data fetched successfully:', leaderboard);
-    return leaderboard;
+    return leaderboardData;
   } catch (error) {
     console.error('Error fetching leaderboard data:', error);
+    toast.error('Failed to fetch leaderboard data');
     return [];
   }
 };

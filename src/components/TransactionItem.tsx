@@ -18,8 +18,11 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
 }) => {
   const { timestamp, buyerName, amount, type, products, boothName } = transaction;
   
-  const formattedTime = formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
-  const formattedDate = new Date(timestamp).toLocaleString();
+  // Ensure timestamp is valid - default to current time if invalid
+  const validTimestamp = timestamp && !isNaN(timestamp) ? timestamp : Date.now();
+  
+  const formattedTime = formatDistance(new Date(validTimestamp), new Date(), { addSuffix: true });
+  const formattedDate = new Date(validTimestamp).toLocaleString();
   
   const renderProductList = () => {
     if (!products || products.length === 0) return null;
@@ -40,7 +43,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
     <div className="bg-white rounded-lg shadow-sm border border-border/50 p-4 mb-3 animate-fade-in-scale">
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium">{buyerName}</div>
+          <div className="font-medium">{buyerName || 'Unknown'}</div>
           <div className="text-xs text-muted-foreground" title={formattedDate}>
             {formattedTime}
           </div>
