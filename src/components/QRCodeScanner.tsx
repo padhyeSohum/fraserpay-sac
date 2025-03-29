@@ -21,36 +21,45 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
   const isMountedRef = useRef<boolean>(true); // Track component mount state
 
   useEffect(() => {
-    console.log('Initializing QR code scanner');
-    
     // Set mounted ref to true
     isMountedRef.current = true;
     
-    // Only initialize the scanner if the DOM element exists
-    if (document.getElementById(scannerDivId)) {
+    // Try to initialize scanner with a slight delay to ensure DOM is ready
+    const initTimeout = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      
       try {
+        console.log('Initializing QR code scanner');
+        const scannerElement = document.getElementById(scannerDivId);
+        
+        if (!scannerElement) {
+          console.error('Scanner DOM element not found');
+          setError('Scanner initialization failed. Please try again.');
+          return;
+        }
+        
         const scanner = new Html5Qrcode(scannerDivId);
         scannerRef.current = scanner;
         startScanning(scanner);
       } catch (err) {
         console.error('Error initializing scanner:', err);
-        setError('Failed to initialize camera. Please try again.');
+        setError('Failed to initialize camera. Please check camera permissions and try again.');
       }
-    } else {
-      console.error('Scanner DOM element not found');
-    }
+    }, 500);
 
     // Clean up function
     return () => {
+      clearTimeout(initTimeout);
+      
       // Set mounted ref to false to prevent state updates after unmount
       isMountedRef.current = false;
       
       try {
-        if (scannerRef.current && isScanning) {
+        if (scannerRef.current) {
           console.log('Cleaning up scanner');
           scannerRef.current
             .stop()
-            .catch((err) => console.error('Error stopping scanner:', err));
+            .catch((err) => console.error('Error stopping scanner during cleanup:', err));
         }
       } catch (err) {
         console.error('Error during scanner cleanup:', err);
@@ -83,10 +92,15 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
             setScanFeedback('QR code detected! Processing...');
             stopScanning();
             
-            // Ensure we're passing a clean string to the handler
-            const cleanText = decodedText.trim();
-            console.log('Passing decoded text to handler:', cleanText);
-            onScan(cleanText);
+            // Add a slight delay before calling onScan to ensure UI updates first
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                // Ensure we're passing a clean string to the handler
+                const cleanText = decodedText.trim();
+                console.log('Passing decoded text to handler:', cleanText);
+                onScan(cleanText);
+              }
+            }, 500);
           }
         },
         (errorMessage) => {
@@ -130,6 +144,8 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, onClose }) => {
       onClose();
     } catch (err) {
       console.error('Error handling close:', err);
+      // Force close even if error occurs
+      onClose();
     }
   };
 

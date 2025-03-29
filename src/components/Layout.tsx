@@ -33,8 +33,14 @@ const Layout: React.FC<LayoutProps> = ({
   const { logout } = useAuth();
 
   const handleBack = () => {
-    // Change this to always go back to dashboard instead of previous page
-    navigate('/dashboard');
+    try {
+      // Change this to always go back to dashboard instead of previous page
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to home if navigation fails
+      navigate('/', { replace: true });
+    }
   };
 
   const handleLogout = async () => {
