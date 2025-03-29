@@ -80,6 +80,8 @@ export interface TransactionContextProps {
   processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
   
   recentTransactions: Transaction[];
+  
+  removeBoothFromUser: (userId: string, boothId: string) => Promise<boolean>;
 }
 
 const defaultContext: TransactionContextProps = {
@@ -119,7 +121,9 @@ const defaultContext: TransactionContextProps = {
   
   processPurchase: async () => false,
   
-  recentTransactions: []
+  recentTransactions: [],
+  
+  removeBoothFromUser: async () => false,
 };
 
 const TransactionContext = createContext<TransactionContextProps>(defaultContext);
@@ -387,7 +391,9 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     processPurchase,
     
-    recentTransactions
+    recentTransactions,
+    
+    removeBoothFromUser: boothManagement.removeBoothFromUser,
   }), [
     booths, 
     recentTransactions,

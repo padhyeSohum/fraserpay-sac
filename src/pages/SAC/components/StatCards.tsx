@@ -1,107 +1,70 @@
 
 import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-
-interface StatsData {
-  totalUsers: number;
-  totalBooths: number;
-  totalTransactions: number;
-  totalRevenue: number;
-  totalTickets?: number;
-}
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatsData } from '../Dashboard';
+import { Users, Building, CreditCard, DollarSign } from 'lucide-react';
 
 interface StatCardsProps {
   stats: StatsData;
   isLoading?: boolean;
 }
 
-const StatCards: React.FC<StatCardsProps> = ({ 
-  stats, 
-  isLoading = false 
-}) => {
-  // Use default values if stats are undefined
-  const safeStats = {
-    totalUsers: stats?.totalUsers || 0,
-    totalBooths: stats?.totalBooths || 0,
-    totalTransactions: stats?.totalTransactions || 0,
-    totalRevenue: stats?.totalRevenue || 0,
-    totalTickets: stats?.totalTickets || 0
-  };
-
-  // Format currency properly with two decimal places
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
+const StatCards: React.FC<StatCardsProps> = ({ stats, isLoading = false }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold">Total Transactions</CardTitle>
-          <CardDescription>All transactions in the system</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="h-10 w-24 bg-muted animate-pulse rounded"></div>
-          ) : (
-            <p className="text-4xl font-bold">{safeStats.totalTransactions}</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold">Total Booths</CardTitle>
-          <CardDescription>Active booths in the system</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="h-10 w-24 bg-muted animate-pulse rounded"></div>
-          ) : (
-            <p className="text-4xl font-bold">{safeStats.totalBooths}</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold">Total Users</CardTitle>
-          <CardDescription>Registered users in the system</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="h-10 w-24 bg-muted animate-pulse rounded"></div>
-          ) : (
-            <p className="text-4xl font-bold">{safeStats.totalUsers}</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold">Total Revenue</CardTitle>
-          <CardDescription>All funds processed</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="h-10 w-24 bg-muted animate-pulse rounded"></div>
-          ) : (
-            <p className="text-4xl font-bold">
-              ${formatCurrency(safeStats.totalRevenue)}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <StatCard
+        icon={<Users className="h-5 w-5 text-blue-500" />}
+        title="Total Students"
+        value={stats.totalUsers}
+        isLoading={isLoading}
+      />
+      <StatCard
+        icon={<Building className="h-5 w-5 text-green-500" />}
+        title="Total Booths"
+        value={stats.totalBooths}
+        isLoading={isLoading}
+      />
+      <StatCard
+        icon={<CreditCard className="h-5 w-5 text-purple-500" />}
+        title="Total Funds Added"
+        value={`$${stats.totalTickets.toFixed(2)}`}
+        isLoading={isLoading}
+      />
+      <StatCard
+        icon={<DollarSign className="h-5 w-5 text-brand-500" />}
+        title="Total Sales"
+        value={`$${stats.totalRevenue.toFixed(2)}`}
+        isLoading={isLoading}
+      />
     </div>
+  );
+};
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  isLoading?: boolean;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, isLoading = false }) => {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="bg-primary-50 p-2 rounded-md">{icon}</div>
+        </div>
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-20 mt-1" />
+          ) : (
+            <h3 className="text-2xl font-semibold mt-1">{value}</h3>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -11,9 +11,49 @@ import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const RemoveBoothDialog = ({ isOpen, onOpenChange, onConfirm, boothName }: { 
+  isOpen: boolean, 
+  onOpenChange: (open: boolean) => void, 
+  onConfirm: () => void,
+  boothName: string
+}) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Remove Booth</h2>
+        <p className="mb-6">Are you sure you want to remove <strong>{boothName}</strong> from your dashboard? You can always join again using the PIN code.</p>
+        <div className="flex justify-end gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={() => {
+              onConfirm();
+              onOpenChange(false);
+            }}
+          >
+            Remove
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId } = useTransactions();
+  const { 
+    recentTransactions, 
+    loadUserTransactions, 
+    getBoothsByUserId, 
+    removeBoothFromUser 
+  } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
@@ -22,6 +62,8 @@ const Dashboard = () => {
   const [dataInitialized, setDataInitialized] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [boothToRemove, setBoothToRemove] = useState<any>(null);
   const MAX_RETRIES = 3;
 
   const refreshUserData = useCallback(async () => {
@@ -63,7 +105,6 @@ const Dashboard = () => {
   const refreshUserBooths = useCallback(() => {
     if (!user) return;
     try {
-      // Get latest booths for this user
       const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
       setUserBooths(booths);
@@ -82,7 +123,6 @@ const Dashboard = () => {
       
       await refreshUserData();
       
-      // Get user booths with error handling
       try {
         refreshUserBooths();
       } catch (error) {
@@ -91,7 +131,6 @@ const Dashboard = () => {
         toast.error("Failed to load your booths");
       }
       
-      // Load transactions with error handling
       try {
         const userTxs = loadUserTransactions ? 
           loadUserTransactions(user.id) : 
@@ -131,26 +170,22 @@ const Dashboard = () => {
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
   useEffect(() => {
-    // Initial refresh for immediate data
     refreshUserData();
     refreshUserBooths();
     
-    // Set up polling interval for regular updates
     const intervalId = setInterval(() => {
       refreshUserData();
       refreshUserBooths();
-    }, 15000); // Refresh every 15 seconds
+    }, 15000);
     
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
 
   useEffect(() => {
-    // Listen for any new transactions and refresh booths
     const handleTransactionUpdate = () => {
       refreshUserBooths();
     };
     
-    // Set up a recurring check 
     const transactionCheckId = setInterval(handleTransactionUpdate, 5000);
     
     return () => {
@@ -166,7 +201,6 @@ const Dashboard = () => {
   }, [user?.booths, refreshUserBooths]);
 
   useEffect(() => {
-    // Update transactions when recentTransactions changes
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
@@ -191,6 +225,42 @@ const Dashboard = () => {
 
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
+  };
+
+  const handleRemoveBooth = (booth: any) => {
+    setBoothToRemove(booth);
+    setIsRemoveDialogOpen(true);
+  };
+
+  const confirmRemoveBooth = async () => {
+    if (!user || !boothToRemove) return;
+    
+    try {
+      const success = await removeBoothFromUser(user.id, boothToRemove.id);
+      
+      if (success) {
+        setUserBooths(prevBooths => 
+          prevBooths.filter(b => b.id !== boothToRemove.id)
+        );
+        
+        if (user && user.booths) {
+          const updatedBooths = user.booths.filter(id => id !== boothToRemove.id);
+          updateUserData({
+            ...user,
+            booths: updatedBooths
+          });
+        }
+        
+        toast.success(`${boothToRemove.name} removed from your dashboard`);
+      } else {
+        toast.error('Failed to remove booth');
+      }
+    } catch (error) {
+      console.error('Error removing booth:', error);
+      toast.error('An error occurred while removing the booth');
+    }
+    
+    setBoothToRemove(null);
   };
 
   const logo = (
@@ -284,6 +354,7 @@ const Dashboard = () => {
                   userRole="manager"
                   earnings={booth.totalEarnings}
                   onClick={() => handleBoothCardClick(booth.id)}
+                  onRemove={() => handleRemoveBooth(booth)}
                 />
               ))
             ) : (
@@ -336,6 +407,13 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+      
+      <RemoveBoothDialog 
+        isOpen={isRemoveDialogOpen}
+        onOpenChange={setIsRemoveDialogOpen}
+        onConfirm={confirmRemoveBooth}
+        boothName={boothToRemove?.name || ''}
+      />
     </Layout>
   );
 };
