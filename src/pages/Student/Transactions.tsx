@@ -9,17 +9,22 @@ import { toast } from 'sonner';
 
 const Transactions = () => {
   const { user } = useAuth();
-  const { loadUserTransactions } = useTransactions();
+  const { loadUserTransactions, refreshTransactions } = useTransactions();
   
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const loadTransactions = async () => {
+    const loadTransactionsData = async () => {
       setIsLoading(true);
       
       try {
         if (!user) return;
+        
+        // Refresh transactions from Firebase first if available
+        if (refreshTransactions) {
+          await refreshTransactions();
+        }
         
         // Load the user transactions
         const userTransactions = loadUserTransactions(user.id);
@@ -34,18 +39,23 @@ const Transactions = () => {
       }
     };
     
-    loadTransactions();
+    loadTransactionsData();
     
     // Set up polling to refresh transaction data
     const intervalId = setInterval(() => {
       if (user) {
-        const userTransactions = loadUserTransactions(user.id);
-        setTransactions(userTransactions);
+        // Use a simpler update method for polling to avoid loading indicators
+        try {
+          const userTransactions = loadUserTransactions(user.id);
+          setTransactions(userTransactions);
+        } catch (error) {
+          console.error('Error in transaction polling:', error);
+        }
       }
     }, 15000); // Refresh every 15 seconds
     
     return () => clearInterval(intervalId);
-  }, [user, loadUserTransactions]);
+  }, [user, loadUserTransactions, refreshTransactions]);
   
   return (
     <Layout title="Transaction History" showBack>

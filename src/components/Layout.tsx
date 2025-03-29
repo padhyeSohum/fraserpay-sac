@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, Plus } from 'lucide-react';
@@ -14,6 +15,7 @@ interface LayoutProps {
   showLogout?: boolean;
   showAddButton?: boolean;
   onAddClick?: () => void;
+  fullWidth?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -25,6 +27,7 @@ const Layout: React.FC<LayoutProps> = ({
   showLogout = false,
   showAddButton = false,
   onAddClick,
+  fullWidth = false,
 }) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -79,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
       </header>
-      <main className="container py-12 flex-1">
+      <main className={`${fullWidth ? 'container-fluid px-4' : 'container'} py-12 flex-1`}>
         {children}
       </main>
     </div>
