@@ -4,6 +4,7 @@ import { Transaction } from '@/types';
 import { formatDistance } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { HelpCircle } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -43,7 +44,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
     <div className="bg-white rounded-lg shadow-sm border border-border/50 p-4 mb-3 animate-fade-in-scale">
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium">{buyerName || 'Unknown'}</div>
+          <div className="font-medium">{buyerName || 'Anonymous'}</div>
           <div className="text-xs text-muted-foreground" title={formattedDate}>
             {formattedTime}
           </div>
@@ -57,7 +58,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         
         <div className="flex flex-col items-end">
           <div className="font-semibold text-right">
-            {type === 'fund' ? '+' : '-'}${amount.toFixed(2)}
+            {type === 'fund' ? '+' : '-'}{formatCurrency(amount)}
           </div>
           
           {showSupport && (

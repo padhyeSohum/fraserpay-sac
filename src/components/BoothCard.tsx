@@ -3,6 +3,7 @@ import React from 'react';
 import { Booth } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/utils/format';
 
 interface BoothCardProps {
   booth: Booth;
@@ -48,7 +49,7 @@ const BoothCard: React.FC<BoothCardProps> = ({
         
         <div className="flex justify-between items-center mt-2">
           <div className="text-sm text-muted-foreground">
-            {showProductCount ? `${products.length} products` : `$${earnings.toFixed(2)} earned`}
+            {showProductCount ? `${products.length} products` : `${formatCurrency(earnings)} earned`}
           </div>
           
           {showProductCount && products.length > 0 && (
