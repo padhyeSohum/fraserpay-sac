@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -7,34 +6,28 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-
 const Settings = () => {
-  const { user, logout, verifySACPin } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    logout,
+    verifySACPin
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-
   const handleSACAccess = () => {
     setIsOpen(true);
     setUsername('');
     setPassword('');
     setLoginError('');
   };
-
   const handleLogin = () => {
     // Validate credentials
     if (username === "sacadmin" && password === "codyisabum") {
@@ -53,9 +46,7 @@ const Settings = () => {
       setLoginError("Invalid username or password");
     }
   };
-
-  return (
-    <Layout title="Account Settings" showBack>
+  return <Layout title="Account Settings" showBack>
       <div className="space-y-6 animate-fade-in">
         <Card>
           <CardHeader>
@@ -85,7 +76,7 @@ const Settings = () => {
         <Card>
           <CardHeader>
             <CardTitle>Notifications</CardTitle>
-            <CardDescription>Configure your notification settings</CardDescription>
+            <CardDescription>These features are still in development. Check back soon to try them out :)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between py-2">
@@ -93,7 +84,7 @@ const Settings = () => {
                 <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>Transaction Alerts</span>
               </div>
-              <Button variant="outline" size="sm">Configure</Button>
+              <Button variant="outline" size="sm">Coming soon</Button>
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
@@ -101,7 +92,7 @@ const Settings = () => {
                 <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>Booth Updates</span>
               </div>
-              <Button variant="outline" size="sm">Configure</Button>
+              <Button variant="outline" size="sm">Coming soon</Button>
             </div>
           </CardContent>
         </Card>
@@ -125,21 +116,13 @@ const Settings = () => {
                 <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>SAC Admin Access</span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleSACAccess}
-              >
+              <Button variant="outline" size="sm" onClick={handleSACAccess}>
                 Verify
               </Button>
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              variant="destructive" 
-              className="w-full"
-              onClick={logout}
-            >
+            <Button variant="destructive" className="w-full" onClick={logout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
@@ -158,26 +141,13 @@ const Settings = () => {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input 
-                id="username" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-              />
+              <Input id="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-              />
+              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" />
             </div>
-            {loginError && (
-              <p className="text-sm text-destructive">{loginError}</p>
-            )}
+            {loginError && <p className="text-sm text-destructive">{loginError}</p>}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsOpen(false)}>Cancel</AlertDialogCancel>
@@ -185,8 +155,6 @@ const Settings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Settings;
