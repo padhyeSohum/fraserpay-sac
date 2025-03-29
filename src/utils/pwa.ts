@@ -7,25 +7,25 @@ export const isPWA = (): boolean => {
 
 // Check if the app can be installed (not already installed and on a compatible browser)
 export const canInstallPWA = (): boolean => {
-  return !isPWA() && 'serviceWorker' in navigator && window.BeforeInstallPromptEvent !== undefined;
+  return !isPWA() && 'serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window;
 };
 
 // This function can be used in components to show an install button
 export const setupInstallPrompt = (
   setCanInstall: (value: boolean) => void,
-  setDeferredPrompt: (event: any) => void
+  setDeferredPrompt: (event: BeforeInstallPromptEvent | null) => void
 ) => {
   console.log("Setting up PWA install prompt event handler");
   
   // Store the install prompt event for later use
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
     // Prevent Chrome 67 and earlier from automatically showing the prompt
     e.preventDefault();
     
     console.log("beforeinstallprompt event captured", e);
     
     // Store the event so it can be triggered later
-    setDeferredPrompt(e);
+    setDeferredPrompt(e as BeforeInstallPromptEvent);
     
     // Update UI to show the install button
     setCanInstall(true);
@@ -51,7 +51,7 @@ export const setupInstallPrompt = (
 };
 
 // Show the install prompt
-export const showInstallPrompt = async (deferredPrompt: any): Promise<boolean> => {
+export const showInstallPrompt = async (deferredPrompt: BeforeInstallPromptEvent): Promise<boolean> => {
   if (!deferredPrompt) {
     console.log('No deferred prompt available to show');
     return false;

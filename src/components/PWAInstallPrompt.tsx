@@ -11,7 +11,7 @@ interface PWAInstallPromptProps {
 }
 
 const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const isMobile = useIsMobile();
   
