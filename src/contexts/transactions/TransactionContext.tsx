@@ -38,9 +38,12 @@ import {
   updateDoc,
   serverTimestamp,
   arrayUnion,
-  deleteDoc
+  deleteDoc,
+  onSnapshot,
+  orderBy
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { fetchAllTransactions } from './transactionService';
 
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
@@ -80,6 +83,7 @@ export interface TransactionContextProps {
   processPurchase: (boothId: string, buyerId: string, buyerName: string, sellerId: string, sellerName: string, cartItems: CartItem[], boothName: string) => Promise<boolean>;
   
   recentTransactions: Transaction[];
+  isLoading: boolean;
 }
 
 const defaultContext: TransactionContextProps = {
@@ -119,7 +123,8 @@ const defaultContext: TransactionContextProps = {
   
   processPurchase: async () => false,
   
-  recentTransactions: []
+  recentTransactions: [],
+  isLoading: false
 };
 
 const TransactionContext = createContext<TransactionContextProps>(defaultContext);
@@ -137,6 +142,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [booths, setBooths] = useState<Booth[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const productManagement = useProductManagement();
   const boothManagement = useBoothManagement();
@@ -150,18 +156,53 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     const initializeData = async () => {
       if (isInitialized) return;
       
+      setIsLoading(true);
       try {
+        console.log("Initializing transaction context data...");
+        
         const fetchedBooths = await boothManagement.fetchAllBooths();
         console.log("Loaded booths:", fetchedBooths.length);
         setBooths(fetchedBooths);
+        
+        const allTransactions = await fetchAllTransactions();
+        console.log("Loaded transactions:", allTransactions.length);
+        setRecentTransactions(allTransactions);
+        
         setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing transaction context:", error);
+        toast.error("Error loading transaction data");
+      } finally {
+        setIsLoading(false);
       }
     };
     
     initializeData();
   }, [isInitialized, boothManagement]);
+  
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    console.log("Setting up transaction listener...");
+    const transactionsRef = collection(firestore, 'transactions');
+    const q = query(transactionsRef, orderBy('created_at', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) return;
+      
+      try {
+        console.log("Transaction update detected, refreshing data...");
+        const updatedTransactions = await fetchAllTransactions();
+        setRecentTransactions(updatedTransactions);
+      } catch (error) {
+        console.error("Error refreshing transactions:", error);
+      }
+    }, (error) => {
+      console.error("Error in transaction listener:", error);
+    });
+    
+    return () => unsubscribe();
+  }, [isInitialized]);
   
   const processPurchase = async (
     boothId: string,
@@ -379,22 +420,24 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     deleteUser,
     
-    cart: [],
-    addToCart: () => {},
-    removeFromCart: () => {},
-    clearCart: () => {},
-    updateQuantity: () => {},
+    cart: cartManagement.cart || [],
+    addToCart: cartManagement.addToCart || (() => {}),
+    removeFromCart: cartManagement.removeFromCart || (() => {}),
+    clearCart: cartManagement.clearCart || (() => {}),
+    updateQuantity: cartManagement.updateQuantity || (() => {}),
     
     processPurchase,
     
-    recentTransactions
+    recentTransactions,
+    isLoading
   }), [
     booths, 
     recentTransactions,
     boothManagement, 
     productManagement, 
     transactionHook,
-    cartManagement
+    cartManagement,
+    isLoading
   ]);
   
   return (

@@ -60,9 +60,36 @@ export const transformFirebaseTransaction = (
   dbTransaction: DocumentData, 
   transactionProducts: DocumentData[] = []
 ): Transaction => {
+  let timestamp = Date.now(); // Default to current time
+  
+  // Try to parse the timestamp from Firestore
+  if (dbTransaction.created_at) {
+    try {
+      if (typeof dbTransaction.created_at === 'string') {
+        // Parse ISO string
+        timestamp = new Date(dbTransaction.created_at).getTime();
+      } else if (dbTransaction.created_at.toDate && typeof dbTransaction.created_at.toDate === 'function') {
+        // Handle Firestore Timestamp object
+        timestamp = dbTransaction.created_at.toDate().getTime();
+      } else if (dbTransaction.created_at.seconds) {
+        // Handle Firestore Timestamp fields that are serialized
+        timestamp = dbTransaction.created_at.seconds * 1000;
+      }
+      
+      // Validate timestamp - if invalid, use current time
+      if (isNaN(timestamp)) {
+        console.log('Invalid timestamp found, using current time');
+        timestamp = Date.now();
+      }
+    } catch (e) {
+      console.error('Error parsing timestamp:', e);
+      timestamp = Date.now();
+    }
+  }
+  
   return {
     id: dbTransaction.id,
-    timestamp: dbTransaction.created_at ? new Date(dbTransaction.created_at).getTime() : Date.now(),
+    timestamp: timestamp,
     buyerId: dbTransaction.student_id,
     buyerName: dbTransaction.student_name,
     sellerId: dbTransaction.booth_id || undefined,

@@ -7,16 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import { toast } from 'sonner';
+import { Transaction } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 const BoothTransactions = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, loadBoothTransactions } = useTransactions();
+  const { getBoothById, loadBoothTransactions, isLoading } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
-  const [transactions, setTransactions] = useState<ReturnType<typeof loadBoothTransactions>>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState('transactions');
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (boothId) {
@@ -24,8 +28,20 @@ const BoothTransactions = () => {
       setBooth(boothData);
       
       if (boothData) {
-        const boothTransactions = loadBoothTransactions(boothId);
-        setTransactions(boothTransactions);
+        setLoadingTransactions(true);
+        setError(null);
+        
+        try {
+          const boothTransactions = loadBoothTransactions(boothId);
+          console.log(`Loaded ${boothTransactions.length} transactions for booth ${boothId}`);
+          setTransactions(boothTransactions);
+        } catch (err) {
+          console.error('Error loading booth transactions:', err);
+          setError('Failed to load transactions');
+          toast.error('Failed to load transactions');
+        } finally {
+          setLoadingTransactions(false);
+        }
       }
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
@@ -80,7 +96,16 @@ const BoothTransactions = () => {
               Showing all transactions for this booth
             </div>
             
-            {transactions.length > 0 ? (
+            {loadingTransactions || isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading transactions...</span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-destructive">
+                <p>{error}</p>
+              </div>
+            ) : transactions.length > 0 ? (
               <div className="space-y-3">
                 {transactions.map((transaction) => (
                   <TransactionItem 
