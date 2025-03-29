@@ -227,6 +227,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       const transactionData = {
         booth_id: boothId,
         booth_name: boothName,
+        student_id: buyerId,
+        student_name: buyerName,
         buyer_id: buyerId,
         buyer_name: buyerName,
         seller_id: sellerId,

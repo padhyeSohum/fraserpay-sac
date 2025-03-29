@@ -91,7 +91,7 @@ export const transformFirebaseTransaction = (
     id: dbTransaction.id,
     timestamp: timestamp,
     buyerId: dbTransaction.student_id,
-    buyerName: dbTransaction.student_name || 'Unknown',
+    buyerName: dbTransaction.buyer_name || dbTransaction.student_name || 'Unknown',
     sellerId: dbTransaction.booth_id || undefined,
     sellerName: undefined,
     boothId: dbTransaction.booth_id || undefined,
@@ -100,9 +100,9 @@ export const transformFirebaseTransaction = (
       productId: tp.product_id,
       productName: tp.product_name,
       quantity: tp.quantity,
-      price: tp.price / 100 // Database stores in cents
+      price: tp.price // Don't divide by 100 as requested
     })),
-    amount: dbTransaction.amount / 100, // Database stores in cents
+    amount: dbTransaction.amount, // Don't divide by 100 as requested
     type: dbTransaction.type,
     paymentMethod: dbTransaction.type === 'fund' ? 'cash' : undefined,
     sacMemberId: dbTransaction.sac_member || undefined,
