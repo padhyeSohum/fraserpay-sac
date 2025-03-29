@@ -19,7 +19,6 @@ import {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // React hooks must be called at the top level of a React function component
   const [user, setUser] = useState<User | null>(null);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,11 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate, location.pathname]);
 
-  // Authentication methods
   const login = async (studentNumber: string, password: string) => {
     setIsLoading(true);
     try {
-      await loginUser(studentNumber, password);
+      const loggedInUser = await loginUser(studentNumber, password);
       // Navigation is handled in the auth state change listener
     } finally {
       setIsLoading(false);

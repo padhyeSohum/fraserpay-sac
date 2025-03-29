@@ -21,7 +21,7 @@ import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
 import { firestore } from '@/integrations/firebase/client';
-import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { transformFirebaseUser } from '@/utils/firebase';
 
 export interface StatsData {
@@ -198,13 +198,12 @@ const Dashboard = () => {
       console.log('SAC Dashboard: Loaded transactions from Firebase', txs.length);
       setTransactions(txs);
       
-      const fundTransactions = txs.filter(tx => tx.type === 'fund' && tx.amount > 0);
-      const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+      const totalAmount = txs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
       
       setStats(prev => ({
         ...prev,
         totalTransactions: txs.length,
-        totalRevenue: totalFundAmount / 100
+        totalRevenue: totalAmount / 100
       }));
     } catch (error) {
       console.error('Error loading transactions from Firebase:', error);

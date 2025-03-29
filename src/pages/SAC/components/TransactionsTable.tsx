@@ -13,7 +13,6 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
-import { formatCurrency } from '@/utils/format';
 
 export interface TransactionsTableProps {
   transactions: any[];
@@ -81,6 +80,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     }
   };
 
+  // Format currency properly
+  const formatCurrency = (amount: number) => {
+    return (amount / 100).toFixed(2);
+  };
+  
   // Toggle sort direction
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
@@ -97,7 +101,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
         t.student_name || 'N/A',
         t.booth_name || 'System',
         t.type,
-        formatCurrency(t.amount / 100)
+        formatCurrency(t.amount)
       ].join(','))
     ];
     
@@ -198,7 +202,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                     <TableCell className="font-medium">
                       {formatDate(transaction.created_at)}
                     </TableCell>
-                    <TableCell>{transaction.student_name || 'Anonymous'}</TableCell>
+                    <TableCell>{transaction.student_name || 'N/A'}</TableCell>
                     <TableCell>{transaction.booth_name || 'System'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -218,7 +222,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                       transaction.type === 'refund' ? 'text-red-600' : 
                       'text-slate-900'
                     }`}>
-                      {formatCurrency(transaction.amount / 100)}
+                      ${formatCurrency(transaction.amount)}
                     </TableCell>
                   </TableRow>
                 ))}
