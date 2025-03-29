@@ -22,7 +22,7 @@ const Transactions = () => {
         if (!user) return;
         
         // Refresh transactions from Firebase first if available
-        if (refreshTransactions) {
+        if (typeof refreshTransactions === 'function') {
           await refreshTransactions();
         }
         

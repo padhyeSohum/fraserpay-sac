@@ -47,10 +47,12 @@ const Layout: React.FC<LayoutProps> = ({
     }
   };
 
+  const containerClass = fullWidth ? 'container-fluid px-4' : 'container';
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="shadow-sm bg-white sticky top-0 z-10">
-        <div className="container flex items-center justify-between h-16">
+        <div className={`${containerClass} flex items-center justify-between h-16`}>
           <div className="flex items-center">
             {showBack && (
               <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2">
@@ -82,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
       </header>
-      <main className={`${fullWidth ? 'container-fluid px-4' : 'container'} py-12 flex-1`}>
+      <main className={`${containerClass} py-12 flex-1`}>
         {children}
       </main>
     </div>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -9,6 +10,7 @@ import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { Booth } from '@/types';
 
 const BoothDashboard = () => {
   const { boothId } = useParams<{ boothId: string }>();
@@ -16,29 +18,41 @@ const BoothDashboard = () => {
   const { getBoothById, loadBoothTransactions } = useTransactions();
   const navigate = useNavigate();
   
-  const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
-  const [transactions, setTransactions] = useState<ReturnType<typeof loadBoothTransactions>>([]);
+  const [booth, setBooth] = useState<Booth | null | undefined>(undefined);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (boothId) {
-      const boothData = getBoothById(boothId);
-      setBooth(boothData);
+      setIsLoading(true);
+      setLoadError(null);
       
-      if (boothData) {
-        const boothTransactions = loadBoothTransactions(boothId);
-        setTransactions(boothTransactions);
+      try {
+        const boothData = getBoothById(boothId);
+        setBooth(boothData || null);
+        
+        if (boothData) {
+          const boothTransactions = loadBoothTransactions(boothId);
+          setTransactions(boothTransactions);
+        }
+      } catch (error) {
+        console.error('Error loading booth data:', error);
+        setLoadError('Failed to load booth data');
+      } finally {
+        setIsLoading(false);
       }
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
 
   useEffect(() => {
-    // Check if user has access to this booth
-    if (user && booth && !booth.managers.includes(user.id)) {
+    // Only check access after loading is complete
+    if (!isLoading && user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
     }
-  }, [user, booth, navigate]);
+  }, [user, booth, navigate, isLoading]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -51,6 +65,33 @@ const BoothDashboard = () => {
       navigate(`/booth/${boothId}/settings`);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Layout title="Loading..." showBack>
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Loading booth information...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Layout title="Error" showBack>
+        <div className="text-center py-10">
+          <p className="text-destructive">{loadError}</p>
+          <Button 
+            variant="link" 
+            onClick={() => navigate('/dashboard')}
+            className="mt-4"
+          >
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!booth) {
     return (
@@ -89,7 +130,7 @@ const BoothDashboard = () => {
             <Card className="border-none shadow-md bg-gradient-to-br from-brand-500 to-brand-700 text-white">
               <CardContent className="p-6">
                 <h3 className="text-lg font-medium text-white/80">Total Sales</h3>
-                <p className="text-3xl font-bold">${booth.totalEarnings.toFixed(2)}</p>
+                <p className="text-3xl font-bold">${(booth.totalEarnings || 0).toFixed(2)}</p>
               </CardContent>
             </Card>
             
@@ -147,8 +188,6 @@ const BoothDashboard = () => {
                 </Card>
               )}
             </div>
-            
-            {/* Top Products - Future implementation */}
           </div>
         </TabsContent>
       </Tabs>
