@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -12,36 +11,39 @@ import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
-
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
-  const { login, isAuthenticated, user } = useAuth();
+  const {
+    login,
+    isAuthenticated,
+    user
+  } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const isMobile = useIsMobile();
 
   // Effect to show PWA install banner on mobile devices
   useEffect(() => {
     // Only show on mobile and when not already in PWA mode
     if (!isMobile || isPWA()) return;
-    
     console.log("Login page: Setting up PWA install banner");
     return showInstallBanner(setShowPWAPrompt, 2000);
   }, [isMobile]);
-  
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
-      navigate('/dashboard', { replace: true });
+      navigate('/dashboard', {
+        replace: true
+      });
     }
   }, [isAuthenticated, user, navigate]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!studentNumber || !password) {
       toast({
         title: "Missing information",
@@ -50,9 +52,7 @@ const Login = () => {
       });
       return;
     }
-    
     setIsLoading(true);
-    
     try {
       await login(studentNumber, password);
     } catch (error) {
@@ -66,19 +66,10 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
-  const logo = (
-    <div className="flex items-center justify-center mb-6">
-      <img 
-        src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" 
-        alt="Fraser Pay" 
-        className="w-48 h-auto" 
-      />
-    </div>
-  );
-
-  return (
-    <Layout>
+  const logo = <div className="flex items-center justify-center mb-6">
+      <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
+    </div>;
+  return <Layout>
       <div className="flex flex-col items-center justify-center min-h-[80vh] animate-fade-in">
         {logo}
         
@@ -95,37 +86,15 @@ const Login = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="studentNumber">Student Number</Label>
-                  <Input
-                    id="studentNumber"
-                    type="text"
-                    placeholder="Enter your student number"
-                    value={studentNumber}
-                    onChange={(e) => setStudentNumber(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-white/50"
-                  />
+                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-white/50"
-                  />
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
                 </div>
                 
-                <Button
-                  type="submit"
-                  className="w-full bg-brand-600 hover:bg-brand-700"
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
@@ -141,7 +110,7 @@ const Login = () => {
               
               <div className="flex items-center justify-center text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                <span>Contact SAC if you need help signing in</span>
+                <span className="text-center">Contact SAC if you need help signing in.</span>
               </div>
             </CardFooter>
           </Card>
@@ -149,8 +118,6 @@ const Login = () => {
       </div>
       
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Login;
