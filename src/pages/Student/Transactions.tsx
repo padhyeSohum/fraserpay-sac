@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const Transactions = () => {
   const { user } = useAuth();
-  const { loadUserTransactions, refreshTransactions } = useTransactions();
+  const { loadUserTransactions } = useTransactions();
   
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,10 +21,7 @@ const Transactions = () => {
       try {
         if (!user) return;
         
-        // Refresh the transaction data first
-        await refreshTransactions();
-        
-        // Now load the user transactions
+        // Load the user transactions
         const userTransactions = loadUserTransactions(user.id);
         console.log(`Loaded ${userTransactions.length} transactions for user ${user.id}`);
         
@@ -41,16 +38,14 @@ const Transactions = () => {
     
     // Set up polling to refresh transaction data
     const intervalId = setInterval(() => {
-      refreshTransactions().then(() => {
-        if (user) {
-          const userTransactions = loadUserTransactions(user.id);
-          setTransactions(userTransactions);
-        }
-      });
+      if (user) {
+        const userTransactions = loadUserTransactions(user.id);
+        setTransactions(userTransactions);
+      }
     }, 15000); // Refresh every 15 seconds
     
     return () => clearInterval(intervalId);
-  }, [user, loadUserTransactions, refreshTransactions]);
+  }, [user, loadUserTransactions]);
   
   return (
     <Layout title="Transaction History" showBack>

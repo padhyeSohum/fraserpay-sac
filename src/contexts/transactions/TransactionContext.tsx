@@ -38,9 +38,11 @@ import {
   updateDoc,
   serverTimestamp,
   arrayUnion,
-  deleteDoc
+  deleteDoc,
+  orderBy
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { fetchAllTransactions } from './transactionService';
 
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
@@ -68,6 +70,7 @@ export interface TransactionContextProps {
   getUserBooths: (userId: string) => Promise<any[]>;
   loadUserTransactions: (userId: string) => Transaction[];
   loadBoothTransactions: (boothId: string) => Transaction[];
+  refreshTransactions: () => Promise<Transaction[]>;
   
   deleteUser: (userId: string) => Promise<boolean>;
   
@@ -110,6 +113,7 @@ const defaultContext: TransactionContextProps = {
   getUserBooths: async () => [],
   loadUserTransactions: () => [],
   loadBoothTransactions: () => [],
+  refreshTransactions: async () => [],
   
   deleteUser: async () => false,
   
@@ -158,6 +162,11 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         const fetchedBooths = await boothManagement.fetchAllBooths();
         console.log("Loaded booths:", fetchedBooths.length);
         setBooths(fetchedBooths);
+        
+        // Also fetch transactions
+        const transactions = await fetchAllTransactions();
+        setRecentTransactions(transactions);
+        
         setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing transaction context:", error);
@@ -166,6 +175,17 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     initializeData();
   }, [isInitialized, boothManagement]);
+  
+  const refreshTransactions = async (): Promise<Transaction[]> => {
+    try {
+      const transactions = await fetchAllTransactions();
+      setRecentTransactions(transactions);
+      return transactions;
+    } catch (error) {
+      console.error("Error refreshing transactions:", error);
+      return [];
+    }
+  };
   
   const processPurchase = async (
     boothId: string,
@@ -380,14 +400,15 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     loadUserTransactions,
     loadBoothTransactions,
+    refreshTransactions,
     
     deleteUser,
     
-    cart: [],
-    addToCart: () => {},
-    removeFromCart: () => {},
-    clearCart: () => {},
-    updateQuantity: () => {},
+    cart: cartManagement.cart,
+    addToCart: cartManagement.addToCart,
+    removeFromCart: cartManagement.removeFromCart,
+    clearCart: cartManagement.clearCart,
+    updateQuantity: cartManagement.updateQuantity,
     
     processPurchase,
     
@@ -400,7 +421,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     boothManagement, 
     productManagement, 
     transactionHook,
-    cartManagement
+    cartManagement,
+    refreshTransactions
   ]);
   
   return (

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { Booth } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
@@ -12,6 +13,7 @@ import {
   updateDoc, 
   deleteDoc,
   arrayRemove,
+  arrayUnion,
   serverTimestamp 
 } from 'firebase/firestore';
 import { toast } from 'sonner';

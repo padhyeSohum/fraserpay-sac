@@ -55,8 +55,6 @@ function App() {
                   color: 'black',
                   border: '1px solid #e2e8f0'
                 },
-                // Prevent duplicate toasts
-                id: (id) => id, // Use the ID to deduplicate
                 duration: 4000
               }}
               closeButton
