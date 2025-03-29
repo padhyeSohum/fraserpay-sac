@@ -91,7 +91,7 @@ export const transformFirebaseTransaction = (
     id: dbTransaction.id,
     timestamp: timestamp,
     buyerId: dbTransaction.student_id,
-    buyerName: dbTransaction.student_name,
+    buyerName: dbTransaction.student_name || 'Unknown',
     sellerId: dbTransaction.booth_id || undefined,
     sellerName: undefined,
     boothId: dbTransaction.booth_id || undefined,

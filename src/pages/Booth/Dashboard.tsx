@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -27,6 +28,7 @@ const BoothDashboard = () => {
       
       if (boothData) {
         const boothTransactions = loadBoothTransactions(boothId);
+        console.log('Loaded booth transactions:', boothTransactions);
         setTransactions(boothTransactions);
       }
     }
@@ -147,8 +149,6 @@ const BoothDashboard = () => {
                 </Card>
               )}
             </div>
-            
-            {/* Top Products - Future implementation */}
           </div>
         </TabsContent>
       </Tabs>
