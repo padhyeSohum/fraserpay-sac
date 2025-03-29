@@ -232,22 +232,8 @@ const BoothSettings = () => {
             </Card>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Booth Managers</CardTitle>
-                <CardDescription>Users who can manage this booth</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {boothManagers.length > 0 ? <div className="space-y-2">
-                    {boothManagers.map(manager => <div key={manager.id} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
-                        <div>
-                          <div className="font-medium">{manager.name}</div>
-                          <div className="text-sm text-muted-foreground">{manager.studentNumber}</div>
-                        </div>
-                      </div>)}
-                  </div> : <div className="text-center py-4 text-muted-foreground">
-                    <p>No managers assigned yet</p>
-                  </div>}
-              </CardContent>
+              
+              
             </Card>
           </div>
         </TabsContent>
