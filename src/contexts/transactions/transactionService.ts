@@ -13,7 +13,6 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     const transactionsSnapshot = await getDocs(q);
     
     if (transactionsSnapshot.empty) {
-      console.log('No transactions found in Firebase');
       return [];
     }
     
@@ -34,16 +33,8 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
         return productData;
       });
       
-      // Transform to our Transaction type and ensure valid timestamp
-      const transformedTransaction = transformFirebaseTransaction(transactionData, transactionProducts);
-      
-      // Ensure timestamp is valid (use current time if missing or invalid)
-      if (!transformedTransaction.timestamp || isNaN(transformedTransaction.timestamp)) {
-        transformedTransaction.timestamp = Date.now();
-        console.log(`Fixed invalid timestamp for transaction: ${transformedTransaction.id}`);
-      }
-      
-      transactions.push(transformedTransaction);
+      // Transform to our Transaction type
+      transactions.push(transformFirebaseTransaction(transactionData, transactionProducts));
     }
     
     console.log('Transactions data received:', transactions.length, 'records');

@@ -6,53 +6,51 @@ import { useTransactions } from '@/contexts/transactions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Transaction } from '@/types';
-import { Loader2 } from 'lucide-react';
 
 const BoothTransactions = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, loadBoothTransactions, isLoading } = useTransactions();
+  const { getBoothById, loadBoothTransactions } = useTransactions();
   const navigate = useNavigate();
   
-  const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [booth, setBooth] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('transactions');
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (boothId) {
-      const boothData = getBoothById(boothId);
-      setBooth(boothData);
+      setIsLoading(true);
+      setLoadError(null);
       
-      if (boothData) {
-        setLoadingTransactions(true);
-        setError(null);
+      try {
+        const boothData = getBoothById(boothId);
+        setBooth(boothData || null);
         
-        try {
+        if (boothData) {
           const boothTransactions = loadBoothTransactions(boothId);
-          console.log(`Loaded ${boothTransactions.length} transactions for booth ${boothId}`);
           setTransactions(boothTransactions);
-        } catch (err) {
-          console.error('Error loading booth transactions:', err);
-          setError('Failed to load transactions');
-          toast.error('Failed to load transactions');
-        } finally {
-          setLoadingTransactions(false);
         }
+      } catch (error) {
+        console.error('Error loading booth data:', error);
+        setLoadError('Failed to load booth data');
+      } finally {
+        setIsLoading(false);
       }
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
 
   useEffect(() => {
-    // Check if user has access to this booth
-    if (user && booth && !booth.managers.includes(user.id)) {
+    // Only check access after loading is complete
+    if (!isLoading && user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
     }
-  }, [user, booth, navigate]);
+  }, [user, booth, navigate, isLoading]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -66,11 +64,43 @@ const BoothTransactions = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Layout title="Loading..." showBack>
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Loading transactions...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Layout title="Error" showBack>
+        <div className="text-center py-10">
+          <p className="text-destructive">{loadError}</p>
+          <Button 
+            onClick={() => navigate('/dashboard')} 
+            className="mt-4"
+          >
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
   if (!booth) {
     return (
       <Layout title="Booth not found" showBack>
         <div className="text-center py-10">
           <p className="text-muted-foreground">The booth you're looking for could not be found</p>
+          <Button 
+            onClick={() => navigate('/dashboard')} 
+            className="mt-4"
+          >
+            Return to Dashboard
+          </Button>
         </div>
       </Layout>
     );
@@ -96,16 +126,7 @@ const BoothTransactions = () => {
               Showing all transactions for this booth
             </div>
             
-            {loadingTransactions || isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Loading transactions...</span>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8 text-destructive">
-                <p>{error}</p>
-              </div>
-            ) : transactions.length > 0 ? (
+            {transactions.length > 0 ? (
               <div className="space-y-3">
                 {transactions.map((transaction) => (
                   <TransactionItem 
@@ -116,9 +137,11 @@ const BoothTransactions = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No transactions yet</p>
-              </div>
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  <p>No transactions yet</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </TabsContent>

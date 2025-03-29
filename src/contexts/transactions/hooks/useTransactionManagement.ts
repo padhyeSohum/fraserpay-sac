@@ -7,6 +7,9 @@ import {
 } from '../boothService';
 import { fetchAllTransactions } from '../transactionService';
 import { toast } from 'sonner';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { transformFirebaseTransaction } from '@/utils/firebase';
 
 export interface UseTransactionManagementReturn {
   transactions: Transaction[];
@@ -17,6 +20,7 @@ export interface UseTransactionManagementReturn {
   getSACTransactions: () => Transaction[];
   getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
   getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number }[]>;
+  refreshTransactions: () => Promise<void>;
 }
 
 export const useTransactionManagement = (booths: Booth[]): UseTransactionManagementReturn => {
@@ -24,47 +28,51 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const { user, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    const fetchTransactionsData = async () => {
-      if (!isAuthenticated) return;
-      
-      console.log('Initializing transaction data fetch');
-      try {
-        const allTransactions = await fetchAllTransactions();
-        console.log('Fetched transactions:', allTransactions.length);
-        setTransactions(allTransactions);
-        
-        if (user && allTransactions.length > 0) {
-          const userTxs = allTransactions.filter(t => t.buyerId === user.id);
-          console.log('User transactions:', userTxs.length);
-          setRecentTransactions(userTxs.slice(0, 5));
-        }
-      } catch (error) {
-        console.error('Error in fetchTransactionsData:', error);
-      }
-    };
+  const fetchTransactionsData = async () => {
+    if (!isAuthenticated) return;
     
+    console.log('Initializing transaction data fetch');
+    try {
+      const allTransactions = await fetchAllTransactions();
+      console.log('Fetched transactions:', allTransactions.length);
+      setTransactions(allTransactions);
+      
+      if (user && allTransactions.length > 0) {
+        const userTxs = allTransactions.filter(t => t.buyerId === user.id);
+        console.log('User transactions:', userTxs.length);
+        setRecentTransactions(userTxs.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error in fetchTransactionsData:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchTransactionsData();
   }, [user, isAuthenticated]);
 
-  const loadBoothTransactions = (boothId: string) => {
-    return transactions.filter(t => t.boothId === boothId);
+  const refreshTransactions = async () => {
+    await fetchTransactionsData();
   };
 
-  const loadUserFundsTransactions = () => {
+  const loadBoothTransactions = useCallback((boothId: string) => {
+    return transactions.filter(t => t.boothId === boothId);
+  }, [transactions]);
+
+  const loadUserFundsTransactions = useCallback(() => {
     if (!user) return [];
     return transactions.filter(t => t.type === 'fund' && t.buyerId === user.id);
-  };
+  }, [transactions, user]);
 
-  const loadUserTransactions = (userId: string) => {
+  const loadUserTransactions = useCallback((userId: string) => {
     return transactions.filter(t => t.buyerId === userId);
-  };
+  }, [transactions]);
 
-  const getSACTransactions = () => {
+  const getSACTransactions = useCallback(() => {
     return transactions;
-  };
+  }, [transactions]);
 
-  const getTransactionStats = (boothId: string, dateRange: DateRange): TransactionStats => {
+  const getTransactionStats = useCallback((boothId: string, dateRange: DateRange): TransactionStats => {
     const boothTransactions = transactions.filter(t => 
       t.boothId === boothId && 
       t.type === 'purchase' &&
@@ -104,7 +112,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       topProducts,
       totalSales
     };
-  };
+  }, [transactions]);
 
   const getLeaderboard = useCallback(async () => {
     try {
@@ -124,6 +132,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     loadUserTransactions,
     getSACTransactions,
     getTransactionStats,
-    getLeaderboard
+    getLeaderboard,
+    refreshTransactions
   };
 };
