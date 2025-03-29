@@ -9,16 +9,21 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Booth } from '@/types';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { useTransactions } from '@/contexts/transactions';
 
 interface BoothsListProps {
   booths: Booth[];
   isLoading?: boolean;
+  onHideBooth?: (boothId: string) => void;
 }
 
 const BoothsList: React.FC<BoothsListProps> = ({ 
   booths = [],
-  isLoading = false 
+  isLoading = false,
+  onHideBooth
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
@@ -28,6 +33,14 @@ const BoothsList: React.FC<BoothsListProps> = ({
       ...prev,
       [boothId]: !prev[boothId]
     }));
+  };
+
+  const handleHideBooth = (boothId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (onHideBooth) {
+      onHideBooth(boothId);
+      toast.success("Booth removed from your view");
+    }
   };
 
   const filteredBooths = booths.filter(booth => 
@@ -89,6 +102,17 @@ const BoothsList: React.FC<BoothsListProps> = ({
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
+                    {onHideBooth && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => handleHideBooth(booth.id, e)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        aria-label="Remove booth"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

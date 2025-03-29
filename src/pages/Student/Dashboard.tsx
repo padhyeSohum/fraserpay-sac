@@ -7,13 +7,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
-import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
+import { QrCode, ListOrdered, Settings, Plus, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, updateUserData } = useAuth();
-  const { recentTransactions, loadUserTransactions, getBoothsByUserId } = useTransactions();
+  const { 
+    recentTransactions, 
+    loadUserTransactions, 
+    getBoothsByUserId, 
+    booths,
+    removeBoothFromUser
+  } = useTransactions();
   const navigate = useNavigate();
   
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
@@ -63,7 +69,6 @@ const Dashboard = () => {
   const refreshUserBooths = useCallback(() => {
     if (!user) return;
     try {
-      // Get latest booths for this user
       const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
       setUserBooths(booths);
@@ -82,7 +87,6 @@ const Dashboard = () => {
       
       await refreshUserData();
       
-      // Get user booths with error handling
       try {
         refreshUserBooths();
       } catch (error) {
@@ -91,7 +95,6 @@ const Dashboard = () => {
         toast.error("Failed to load your booths");
       }
       
-      // Load transactions with error handling
       try {
         const userTxs = loadUserTransactions ? 
           loadUserTransactions(user.id) : 
@@ -131,26 +134,22 @@ const Dashboard = () => {
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
   useEffect(() => {
-    // Initial refresh for immediate data
     refreshUserData();
     refreshUserBooths();
     
-    // Set up polling interval for regular updates
     const intervalId = setInterval(() => {
       refreshUserData();
       refreshUserBooths();
-    }, 15000); // Refresh every 15 seconds
+    }, 15000);
     
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
 
   useEffect(() => {
-    // Listen for any new transactions and refresh booths
     const handleTransactionUpdate = () => {
       refreshUserBooths();
     };
     
-    // Set up a recurring check 
     const transactionCheckId = setInterval(handleTransactionUpdate, 5000);
     
     return () => {
@@ -166,12 +165,34 @@ const Dashboard = () => {
   }, [user?.booths, refreshUserBooths]);
 
   useEffect(() => {
-    // Update transactions when recentTransactions changes
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
     }
   }, [recentTransactions, user, loadUserTransactions]);
+
+  const handleHideBooth = async (boothId: string) => {
+    if (!user) return;
+    
+    try {
+      const success = await removeBoothFromUser(user.id, boothId);
+      if (success) {
+        setUserBooths(prev => prev.filter(booth => booth.id !== boothId));
+        
+        if (user.booths) {
+          updateUserData({
+            ...user,
+            booths: user.booths.filter(id => id !== boothId)
+          });
+        }
+        
+        toast.success("Booth removed from your dashboard");
+      }
+    } catch (error) {
+      console.error("Error removing booth:", error);
+      toast.error("Failed to remove booth");
+    }
+  };
 
   const handleViewQRCode = () => {
     navigate('/qr-code');
@@ -278,13 +299,23 @@ const Dashboard = () => {
               </Card>
             ) : userBooths.length > 0 ? (
               userBooths.map(booth => (
-                <BoothCard
-                  key={booth.id}
-                  booth={booth}
-                  userRole="manager"
-                  earnings={booth.totalEarnings}
-                  onClick={() => handleBoothCardClick(booth.id)}
-                />
+                <div key={booth.id} className="relative group">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleHideBooth(booth.id)}
+                    className="absolute right-1 top-1 z-10 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-transparent"
+                    aria-label="Remove booth"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                  <BoothCard
+                    booth={booth}
+                    userRole="manager"
+                    earnings={booth.totalEarnings}
+                    onClick={() => handleBoothCardClick(booth.id)}
+                  />
+                </div>
               ))
             ) : (
               <Card>
