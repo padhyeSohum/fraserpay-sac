@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,45 +9,41 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { toast } from 'sonner';
 import { Info, Loader2 } from 'lucide-react';
-
 const BoothJoin: React.FC = () => {
-  const { user } = useAuth();
-  const { joinBooth, fetchAllBooths } = useTransactions();
+  const {
+    user
+  } = useAuth();
+  const {
+    joinBooth,
+    fetchAllBooths
+  } = useTransactions();
   const navigate = useNavigate();
-
   const [pin, setPin] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPin(e.target.value);
     setError(null); // Clear error when pin is changed
   };
-
   const handleJoinBooth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!pin.trim()) {
       setError('Please enter a PIN code');
       return;
     }
-    
     if (!user || !user.id) {
       toast.error('You must be logged in to join a booth');
       return;
     }
-    
     try {
       setIsJoining(true);
       setError(null);
-      
       console.log(`Attempting to join booth with PIN: ${pin}`);
       const success = await joinBooth(pin, user.id);
-      
       if (success) {
         // Refresh booths list to include the newly joined booth
         await fetchAllBooths();
-        
+
         // Redirect back to dashboard
         navigate('/dashboard');
       } else {
@@ -62,13 +57,7 @@ const BoothJoin: React.FC = () => {
       setIsJoining(false);
     }
   };
-
-  return (
-    <Layout 
-      title="Join a Booth" 
-      subtitle="Enter the booth PIN code"
-      showBack
-    >
+  return <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader>
@@ -84,56 +73,29 @@ const BoothJoin: React.FC = () => {
                 <label htmlFor="pin" className="text-sm font-medium">
                   Booth PIN Code
                 </label>
-                <Input
-                  id="pin"
-                  type="text"
-                  value={pin}
-                  onChange={handlePinChange}
-                  placeholder="Enter 6-digit PIN"
-                  maxLength={6}
-                  className={error ? "border-destructive" : ""}
-                  disabled={isJoining}
-                />
+                <Input id="pin" type="text" value={pin} onChange={handlePinChange} placeholder="Enter 6-digit PIN" maxLength={6} className={error ? "border-destructive" : ""} disabled={isJoining} />
                 
-                {error && (
-                  <div className="text-destructive text-sm flex items-center gap-1.5">
+                {error && <div className="text-destructive text-sm flex items-center gap-1.5">
                     <Info className="h-4 w-4" />
                     <span>{error}</span>
-                  </div>
-                )}
+                  </div>}
               </div>
               
               <div className="bg-muted/50 rounded-md p-3">
                 <h4 className="text-sm font-medium mb-2">Don't have a PIN?</h4>
-                <p className="text-sm text-muted-foreground">
-                  Ask the booth manager for their booth PIN code. This is required to join an existing booth.
-                </p>
+                <p className="text-sm text-muted-foreground">Ask your teacher or club supervisor to provide your booth pin. If you need help with this, please visit the SAC booth. </p>
               </div>
             </CardContent>
             
             <CardFooter className="flex justify-between flex-col sm:flex-row gap-3">
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={() => navigate('/dashboard')}
-                disabled={isJoining}
-                className="w-full sm:w-auto"
-              >
+              <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} disabled={isJoining} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button 
-                type="submit"
-                disabled={!pin.trim() || isJoining}
-                className="w-full sm:w-auto"
-              >
-                {isJoining ? (
-                  <>
+              <Button type="submit" disabled={!pin.trim() || isJoining} className="w-full sm:w-auto">
+                {isJoining ? <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Joining...
-                  </>
-                ) : (
-                  'Join Booth'
-                )}
+                  </> : 'Join Booth'}
               </Button>
             </CardFooter>
           </form>
@@ -146,16 +108,11 @@ const BoothJoin: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-4">
             If you need to create a new booth, please contact your SAC representative.
           </p>
-          <Button
-            variant="link"
-            onClick={() => navigate('/dashboard')}
-          >
+          <Button variant="link" onClick={() => navigate('/dashboard')}>
             Return to Dashboard
           </Button>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default BoothJoin;
