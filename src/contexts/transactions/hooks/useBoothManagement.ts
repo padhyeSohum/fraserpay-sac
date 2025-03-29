@@ -1,231 +1,256 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
+import { toast } from 'sonner';
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
-  doc, 
-  getDoc, 
   getDocs, 
   query, 
   where, 
   addDoc, 
-  updateDoc, 
-  deleteDoc,
-  arrayRemove,
-  arrayUnion,
-  serverTimestamp 
+  doc, 
+  getDoc, 
+  orderBy,
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
-import { toast } from 'sonner';
+import { deleteBooth as deleteBoothService } from '@/contexts/transactions/boothService';
 
 export interface UseBoothManagementReturn {
   booths: Booth[];
-  createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
-  getBoothById: (boothId: string) => Booth | undefined;
+  getBoothById: (id: string) => Booth | undefined;
+  loadBooths: () => Promise<Booth[]>;
+  loadStudentBooths: (userId?: string) => Promise<Booth[]>;
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
-  fetchBoothById: (boothId: string) => Promise<Booth | null>;  // New method for direct fetching
+  createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   deleteBooth: (boothId: string) => Promise<boolean>;
-  removeBoothFromUser: (userId: string, boothId: string) => Promise<boolean>;
+  isLoading: boolean;
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
+  const { user, isAuthenticated } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Initialize booths on first load
-  useEffect(() => {
-    if (!isInitialized) {
-      fetchAllBooths().then(() => {
-        setIsInitialized(true);
-      }).catch(error => {
-        console.error("Failed to initialize booths:", error);
-      });
-    }
-  }, [isInitialized]);
-
-  const createBooth = async (
-    name: string, 
-    description: string, 
-    managerId: string,
-    pinCode: string
-  ): Promise<string> => {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Load all booths
+  const loadBooths = useCallback(async () => {
+    console.log('Loading all booths');
+    setIsLoading(true);
+    
     try {
-      const boothsRef = collection(firestore, 'booths');
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsQuery = query(boothsCollection, orderBy('created_at', 'desc'));
+      const boothsSnapshot = await getDocs(boothsQuery);
+      
+      const boothsData: Booth[] = [];
+      
+      for (const boothDoc of boothsSnapshot.docs) {
+        const boothData = boothDoc.data();
+        
+        // Check if the booth already has products in the document
+        const products = boothData.products || [];
+        
+        // Map the products to our Product type
+        const mappedProducts = products.map((prod: any) => ({
+          id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          boothId: boothDoc.id,
+          description: prod.description || '',
+          image: prod.image || '',
+          salesCount: prod.salesCount || 0
+        }));
+        
+        boothsData.push({
+          id: boothDoc.id,
+          name: boothData.name,
+          description: boothData.description || '',
+          pin: boothData.pin,
+          products: mappedProducts,
+          managers: boothData.members || [],
+          totalEarnings: (boothData.sales || 0) / 100, // Convert from cents to dollars
+          createdAt: boothData.created_at
+        });
+      }
+      
+      console.log('Loaded booths:', boothsData.length);
+      return boothsData;
+    } catch (error) {
+      console.error('Error loading booths:', error);
+      toast.error('Failed to load booths');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Load booths where a user is a manager
+  const loadStudentBooths = useCallback(async (userId?: string) => {
+    const userIdToUse = userId || (user ? user.id : undefined);
+    
+    if (!userIdToUse) {
+      console.warn('No user ID provided for loadStudentBooths');
+      return [];
+    }
+    
+    console.log('Loading booths for user:', userIdToUse);
+    setIsLoading(true);
+    
+    try {
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsQuery = query(
+        boothsCollection, 
+        where('members', 'array-contains', userIdToUse),
+        orderBy('created_at', 'desc')
+      );
+      const boothsSnapshot = await getDocs(boothsQuery);
+      
+      const boothsData: Booth[] = [];
+      
+      for (const boothDoc of boothsSnapshot.docs) {
+        const boothData = boothDoc.data();
+        
+        // Load booth products
+        const productsCollection = collection(firestore, 'products');
+        const productsQuery = query(productsCollection, where('booth_id', '==', boothDoc.id));
+        const productsSnapshot = await getDocs(productsQuery);
+        
+        const products = productsSnapshot.docs.map(productDoc => {
+          const productData = productDoc.data();
+          return {
+            id: productDoc.id,
+            name: productData.name,
+            price: (productData.price || 0) / 100, // Convert from cents to dollars
+            boothId: boothDoc.id,
+            image: productData.image,
+            salesCount: 0
+          };
+        });
+        
+        boothsData.push({
+          id: boothDoc.id,
+          name: boothData.name,
+          description: boothData.description || '',
+          pin: boothData.pin,
+          products: products,
+          managers: boothData.members || [],
+          totalEarnings: (boothData.sales || 0) / 100, // Convert from cents to dollars
+          createdAt: boothData.created_at
+        });
+      }
+      
+      console.log('Loaded user booths:', boothsData.length);
+      return boothsData;
+    } catch (error) {
+      console.error('Error loading user booths:', error);
+      toast.error('Failed to load your booths');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+  
+  // Fetch all booths and update state
+  const fetchAllBooths = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const boothsData = await loadBooths();
+      setBooths(boothsData);
+      return boothsData; // Return the booths data to match the interface
+    } catch (error) {
+      console.error('Error in fetchAllBooths:', error);
+      return []; // Return empty array on error to match the interface
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadBooths]);
+  
+  // Effect to load booths when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAllBooths();
+    }
+  }, [isAuthenticated, fetchAllBooths]);
+  
+  // Create a new booth
+  const createBooth = async (name: string, description: string, managerId: string, pin: string): Promise<string | null> => {
+    console.log('Creating booth:', { name, description, managerId, pin });
+    setIsLoading(true);
+    
+    try {
+      // Create the booth
       const boothData = {
         name,
         description,
-        managers: [managerId],
-        products: [],
-        totalEarnings: 0,
+        members: [managerId], // Initial manager
+        pin,
         sales: 0,
-        pin: pinCode,
-        created_at: serverTimestamp()
+        created_at: new Date().toISOString(),
+        created_by: managerId
       };
-      const docRef = await addDoc(boothsRef, boothData);
       
-      // Update the user document to include the booth ID in the booth_access array
-      const userRef = doc(firestore, 'users', managerId);
-      await updateDoc(userRef, {
-        booth_access: arrayUnion(docRef.id),
-        updated_at: serverTimestamp()
-      });
+      const boothRef = await addDoc(collection(firestore, 'booths'), boothData);
       
-      // Add to local state
-      const newBooth: Booth = {
-        id: docRef.id,
-        ...boothData,
-        managers: [managerId],
-        products: []
-      };
-      setBooths(prev => [...prev, newBooth]);
+      // Update booth list
+      await fetchAllBooths();
       
-      toast.success('Booth created successfully!');
-      return docRef.id;
+      console.log('Booth created with ID:', boothRef.id);
+      toast.success('Booth created successfully');
+      
+      return boothRef.id;
     } catch (error) {
       console.error('Error creating booth:', error);
-      toast.error('Failed to create booth');
-      return "";
+      toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  const getBoothById = useCallback((boothId: string): Booth | undefined => {
-    return booths.find(booth => booth.id === boothId);
-  }, [booths]);
-
-  // New method to fetch booth directly from Firestore
-  const fetchBoothById = useCallback(async (boothId: string): Promise<Booth | null> => {
-    try {
-      console.log(`Directly fetching booth ${boothId} from Firestore`);
-      const boothRef = doc(firestore, 'booths', boothId);
-      const boothSnap = await getDoc(boothRef);
-      
-      if (boothSnap.exists()) {
-        const boothData = {
-          id: boothSnap.id,
-          ...boothSnap.data()
-        } as Booth;
-        
-        // Update local state
-        setBooths(prev => {
-          const exists = prev.some(b => b.id === boothId);
-          if (!exists) {
-            return [...prev, boothData];
-          }
-          return prev.map(b => b.id === boothId ? boothData : b);
-        });
-        
-        return boothData;
-      }
-      return null;
-    } catch (error) {
-      console.error(`Error fetching booth ${boothId}:`, error);
-      return null;
-    }
-  }, []);
-
-  const getBoothsByUserId = useCallback((userId: string): Booth[] => {
-    if (!userId || !booths || !Array.isArray(booths)) return [];
-    return booths.filter(booth => 
-      booth.managers && Array.isArray(booth.managers) && booth.managers.includes(userId)
-    );
-  }, [booths]);
-
-  const fetchAllBooths = useCallback(async (): Promise<Booth[]> => {
-    try {
-      console.log("Fetching all booths from Firestore");
-      const boothsRef = collection(firestore, 'booths');
-      const querySnapshot = await getDocs(boothsRef);
-      const boothsList: Booth[] = [];
-      
-      querySnapshot.forEach(doc => {
-        boothsList.push({
-          id: doc.id,
-          ...doc.data()
-        } as Booth);
-      });
-      
-      console.log(`Retrieved ${boothsList.length} booths from Firestore`);
-      setBooths(boothsList);
-      return boothsList;
-    } catch (error) {
-      console.error('Error fetching booths:', error);
-      toast.error('Failed to fetch booths');
-      return [];
-    }
-  }, []);
-
+  
+  // Delete a booth
   const deleteBooth = async (boothId: string): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      const boothRef = doc(firestore, 'booths', boothId);
-      await deleteDoc(boothRef);
+      const success = await deleteBoothService(boothId);
       
-      // Remove the booth from the local state
-      setBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
+      if (success) {
+        // Update the local booths state by removing the deleted booth
+        setBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
+        toast.success('Booth deleted successfully');
+      }
       
-      toast.success('Booth deleted successfully!');
-      return true;
+      return success;
     } catch (error) {
       console.error('Error deleting booth:', error);
       toast.error('Failed to delete booth');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Add function to remove a booth from a user
-  const removeBoothFromUser = async (userId: string, boothId: string): Promise<boolean> => {
-    try {
-      console.log(`Removing booth ${boothId} from user ${userId}`);
-      
-      // Update the user document to remove booth access
-      const userRef = doc(firestore, 'users', userId);
-      await updateDoc(userRef, {
-        booth_access: arrayRemove(boothId),
-        updated_at: serverTimestamp()
-      });
-      
-      // Update the booth document to remove manager
-      const boothRef = doc(firestore, 'booths', boothId);
-      const boothDoc = await getDoc(boothRef);
-      
-      if (boothDoc.exists()) {
-        const boothData = boothDoc.data();
-        if (boothData.managers && Array.isArray(boothData.managers)) {
-          await updateDoc(boothRef, {
-            managers: arrayRemove(userId),
-            updated_at: serverTimestamp()
-          });
-          
-          // Update the local state
-          setBooths(prevBooths => prevBooths.map(booth => {
-            if (booth.id === boothId && booth.managers) {
-              return {
-                ...booth,
-                managers: booth.managers.filter(id => id !== userId)
-              };
-            }
-            return booth;
-          }));
-        }
-      }
-      
-      toast.success('Successfully removed from booth');
-      return true;
-    } catch (error) {
-      console.error('Error removing booth from user:', error);
-      toast.error('Failed to remove booth access');
-      return false;
-    }
-  };
-
+  
+  // Get booth by ID
+  const getBoothById = useCallback((id: string): Booth | undefined => {
+    return booths.find(booth => booth.id === id);
+  }, [booths]);
+  
+  // Get booths by user ID
+  const getBoothsByUserId = useCallback((userId: string): Booth[] => {
+    return booths.filter(booth => booth.managers.includes(userId));
+  }, [booths]);
+  
   return {
     booths,
-    createBooth,
     getBoothById,
+    loadBooths,
+    loadStudentBooths,
     getBoothsByUserId,
     fetchAllBooths,
-    fetchBoothById,
+    createBooth,
     deleteBooth,
-    removeBoothFromUser
+    isLoading
   };
 };

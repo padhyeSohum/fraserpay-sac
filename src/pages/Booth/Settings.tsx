@@ -30,7 +30,7 @@ const BoothSettings = () => {
   const { getBoothById, addProductToBooth, removeProductFromBooth, deleteBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
-  const [booth, setBooth] = useState<any>(null);
+  const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
   const [activeTab, setActiveTab] = useState('settings');
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '' });
@@ -39,16 +39,12 @@ const BoothSettings = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Function to fetch the latest booth data
   const refreshBoothData = async () => {
     if (!boothId) return;
     
     setIsRefreshing(true);
-    setLoadError(null);
-    
     try {
       // Force refresh booths data from Firestore
       await fetchAllBooths();
@@ -56,23 +52,17 @@ const BoothSettings = () => {
       // Now get the updated booth
       const updatedBooth = getBoothById(boothId);
       console.log('Refreshed booth data:', updatedBooth);
+      setBooth(updatedBooth);
       
       if (updatedBooth) {
-        setBooth(updatedBooth);
-        
         const usersStr = localStorage.getItem('users');
         const users: User[] = usersStr ? JSON.parse(usersStr) : [];
         
         const managers = users.filter(u => updatedBooth.managers.includes(u.id));
         setBoothManagers(managers);
-        setIsLoading(false);
-      } else {
-        setLoadError("Booth not found. It may have been deleted.");
-        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error refreshing booth data:', error);
-      setLoadError("Failed to load booth data. Please try again.");
     } finally {
       setIsRefreshing(false);
     }
@@ -85,11 +75,11 @@ const BoothSettings = () => {
   }, [boothId, getBoothById]);
 
   useEffect(() => {
-    if (!isLoading && user && booth && !booth.managers.includes(user.id)) {
+    if (user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
     }
-  }, [user, booth, navigate, isLoading]);
+  }, [user, booth, navigate]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -176,45 +166,11 @@ const BoothSettings = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Layout title="Loading Booth..." showBack>
-        <div className="text-center py-10">
-          <div className="animate-pulse">
-            <p className="text-muted-foreground">Loading booth information...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <Layout title="Error" showBack>
-        <div className="text-center py-10">
-          <p className="text-destructive">{loadError}</p>
-          <Button 
-            onClick={() => navigate('/dashboard')} 
-            className="mt-4"
-          >
-            Return to Dashboard
-          </Button>
-        </div>
-      </Layout>
-    );
-  }
-
   if (!booth) {
     return (
       <Layout title="Booth not found" showBack>
         <div className="text-center py-10">
           <p className="text-muted-foreground">The booth you're looking for could not be found</p>
-          <Button 
-            onClick={() => navigate('/dashboard')} 
-            className="mt-4"
-          >
-            Return to Dashboard
-          </Button>
         </div>
       </Layout>
     );
@@ -263,12 +219,12 @@ const BoothSettings = () => {
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground">PIN</span>
                   <span className="font-medium">
-                    {booth.pin?.replace(/./g, '•') || '••••••'}
+                    {booth.pin.replace(/./g, '•')}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground">Total Earnings</span>
-                  <span className="font-medium">${(booth.totalEarnings || 0).toFixed(2)}</span>
+                  <span className="font-medium">${booth.totalEarnings.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>

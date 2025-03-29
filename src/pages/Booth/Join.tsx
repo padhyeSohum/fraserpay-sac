@@ -1,116 +1,282 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import Layout from '@/components/Layout';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { Info, Loader2 } from 'lucide-react';
-const BoothJoin: React.FC = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    joinBooth,
-    fetchAllBooths
-  } = useTransactions();
-  const navigate = useNavigate();
-  const [pin, setPin] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPin(e.target.value);
-    setError(null); // Clear error when pin is changed
-  };
-  const handleJoinBooth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pin.trim()) {
-      setError('Please enter a PIN code');
-      return;
-    }
-    if (!user || !user.id) {
-      toast.error('You must be logged in to join a booth');
-      return;
-    }
-    try {
-      setIsJoining(true);
-      setError(null);
-      console.log(`Attempting to join booth with PIN: ${pin}`);
-      const success = await joinBooth(pin, user.id);
-      if (success) {
-        // Refresh booths list to include the newly joined booth
-        await fetchAllBooths();
+import Layout from '@/components/Layout';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 
-        // Redirect back to dashboard
-        navigate('/dashboard');
+// Create a schema for booth creation
+const createBoothSchema = z.object({
+  name: z.string().min(3, "Booth name must be at least 3 characters"),
+  description: z.string().optional(),
+  pin: z.string().length(6, "PIN must be exactly 6 digits"),
+});
+
+// Create a schema for joining a booth
+const joinBoothSchema = z.object({
+  pin: z.string().length(6, "PIN must be exactly 6 digits"),
+});
+
+const JoinBooth = () => {
+  const [mode, setMode] = useState<'join' | 'create'>('join');
+  const [isLoading, setIsLoading] = useState(false);
+  const { verifyBoothPin, user, updateUserData } = useAuth();
+  const { createBooth, fetchAllBooths } = useTransactions();
+  const navigate = useNavigate();
+
+  const joinForm = useForm<z.infer<typeof joinBoothSchema>>({
+    resolver: zodResolver(joinBoothSchema),
+    defaultValues: {
+      pin: "",
+    },
+  });
+
+  const createForm = useForm<z.infer<typeof createBoothSchema>>({
+    resolver: zodResolver(createBoothSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      pin: "",
+    },
+  });
+
+  const handleJoinSubmit = async (values: z.infer<typeof joinBoothSchema>) => {
+    setIsLoading(true);
+    
+    try {
+      if (!user) {
+        throw new Error("You must be logged in to join a booth");
+      }
+      
+      console.log("Attempting to verify booth PIN:", values.pin);
+      const result = await verifyBoothPin(values.pin);
+      console.log("PIN verification result:", result);
+      
+      if (result.success) {
+        toast.success("Successfully joined booth!");
+        
+        // After successful join, fetch the latest booth data
+        await fetchAllBooths();
+        
+        // Update the user's data to include the new booth
+        if (user && result.boothId && !user.booths.includes(result.boothId)) {
+          console.log("Adding booth to user's booth list:", result.boothId);
+          updateUserData({
+            ...user,
+            booths: [...user.booths, result.boothId]
+          });
+        }
+        
+        // Add proper boothId handling with fallback
+        if (result.boothId) {
+          navigate(`/booth/${result.boothId}`);
+        } else if (user?.booths && user.booths.length > 0) {
+          // Fallback: Navigate to the most recently added booth
+          const mostRecentBoothId = user.booths[user.booths.length - 1];
+          navigate(`/booth/${mostRecentBoothId}`);
+          console.log("Booth ID not returned from verification, using fallback:", mostRecentBoothId);
+        } else {
+          toast.error("Could not determine booth ID. Redirecting to dashboard.");
+          navigate('/dashboard');
+        }
       } else {
-        setError('Invalid PIN code or unable to join booth. Please check and try again.');
+        toast.error("Invalid booth PIN");
       }
     } catch (error) {
-      console.error('Error joining booth:', error);
-      setError('An unexpected error occurred. Please try again.');
-      toast.error('Failed to join booth');
+      console.error("Join booth error:", error);
+      toast.error(error instanceof Error ? error.message : "Unable to join booth");
     } finally {
-      setIsJoining(false);
+      setIsLoading(false);
     }
   };
-  return <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
-      <div className="max-w-md mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Join Existing Booth</CardTitle>
-            <CardDescription>
-              Enter the PIN code provided by the booth manager to join an existing booth.
-            </CardDescription>
-          </CardHeader>
-          
-          <form onSubmit={handleJoinBooth}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="pin" className="text-sm font-medium">
-                  Booth PIN Code
-                </label>
-                <Input id="pin" type="text" value={pin} onChange={handlePinChange} placeholder="Enter 6-digit PIN" maxLength={6} className={error ? "border-destructive" : ""} disabled={isJoining} />
-                
-                {error && <div className="text-destructive text-sm flex items-center gap-1.5">
-                    <Info className="h-4 w-4" />
-                    <span>{error}</span>
-                  </div>}
+
+  const handleCreateSubmit = async (values: z.infer<typeof createBoothSchema>) => {
+    setIsLoading(true);
+    
+    try {
+      if (!user) {
+        throw new Error("You must be logged in to create a booth");
+      }
+      
+      console.log("Creating booth with values:", values);
+      const boothId = await createBooth(
+        values.name,
+        values.description || '',
+        user.id,
+        values.pin // Pass the PIN from the form
+      );
+      
+      console.log("Booth creation result:", boothId);
+      
+      if (boothId) {
+        toast.success("Booth created successfully!");
+        
+        // Refresh booths data to include the new booth
+        await fetchAllBooths();
+        
+        // Update user data to include the new booth
+        if (user && !user.booths.includes(boothId)) {
+          console.log("Adding new booth to user's booth list:", boothId);
+          updateUserData({
+            ...user,
+            booths: [...user.booths, boothId]
+          });
+        }
+        
+        navigate(`/booth/${boothId}`);
+      } else {
+        toast.error("Failed to create booth");
+      }
+    } catch (error) {
+      console.error("Create booth error:", error);
+      toast.error(error instanceof Error ? error.message : "Unable to create booth");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Only allow SAC members to create booths
+  const canCreateBooth = user?.role === 'sac';
+
+  return (
+    <Layout title={mode === 'join' ? "Join a Booth" : "Create a Booth"} showBack>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
+        <div className="w-full max-w-md">
+          <Card className="border-none shadow-lg glass-card">
+            <CardHeader className="space-y-1">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-2xl font-bold">
+                  {mode === 'join' ? "Join a Booth" : "Create a Booth"}
+                </CardTitle>
               </div>
-              
-              <div className="bg-muted/50 rounded-md p-3">
-                <h4 className="text-sm font-medium mb-2">Don't have a PIN?</h4>
-                <p className="text-sm text-muted-foreground">Ask your teacher or club supervisor to provide your booth pin. If you need help with this, please visit the SAC booth. </p>
-              </div>
+              <CardDescription>
+                {mode === 'join' 
+                  ? "Enter the booth PIN to join an existing booth" 
+                  : "Create a new booth for your club or homeroom"}
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              {mode === 'join' ? (
+                <Form {...joinForm}>
+                  <form onSubmit={joinForm.handleSubmit(handleJoinSubmit)} className="space-y-4">
+                    <FormField
+                      control={joinForm.control}
+                      name="pin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Booth PIN</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter 6-digit PIN"
+                              type="password"
+                              maxLength={6}
+                              className="text-center text-lg py-6"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button
+                      type="submit"
+                      className="w-full bg-brand-600 hover:bg-brand-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Verifying PIN..." : "Join Booth"}
+                    </Button>
+                  </form>
+                </Form>
+              ) : (
+                <Form {...createForm}>
+                  <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-4">
+                    <FormField
+                      control={createForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Booth Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g., Computer Club"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={createForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Booth Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g., Tech support and gadgets"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={createForm.control}
+                      name="pin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Security PIN (6 digits)</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Create a 6-digit PIN"
+                              type="password"
+                              maxLength={6}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button
+                      type="submit"
+                      className="w-full bg-brand-600 hover:bg-brand-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Creating Booth..." : "Create Booth"}
+                    </Button>
+                  </form>
+                </Form>
+              )}
             </CardContent>
             
-            <CardFooter className="flex justify-between flex-col sm:flex-row gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} disabled={isJoining} className="w-full sm:w-auto">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!pin.trim() || isJoining} className="w-full sm:w-auto">
-                {isJoining ? <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Joining...
-                  </> : 'Join Booth'}
-              </Button>
+            <CardFooter className="text-xs text-center text-muted-foreground">
+              <p className="w-full">
+                {mode === 'join' 
+                  ? "Don't have a PIN? Contact a booth manager or SAC member." 
+                  : "Share the PIN with other booth members so they can join."}
+              </p>
             </CardFooter>
-          </form>
-        </Card>
-
-        <Separator className="my-8" />
-        
-        <div className="text-center">
-          <h3 className="text-base font-medium mb-2">Need to Create a New Booth?</h3>
-          <p className="text-sm text-muted-foreground mb-4">Find the SAC booth and ask a SAC member there to help you out. </p>
-          <Button variant="link" onClick={() => navigate('/dashboard')}>
-            Return to Dashboard
-          </Button>
+          </Card>
         </div>
       </div>
-    </Layout>;
+    </Layout>
+  );
 };
-export default BoothJoin;
+
+export default JoinBooth;

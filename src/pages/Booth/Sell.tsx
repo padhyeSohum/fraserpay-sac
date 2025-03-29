@@ -21,7 +21,7 @@ const BoothSell = () => {
   const { getBoothById, processPurchase, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
-  const [booth, setBooth] = useState<any>(null);
+  const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [scanning, setScanning] = useState(false);
   const [customer, setCustomer] = useState<{ id: string; name: string; balance: number } | null>(null);
@@ -31,51 +31,36 @@ const BoothSell = () => {
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   const [isProcessingQR, setIsProcessingQR] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   const refreshBoothData = async () => {
     if (!boothId) return;
     
     setIsRefreshing(true);
-    setLoadError(null);
-    
     try {
       await fetchAllBooths();
       
       const updatedBooth = getBoothById(boothId);
       console.log('Refreshed booth data for sell page:', updatedBooth);
-      
-      if (!updatedBooth) {
-        setLoadError('Booth not found. It may have been deleted.');
-        setBooth(null);
-      } else {
-        setBooth(updatedBooth);
-      }
+      setBooth(updatedBooth);
     } catch (error) {
       console.error('Error refreshing booth data:', error);
-      setLoadError('Failed to load booth data. Please try again.');
     } finally {
       setIsRefreshing(false);
-      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     if (boothId) {
       refreshBoothData();
-    } else {
-      setLoadError('Missing booth ID');
-      setIsLoading(false);
     }
-  }, [boothId]);
+  }, [boothId, getBoothById]);
 
   useEffect(() => {
-    if (!isLoading && user && booth && Array.isArray(booth.managers) && !booth.managers.includes(user.id)) {
+    if (user && booth && !booth.managers.includes(user.id)) {
       toast.error("You don't have access to this booth");
       navigate('/dashboard');
     }
-  }, [user, booth, navigate, isLoading]);
+  }, [user, booth, navigate]);
 
   const handleProductSelect = (product: Product) => {
     const existingItem = cart.find(item => item.productId === product.id);
@@ -290,33 +275,6 @@ const BoothSell = () => {
     );
   };
 
-  if (isLoading) {
-    return (
-      <Layout title="Loading Booth..." showBack>
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">Loading booth information...</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <Layout title="Error" showBack>
-        <div className="text-center py-10">
-          <p className="text-destructive">{loadError}</p>
-          <Button 
-            variant="link" 
-            onClick={() => navigate('/dashboard')}
-            className="mt-4"
-          >
-            Return to Dashboard
-          </Button>
-        </div>
-      </Layout>
-    );
-  }
-
   if (!booth) {
     return (
       <Layout title="Booth not found" showBack>
@@ -466,7 +424,7 @@ const BoothSell = () => {
                 <div className="space-y-3">
                   <h3 className="font-medium">Select Products</h3>
                   
-                  {booth.products && Array.isArray(booth.products) ? booth.products.map(product => (
+                  {booth.products.map(product => (
                     <ProductItem
                       key={product.id}
                       product={product}
@@ -475,13 +433,7 @@ const BoothSell = () => {
                       onDecrement={() => handleDecrement(product.id)}
                       selectable
                     />
-                  )) : (
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-muted-foreground">No products available</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                  ))}
                 </div>
                 
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
