@@ -9,65 +9,25 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Booth } from '@/types';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useTransactions } from '@/contexts/transactions';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface BoothsListProps {
   booths: Booth[];
   isLoading?: boolean;
-  onRemoveBooth?: (boothId: string) => Promise<boolean>;
-  showRemoveButton?: boolean;
 }
 
 const BoothsList: React.FC<BoothsListProps> = ({ 
   booths = [],
-  isLoading = false,
-  onRemoveBooth,
-  showRemoveButton = false
+  isLoading = false 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
-  const [removingBoothId, setRemovingBoothId] = useState<string | null>(null);
-  const { removeBoothFromUser } = useTransactions();
 
   const togglePinVisibility = (boothId: string) => {
     setShowPins(prev => ({
       ...prev,
       [boothId]: !prev[boothId]
     }));
-  };
-
-  const handleRemoveBooth = async (boothId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    
-    if (removingBoothId) return; // Prevent multiple clicks
-    
-    try {
-      setRemovingBoothId(boothId);
-      
-      if (onRemoveBooth) {
-        const success = await onRemoveBooth(boothId);
-        if (success) {
-          toast.success("Booth removed successfully");
-        } else {
-          toast.error("Failed to remove booth");
-        }
-      } else if (removeBoothFromUser) {
-        const success = await removeBoothFromUser(boothId);
-        if (success) {
-          toast.success("Booth removed from your dashboard");
-        } else {
-          toast.error("Failed to remove booth");
-        }
-      }
-    } catch (error) {
-      console.error("Error removing booth:", error);
-      toast.error("Failed to remove booth");
-    } finally {
-      setRemovingBoothId(null);
-    }
   };
 
   const filteredBooths = booths.filter(booth => 
@@ -129,19 +89,6 @@ const BoothsList: React.FC<BoothsListProps> = ({
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
-                    
-                    {showRemoveButton && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => handleRemoveBooth(booth.id, e)}
-                        disabled={removingBoothId === booth.id}
-                        aria-label="Remove booth"
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 </div>
               ))

@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
-import BoothsList from '@/pages/SAC/components/BoothsList';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -194,28 +193,6 @@ const Dashboard = () => {
     navigate(`/booth/${boothId}`);
   };
 
-  const handleRemoveBooth = async (boothId: string) => {
-    if (!user) return false;
-    
-    try {
-      const success = await removeBoothFromUser(boothId, user.id);
-      
-      if (success) {
-        // Remove booth from local state to update UI immediately
-        setUserBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
-        
-        // Also refresh the user data
-        refreshUserData();
-        
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error removing booth:', error);
-      return false;
-    }
-  };
-
   const logo = (
     <div className="flex items-center mb-2">
       <div>
@@ -300,12 +277,15 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             ) : userBooths.length > 0 ? (
-              <BoothsList
-                booths={userBooths}
-                isLoading={isLoading}
-                onRemoveBooth={handleRemoveBooth}
-                showRemoveButton={true}
-              />
+              userBooths.map(booth => (
+                <BoothCard
+                  key={booth.id}
+                  booth={booth}
+                  userRole="manager"
+                  earnings={booth.totalEarnings}
+                  onClick={() => handleBoothCardClick(booth.id)}
+                />
+              ))
             ) : (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">

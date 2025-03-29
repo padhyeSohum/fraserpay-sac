@@ -84,8 +84,6 @@ export interface TransactionContextProps {
   
   recentTransactions: Transaction[];
   isLoading: boolean;
-  
-  removeBoothFromUser: (boothId: string, userId?: string) => Promise<boolean>;
 }
 
 const defaultContext: TransactionContextProps = {
@@ -126,9 +124,7 @@ const defaultContext: TransactionContextProps = {
   processPurchase: async () => false,
   
   recentTransactions: [],
-  isLoading: false,
-  
-  removeBoothFromUser: async () => false,
+  isLoading: false
 };
 
 const TransactionContext = createContext<TransactionContextProps>(defaultContext);
@@ -433,9 +429,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     processPurchase,
     
     recentTransactions,
-    isLoading,
-    
-    removeBoothFromUser: boothManagement.removeBoothFromUser
+    isLoading
   }), [
     booths, 
     recentTransactions,
