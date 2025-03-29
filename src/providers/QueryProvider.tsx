@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Create a client with robust error handling that won't freeze the app
@@ -42,35 +42,33 @@ interface QueryProviderProps {
   children: React.ReactNode;
 }
 
-const QueryProvider = ({ children }: QueryProviderProps) => {
-  // Add error boundary to catch React rendering errors
-  React.useEffect(() => {
-    // Add global unhandled promise rejection handler
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled Promise Rejection:', event.reason);
-      // Prevent the app from freezing on uncaught promise rejections
-      event.preventDefault();
-    };
+const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
+  // Add global unhandled promise rejection handler outside of useEffect
+  const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    console.error('Unhandled Promise Rejection:', event.reason);
+    // Prevent the app from freezing on uncaught promise rejections
+    event.preventDefault();
+  };
+  
+  // Function to clear query cache
+  const clearQueryCache = () => {
+    // Invalidate all queries to force refetch
+    queryClient.invalidateQueries();
+  };
 
+  // Only use useEffect in the component body, not conditionally
+  useEffect(() => {
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    // Clear query cache initially
+    clearQueryCache();
+    // Set up interval to clear cache every 15 minutes
+    const interval = setInterval(clearQueryCache, 15 * 60 * 1000);
     
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      clearInterval(interval);
     };
-  }, []);
-
-  // Periodically clear query cache
-  React.useEffect(() => {
-    const clearQueryCache = () => {
-      // Invalidate all queries to force refetch
-      queryClient.invalidateQueries();
-    };
-    
-    // Clear query cache initially and every 15 minutes
-    clearQueryCache();
-    const interval = setInterval(clearQueryCache, 15 * 60 * 1000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   return (
