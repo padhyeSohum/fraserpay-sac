@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Booth } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { 
@@ -24,12 +24,25 @@ export interface UseBoothManagementReturn {
   getBoothById: (boothId: string) => Booth | undefined;
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
+  fetchBoothById: (boothId: string) => Promise<Booth | null>;  // New method for direct fetching
   deleteBooth: (boothId: string) => Promise<boolean>;
   removeBoothFromUser: (userId: string, boothId: string) => Promise<boolean>;
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
   const [booths, setBooths] = useState<Booth[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize booths on first load
+  useEffect(() => {
+    if (!isInitialized) {
+      fetchAllBooths().then(() => {
+        setIsInitialized(true);
+      }).catch(error => {
+        console.error("Failed to initialize booths:", error);
+      });
+    }
+  }, [isInitialized]);
 
   const createBooth = async (
     name: string, 
@@ -45,6 +58,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         managers: [managerId],
         products: [],
         totalEarnings: 0,
+        sales: 0,
         pin: pinCode,
         created_at: serverTimestamp()
       };
@@ -56,6 +70,15 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         booth_access: arrayUnion(docRef.id),
         updated_at: serverTimestamp()
       });
+      
+      // Add to local state
+      const newBooth: Booth = {
+        id: docRef.id,
+        ...boothData,
+        managers: [managerId],
+        products: []
+      };
+      setBooths(prev => [...prev, newBooth]);
       
       toast.success('Booth created successfully!');
       return docRef.id;
@@ -70,12 +93,47 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     return booths.find(booth => booth.id === boothId);
   }, [booths]);
 
+  // New method to fetch booth directly from Firestore
+  const fetchBoothById = useCallback(async (boothId: string): Promise<Booth | null> => {
+    try {
+      console.log(`Directly fetching booth ${boothId} from Firestore`);
+      const boothRef = doc(firestore, 'booths', boothId);
+      const boothSnap = await getDoc(boothRef);
+      
+      if (boothSnap.exists()) {
+        const boothData = {
+          id: boothSnap.id,
+          ...boothSnap.data()
+        } as Booth;
+        
+        // Update local state
+        setBooths(prev => {
+          const exists = prev.some(b => b.id === boothId);
+          if (!exists) {
+            return [...prev, boothData];
+          }
+          return prev.map(b => b.id === boothId ? boothData : b);
+        });
+        
+        return boothData;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching booth ${boothId}:`, error);
+      return null;
+    }
+  }, []);
+
   const getBoothsByUserId = useCallback((userId: string): Booth[] => {
-    return booths.filter(booth => booth.managers.includes(userId));
+    if (!userId || !booths || !Array.isArray(booths)) return [];
+    return booths.filter(booth => 
+      booth.managers && Array.isArray(booth.managers) && booth.managers.includes(userId)
+    );
   }, [booths]);
 
   const fetchAllBooths = useCallback(async (): Promise<Booth[]> => {
     try {
+      console.log("Fetching all booths from Firestore");
       const boothsRef = collection(firestore, 'booths');
       const querySnapshot = await getDocs(boothsRef);
       const boothsList: Booth[] = [];
@@ -87,6 +145,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         } as Booth);
       });
       
+      console.log(`Retrieved ${boothsList.length} booths from Firestore`);
       setBooths(boothsList);
       return boothsList;
     } catch (error) {
@@ -136,13 +195,25 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
             managers: arrayRemove(userId),
             updated_at: serverTimestamp()
           });
+          
+          // Update the local state
+          setBooths(prevBooths => prevBooths.map(booth => {
+            if (booth.id === boothId && booth.managers) {
+              return {
+                ...booth,
+                managers: booth.managers.filter(id => id !== userId)
+              };
+            }
+            return booth;
+          }));
         }
       }
       
-      // Return success
+      toast.success('Successfully removed from booth');
       return true;
     } catch (error) {
       console.error('Error removing booth from user:', error);
+      toast.error('Failed to remove booth access');
       return false;
     }
   };
@@ -153,6 +224,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     getBoothById,
     getBoothsByUserId,
     fetchAllBooths,
+    fetchBoothById,
     deleteBooth,
     removeBoothFromUser
   };

@@ -1,3 +1,4 @@
+
 import React, { 
   createContext, 
   useContext, 
@@ -47,6 +48,7 @@ import { fetchAllTransactions } from './transactionService';
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
   getBoothById: (boothId: string) => Booth | undefined;
+  fetchBoothById: (boothId: string) => Promise<Booth | null>; // New direct fetch method
   getBoothsByUserId: (userId: string) => Booth[];
   joinBooth: (pinCode: string, userId: string) => Promise<boolean>;
   fetchAllBooths: () => Promise<Booth[]>;
@@ -90,6 +92,7 @@ export interface TransactionContextProps {
 const defaultContext: TransactionContextProps = {
   createBooth: async () => "",
   getBoothById: () => undefined,
+  fetchBoothById: async () => null,
   getBoothsByUserId: () => [],
   joinBooth: async () => false,
   fetchAllBooths: async () => [],
@@ -335,35 +338,55 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const joinBooth = async (pinCode: string, userId: string): Promise<boolean> => {
+    if (!pinCode || !userId) {
+      toast.error('Missing pin code or user ID');
+      return false;
+    }
+    
     try {
+      console.log(`Attempting to join booth with PIN: ${pinCode} for user: ${userId}`);
       const boothsCollection = collection(firestore, 'booths');
       const q = query(boothsCollection, where('pin', '==', pinCode));
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
+        console.log('No booth found with the provided PIN');
         toast.error('Invalid PIN code');
         return false;
       }
       
       const boothId = querySnapshot.docs[0].id;
-      const boothRef = doc(firestore, 'booths', boothId);
+      const boothData = querySnapshot.docs[0].data();
+      console.log(`Found booth: ${boothId}, ${boothData.name}`);
       
+      // Check if user already has access
+      if (boothData.managers && boothData.managers.includes(userId)) {
+        console.log('User already has access to this booth');
+        toast.info('You already have access to this booth');
+        return true;
+      }
+      
+      const boothRef = doc(firestore, 'booths', boothId);
       await updateDoc(boothRef, {
-        managers: arrayUnion(userId)
+        managers: arrayUnion(userId),
+        updated_at: serverTimestamp()
       });
       
       const userRef = doc(firestore, 'users', userId);
       await updateDoc(userRef, {
-        booth_access: arrayUnion(boothId)
+        booth_access: arrayUnion(boothId),
+        updated_at: serverTimestamp()
       });
       
-      await boothManagement.fetchAllBooths().then(setBooths);
+      // Update local state
+      const updatedBooths = await boothManagement.fetchAllBooths();
+      setBooths(updatedBooths);
       
-      toast.success('Successfully joined booth');
+      toast.success(`Successfully joined ${boothData.name}`);
       return true;
     } catch (error) {
       console.error('Error joining booth:', error);
-      toast.error('Failed to join booth');
+      toast.error('Failed to join booth. Please try again.');
       return false;
     }
   };
@@ -371,6 +394,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const contextValue = useMemo(() => ({
     createBooth: boothManagement.createBooth,
     getBoothById: boothManagement.getBoothById,
+    fetchBoothById: boothManagement.fetchBoothById,
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     joinBooth,
     fetchAllBooths: boothManagement.fetchAllBooths,
@@ -422,7 +446,12 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     productManagement, 
     transactionHook,
     cartManagement,
-    refreshTransactions
+    refreshTransactions,
+    joinBooth,
+    loadUserTransactions,
+    loadBoothTransactions,
+    deleteUser,
+    processPurchase
   ]);
   
   return (

@@ -9,11 +9,15 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import AppRoutes from '@/routes/AppRoutes';
 import { LoadingScreen } from '@/routes';
 
-// Error boundary component to prevent the whole app from crashing
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+// Enhanced Error boundary component to prevent the whole app from crashing
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null, errorInfo: React.ErrorInfo | null}> {
   constructor(props: {children: React.ReactNode}) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { 
+      hasError: false, 
+      error: null,
+      errorInfo: null
+    };
   }
 
   static getDerivedStateFromError(error: Error) {
@@ -21,24 +25,65 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log the error for debugging
     console.error("App error:", error, errorInfo);
+    this.setState({ errorInfo });
+
+    // Log specific DOM-related errors
+    if (error.message.includes("can not be found")) {
+      console.warn("DOM-related error detected. This might be due to component unmounting issues.");
+    }
+  }
+
+  handleRefresh = () => {
+    // Clear session storage to force a clean state
+    sessionStorage.clear();
+    
+    // Reload the page
+    window.location.reload();
+  }
+
+  handleHomeRedirect = () => {
+    // Clear session storage
+    sessionStorage.clear();
+    
+    // Navigate home
+    window.location.href = '/';
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center h-screen p-4">
-          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-          <p className="mb-4">The application encountered an error. Please refresh the page to try again.</p>
-          <p className="text-sm text-gray-600 mb-4">
-            {this.state.error?.message || 'Unknown error'}
-          </p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Refresh Page
-          </button>
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+          <div className="w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
+            <h2 className="text-xl font-bold mb-2 text-foreground">Something went wrong</h2>
+            
+            <p className="mb-4 text-muted-foreground">
+              The application encountered an error. Please try refreshing the page.
+            </p>
+            
+            <div className="bg-muted/40 p-4 rounded-md mb-4 overflow-auto max-h-[200px]">
+              <p className="text-sm font-mono text-destructive whitespace-pre-wrap break-all">
+                {this.state.error?.message || 'Unknown error'}
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={this.handleRefresh} 
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              >
+                Refresh Page
+              </button>
+              
+              <button 
+                onClick={this.handleHomeRedirect}
+                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90 transition-colors"
+              >
+                Go to Home Page
+              </button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -75,9 +120,22 @@ function App() {
       originalConsoleError.apply(console, args);
     };
     
+    // Add global error handler for all unhandled errors
+    const handleGlobalError = (event: ErrorEvent) => {
+      console.error("Unhandled global error:", event.error);
+      
+      // Prevent the default browser error overlay
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+    };
+    
+    window.addEventListener('error', handleGlobalError);
+    
     return () => {
       // Restore original console.error when component unmounts
       console.error = originalConsoleError;
+      window.removeEventListener('error', handleGlobalError);
     };
   }, []);
   
