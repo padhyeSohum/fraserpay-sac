@@ -13,7 +13,9 @@ import {
   getDoc, 
   orderBy,
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  updateDoc,
+  arrayRemove
 } from 'firebase/firestore';
 import { deleteBooth as deleteBoothService } from '@/contexts/transactions/boothService';
 
@@ -26,6 +28,7 @@ export interface UseBoothManagementReturn {
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   deleteBooth: (boothId: string) => Promise<boolean>;
+  removeBoothFromUser: (boothId: string, userId?: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -232,6 +235,43 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     }
   };
   
+  // Remove booth access from a user
+  const removeBoothFromUser = async (boothId: string, userId?: string): Promise<boolean> => {
+    const userIdToUse = userId || (user ? user.id : undefined);
+    
+    if (!userIdToUse) {
+      console.error('No user ID provided for removeBoothFromUser');
+      return false;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Update the user document to remove the booth from booth_access array
+      const userRef = doc(firestore, 'users', userIdToUse);
+      await updateDoc(userRef, {
+        booth_access: arrayRemove(boothId)
+      });
+      
+      // Update local booths state
+      setBooths(prevBooths => prevBooths.filter(booth => {
+        // If this is the user's booth, remove it from their list
+        if (booth.id === boothId) {
+          return false;
+        }
+        return true;
+      }));
+      
+      console.log(`Removed booth ${boothId} from user ${userIdToUse}`);
+      return true;
+    } catch (error) {
+      console.error('Error removing booth from user:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Get booth by ID
   const getBoothById = useCallback((id: string): Booth | undefined => {
     return booths.find(booth => booth.id === id);
@@ -251,6 +291,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     fetchAllBooths,
     createBooth,
     deleteBooth,
+    removeBoothFromUser,
     isLoading
   };
 };
