@@ -36,7 +36,7 @@ const mountApp = () => {
       return;
     }
     
-    // Create React root and render only once
+    // Create React root and render App
     const root = createRoot(rootElement);
     
     root.render(

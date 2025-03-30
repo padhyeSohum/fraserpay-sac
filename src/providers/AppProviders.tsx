@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import QueryProvider from './QueryProvider';
 import { AuthProvider } from '@/contexts/auth';
 import { TransactionProvider } from '@/contexts/transactions';
@@ -10,7 +10,7 @@ import { Toaster as SonnerToaster } from 'sonner';
 // App providers wrapper component
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Router>
+    <BrowserRouter>
       <QueryProvider>
         <AuthProvider>
           <TransactionProvider>
@@ -20,7 +20,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           </TransactionProvider>
         </AuthProvider>
       </QueryProvider>
-    </Router>
+    </BrowserRouter>
   );
 };
 
