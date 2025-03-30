@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,11 +10,12 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Upload, X, Check, FileText } from 'lucide-react';
+import { Upload, X, Check, FileText, Download } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/auth';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { downloadCSVTemplate, generateUserCSVTemplate } from '@/utils/csvParser';
 
 const MassUserImport = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -46,7 +46,6 @@ const MassUserImport = () => {
     
     setFile(selectedFile);
     
-    // Parse CSV file
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -55,7 +54,7 @@ const MassUserImport = () => {
         const headers = rows[0].split(',').map(h => h.trim());
         
         const parsedData = rows.slice(1).map(row => {
-          if (!row.trim()) return null; // Skip empty rows
+          if (!row.trim()) return null;
           
           const values = row.split(',').map(v => v.trim());
           const rowData: any = {};
@@ -102,7 +101,6 @@ const MassUserImport = () => {
     });
     
     try {
-      // Process CSV data in chunks to avoid overwhelming Firebase
       const chunkSize = 10;
       const chunks = [];
       
@@ -117,14 +115,12 @@ const MassUserImport = () => {
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (row) => {
           try {
-            // Validate required fields
             if (!row.name || !row.student_number || !row.email) {
               console.error('Missing required fields:', row);
               skippedCount++;
               return;
             }
             
-            // Check if user already exists
             const usersRef = collection(firestore, 'users');
             const q = query(usersRef, where('student_number', '==', row.student_number));
             const querySnapshot = await getDocs(q);
@@ -135,7 +131,6 @@ const MassUserImport = () => {
               return;
             }
             
-            // Add user to Firestore
             const userData = {
               name: row.name,
               student_number: row.student_number,
@@ -154,7 +149,6 @@ const MassUserImport = () => {
           }
         }));
         
-        // Update stats after each chunk
         setUploadStats({
           total: csvData.length,
           success: successCount,
@@ -180,10 +174,27 @@ const MassUserImport = () => {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const templateContent = generateUserCSVTemplate();
+    downloadCSVTemplate(templateContent, 'user-import-template.csv');
+    toast.success('Template downloaded successfully');
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>User Data (CSV)</Label>
+        <div className="flex justify-between items-center">
+          <Label>User Data (CSV)</Label>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-1"
+          >
+            <Download className="h-4 w-4" />
+            Download Template
+          </Button>
+        </div>
         
         {!file ? (
           <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
@@ -325,6 +336,7 @@ const MassUserImport = () => {
           <li>Required columns: name, student_number, email</li>
           <li>Optional columns: role (default: "student"), tickets (default: 0)</li>
           <li>For tickets, use whole numbers representing cents (e.g., 500 = $5.00)</li>
+          <li><Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleDownloadTemplate}>Download template</Button> for an example</li>
         </ul>
       </div>
     </div>

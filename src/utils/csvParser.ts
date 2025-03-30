@@ -121,20 +121,27 @@ export const validateBoothCSV = (data: Record<string, string>[]): { isValid: boo
  * Create sample CSV templates for download
  */
 export const generateUserCSVTemplate = (): string => {
-  return 'studentNumber,name,email,role\n123456,John Doe,john@example.com,student';
+  return 'studentNumber,name,email,role,tickets\n' +
+    '123456,John Doe,john@example.com,student,500\n' +
+    '789012,Jane Smith,jane@example.com,student,1000\n' +
+    '345678,Admin User,admin@example.com,admin,0';
 };
 
 export const generateBoothCSVTemplate = (): string => {
-  return 'name,description,pin\nSample Booth,This is a sample booth description,123456';
+  return 'name,description,pin\n' +
+    'Food Booth,Delicious food items available here,1234\n' +
+    'Game Booth,Play fun games and win prizes,5678\n' +
+    'Craft Booth,Creative crafts and DIY activities,9012';
 };
 
 /**
  * Create sample CSV template for booths with products
  */
 export const generateBoothWithProductsCSVTemplate = (): string => {
-  return 'name,description,pin,product1Name,product1Price,product1Image,product2Name,product2Price,product2Image\n' +
-    'Sample Booth,This is a sample booth description,123456,Product 1,9.99,https://example.com/image1.jpg,Product 2,14.99,\n' +
-    'Another Booth,Another description,654321,Hot Dog,5.99,,Soda,2.50,';
+  return 'name,description,pin,product_name,product_price,product_image\n' +
+    'Food Booth,Delicious food items,1234,Hot Dog,5.99,\n' +
+    'Drink Booth,Refreshing beverages,5678,Soda,2.50,\n' +
+    'Game Booth,Fun games and prizes,9012,Game Ticket,1.00,';
 };
 
 /**

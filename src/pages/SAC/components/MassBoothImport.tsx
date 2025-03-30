@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,10 +10,11 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Upload, X, Check, FileText } from 'lucide-react';
+import { Upload, X, Check, FileText, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { downloadCSVTemplate, generateBoothCSVTemplate, generateBoothWithProductsCSVTemplate } from '@/utils/csvParser';
 
 const MassBoothImport = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -44,7 +44,6 @@ const MassBoothImport = () => {
     
     setFile(selectedFile);
     
-    // Parse CSV file
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -100,7 +99,6 @@ const MassBoothImport = () => {
     });
     
     try {
-      // Process CSV data in chunks to avoid overwhelming Firebase
       const chunkSize = 5;
       const chunks = [];
       
@@ -115,14 +113,12 @@ const MassBoothImport = () => {
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (row) => {
           try {
-            // Validate required fields
             if (!row.name || !row.pin) {
               console.error('Missing required fields:', row);
               skippedCount++;
               return;
             }
             
-            // Check if booth already exists
             const boothsRef = collection(firestore, 'booths');
             const q = query(boothsRef, where('name', '==', row.name));
             const querySnapshot = await getDocs(q);
@@ -133,27 +129,24 @@ const MassBoothImport = () => {
               return;
             }
             
-            // Add booth to Firestore
             const boothData = {
               name: row.name,
               description: row.description || '',
               pin: row.pin,
-              members: [user.id], // Default member is the current user
+              members: [user.id],
               sales: 0,
               created_at: new Date().toISOString(),
               created_by: user.id
             };
             
-            // Create the booth
             const boothRef = await addDoc(collection(firestore, 'booths'), boothData);
             
-            // If product data is available, add the product
             if (row.product_name && row.product_price) {
               const productPrice = parseFloat(row.product_price);
               if (!isNaN(productPrice) && productPrice > 0) {
                 const productData = {
                   name: row.product_name,
-                  price: Math.round(productPrice * 100), // Convert to cents
+                  price: Math.round(productPrice * 100),
                   booth_id: boothRef.id,
                   created_at: new Date().toISOString()
                 };
@@ -169,7 +162,6 @@ const MassBoothImport = () => {
           }
         }));
         
-        // Update stats after each chunk
         setUploadStats({
           total: csvData.length,
           success: successCount,
@@ -195,10 +187,44 @@ const MassBoothImport = () => {
     }
   };
 
+  const handleDownloadSimpleTemplate = () => {
+    const templateContent = generateBoothCSVTemplate();
+    downloadCSVTemplate(templateContent, 'booth-import-template.csv');
+    toast.success('Simple booth template downloaded');
+  };
+
+  const handleDownloadWithProductsTemplate = () => {
+    const templateContent = generateBoothWithProductsCSVTemplate();
+    downloadCSVTemplate(templateContent, 'booth-with-products-template.csv');
+    toast.success('Booth with products template downloaded');
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Booth Data (CSV)</Label>
+        <div className="flex justify-between items-center">
+          <Label>Booth Data (CSV)</Label>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDownloadSimpleTemplate}
+              className="flex items-center gap-1"
+            >
+              <Download className="h-4 w-4" />
+              Simple Template
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDownloadWithProductsTemplate}
+              className="flex items-center gap-1"
+            >
+              <Download className="h-4 w-4" />
+              With Products
+            </Button>
+          </div>
+        </div>
         
         {!file ? (
           <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
@@ -340,7 +366,7 @@ const MassBoothImport = () => {
           <li>Required columns: name, pin</li>
           <li>Optional columns: description, product_name, product_price</li>
           <li>PIN should be a 4-digit code for booth access</li>
-          <li>If product_name and product_price are provided, a product will be created for the booth</li>
+          <li>Download a <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleDownloadSimpleTemplate}>simple template</Button> or <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleDownloadWithProductsTemplate}>template with products</Button></li>
         </ul>
       </div>
     </div>
