@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
@@ -7,17 +7,17 @@ import { toast } from 'sonner';
 import { auth } from './integrations/firebase/client';
 
 const App: React.FC = () => {
-  const [isReady, setIsReady] = React.useState(false);
-  const [isInitializing, setIsInitializing] = React.useState(true);
-  const initAttempted = React.useRef(false);
+  const [isReady, setIsReady] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const initAttempted = useRef(false);
 
   // Debug logging for initialization state
-  React.useEffect(() => {
+  useEffect(() => {
     console.log(`App state: isReady=${isReady}, isInitializing=${isInitializing}`);
   }, [isReady, isInitializing]);
 
   // Add a safety timeout to prevent app from being stuck in loading state
-  React.useEffect(() => {
+  useEffect(() => {
     if (isReady) return;
     
     const safetyTimeout = setTimeout(() => {
@@ -29,7 +29,7 @@ const App: React.FC = () => {
     return () => clearTimeout(safetyTimeout);
   }, [isReady]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Prevent multiple initialization attempts
     if (initAttempted.current) return;
     initAttempted.current = true;
