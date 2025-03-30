@@ -12,18 +12,24 @@ import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { AlertCircle, Copy, Trash } from 'lucide-react';
-
 const BoothSettings = () => {
-  const { boothId } = useParams<{ boothId: string }>();
-  const { user } = useAuth();
-  const { getBoothById, deleteBooth } = useTransactions();
+  const {
+    boothId
+  } = useParams<{
+    boothId: string;
+  }>();
+  const {
+    user
+  } = useAuth();
+  const {
+    getBoothById,
+    deleteBooth
+  } = useTransactions();
   const navigate = useNavigate();
-  
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
   const [activeTab, setActiveTab] = useState('settings');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
@@ -38,10 +44,8 @@ const BoothSettings = () => {
       // We'll handle this in the render method below
     }
   }, [booth]);
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    
     if (value === 'dashboard') {
       navigate(`/booth/${boothId}`);
     } else if (value === 'sell') {
@@ -50,21 +54,17 @@ const BoothSettings = () => {
       navigate(`/booth/${boothId}/transactions`);
     }
   };
-
   const handleCopyPin = () => {
     if (booth) {
       navigator.clipboard.writeText(booth.pin);
       toast.success('PIN code copied to clipboard');
     }
   };
-
   const handleDeleteBooth = async () => {
     setIsDeleting(true);
-    
     if (boothId) {
       try {
         const success = await deleteBooth(boothId);
-        
         if (success) {
           toast.success('Booth deleted successfully');
           navigate('/dashboard');
@@ -80,23 +80,14 @@ const BoothSettings = () => {
       }
     }
   };
-
   if (!booth) {
-    return (
-      <Layout title="Booth not found" showBack>
+    return <Layout title="Booth not found" showBack>
         <div className="text-center py-10">
           <p className="text-muted-foreground">The booth you're looking for could not be found</p>
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
-
-  return (
-    <Layout 
-      title={booth.name} 
-      subtitle="Booth Management" 
-      showBack
-    >
+  return <Layout title={booth.name} subtitle="Booth Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="dashboard" className="tab-button">Dashboard</TabsTrigger>
@@ -126,16 +117,7 @@ const BoothSettings = () => {
                 
                 <Separator />
                 
-                <div className="space-y-2">
-                  <Label htmlFor="pin">PIN Code</Label>
-                  <div className="flex items-center">
-                    <Input id="pin" value={booth.pin} readOnly className="mr-2" />
-                    <Button variant="outline" size="sm" onClick={handleCopyPin}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy
-                    </Button>
-                  </div>
-                </div>
+                
               </CardContent>
             </Card>
             
@@ -143,10 +125,7 @@ const BoothSettings = () => {
             
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash className="h-4 w-4 mr-2" />
-                  Delete Booth
-                </Button>
+                
               </AlertDialogTrigger>
               
               <AlertDialogContent>
@@ -160,15 +139,11 @@ const BoothSettings = () => {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDeleteBooth} disabled={isDeleting}>
-                    {isDeleting ? (
-                      <>
+                    {isDeleting ? <>
                         Deleting...
-                      </>
-                    ) : (
-                      <>
+                      </> : <>
                         Delete
-                      </>
-                    )}
+                      </>}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -176,8 +151,6 @@ const BoothSettings = () => {
           </div>
         </TabsContent>
       </Tabs>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default BoothSettings;
