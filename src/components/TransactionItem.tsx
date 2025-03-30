@@ -4,6 +4,7 @@ import { Transaction } from '@/types';
 import { formatDistance } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { HelpCircle } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -23,6 +24,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   
   const formattedTime = formatDistance(new Date(validTimestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(validTimestamp).toLocaleString();
+  
+  // Format the amount correctly by converting from cents to dollars
+  const displayAmount = typeof amount === 'number' ? amount / 100 : amount;
   
   const renderProductList = () => {
     if (!products || products.length === 0) return null;
@@ -57,7 +61,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         
         <div className="flex flex-col items-end">
           <div className="font-semibold text-right">
-            {type === 'fund' ? '+' : '-'}${amount.toFixed(2)}
+            {type === 'fund' ? '+' : '-'}${displayAmount.toFixed(2)}
           </div>
           
           {showSupport && (

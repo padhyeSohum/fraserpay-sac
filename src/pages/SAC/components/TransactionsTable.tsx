@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -80,7 +79,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     }
   };
 
-  // Format currency properly
+  // Format currency properly - ensuring we get dollars not cents
   const formatCurrency = (amount: number) => {
     return (amount / 100).toFixed(2);
   };
