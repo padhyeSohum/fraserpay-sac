@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -74,12 +75,11 @@ export const routes = [
     protected: true 
   },
   
-  // Only the SAC Dashboard requires the 'sac' role
+  // SAC Dashboard - no role restrictions anymore
   { 
     path: "/sac/dashboard", 
     element: <SACDashboard />,
-    protected: true,
-    requiredRoles: ['sac']
+    protected: true
   },
   
   // Shared Routes
@@ -150,25 +150,19 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Role-based protected route - only used for SAC dashboard now
+// Simple wrapper for backward compatibility - no longer does role checking
 export const RoleProtectedRoute = ({ 
-  children, 
-  allowedRoles 
+  children
 }: { 
   children: React.ReactNode; 
-  allowedRoles: string[] 
+  allowedRoles?: string[] 
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace state={{ from: location }} />;
-  }
-  
-  if (!user || !allowedRoles.includes(user.role)) {
-    console.log("User does not have required role, redirecting to dashboard");
-    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;

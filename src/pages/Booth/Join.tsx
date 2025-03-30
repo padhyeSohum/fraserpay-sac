@@ -13,7 +13,7 @@ import { Info, Loader2 } from 'lucide-react';
 
 const BoothJoin: React.FC = () => {
   const { user } = useAuth();
-  const { joinBooth, fetchAllBooths, booths } = useTransactions();
+  const { joinBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
   const [pin, setPin] = useState('');
@@ -59,12 +59,13 @@ const BoothJoin: React.FC = () => {
           // Navigate directly to the booth page
           navigate(`/booth/${joinedBooth.id}`);
         } else {
-          // Fallback if for some reason we can't find the booth
+          // If for some reason we can't find the booth, navigate to dashboard
           toast.success('Successfully joined booth!');
           navigate('/dashboard');
         }
       } else {
         setError('Invalid PIN code or unable to join booth. Please check and try again.');
+        toast.error('Failed to join booth');
       }
     } catch (error) {
       console.error('Error joining booth:', error);

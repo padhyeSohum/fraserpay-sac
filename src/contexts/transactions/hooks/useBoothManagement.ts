@@ -206,6 +206,10 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         console.warn('User document not found:', userId);
       }
       
+      // Refresh the booths list after joining
+      const updatedBooths = await loadBooths();
+      setBooths(updatedBooths);
+      
       return true;
     } catch (error) {
       console.error('Error joining booth:', error);
