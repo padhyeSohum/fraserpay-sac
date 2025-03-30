@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -51,8 +52,8 @@ export const routes = [
   { 
     path: "/booth/join", 
     element: <BoothJoin />,
-    protected: true,
-    requiredRoles: ['sac', 'booth'] // Only SAC members and booth managers can access
+    protected: true
+    // Removed the requiredRoles restriction to allow all authenticated users
   },
   { 
     path: "/booth/:boothId", 
