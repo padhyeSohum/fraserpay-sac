@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -12,7 +13,7 @@ import { Info, Loader2 } from 'lucide-react';
 
 const BoothJoin: React.FC = () => {
   const { user } = useAuth();
-  const { joinBooth, fetchAllBooths } = useTransactions();
+  const { joinBooth, fetchAllBooths, booths } = useTransactions();
   const navigate = useNavigate();
   
   const [pin, setPin] = useState('');
@@ -48,13 +49,20 @@ const BoothJoin: React.FC = () => {
         console.log('Successfully joined booth, refreshing data...');
         
         // Refresh booths list to include the newly joined booth
-        await fetchAllBooths();
+        const updatedBooths = await fetchAllBooths();
         
-        // Give a moment for the UI to refresh
-        setTimeout(() => {
+        // Find the booth that matches the PIN
+        const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
+        
+        if (joinedBooth) {
+          toast.success('Successfully joined booth!');
+          // Navigate directly to the booth page
+          navigate(`/booth/${joinedBooth.id}`);
+        } else {
+          // Fallback if for some reason we can't find the booth
           toast.success('Successfully joined booth!');
           navigate('/dashboard');
-        }, 500);
+        }
       } else {
         setError('Invalid PIN code or unable to join booth. Please check and try again.');
       }
