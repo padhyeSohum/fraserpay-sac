@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -211,6 +210,28 @@ const Dashboard = () => {
   }
 
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
+
+  useEffect(() => {
+    if (user) {
+      const pollingInterval = setInterval(() => {
+        refreshUserBooths();
+      }, 2000); // Poll every 2 seconds to catch new booth joins
+      
+      return () => clearInterval(pollingInterval);
+    }
+  }, [user, refreshUserBooths]);
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'boothJoined') {
+        console.log('Detected booth joined event, refreshing booths');
+        refreshUserBooths();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refreshUserBooths]);
 
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">

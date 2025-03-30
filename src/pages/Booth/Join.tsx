@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
@@ -53,6 +53,10 @@ const BoothJoin: React.FC = () => {
         
         // Find the booth that matches the PIN
         const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
+        
+        // Trigger an event to refresh booths on the dashboard
+        localStorage.setItem('boothJoined', Date.now().toString());
+        setTimeout(() => localStorage.removeItem('boothJoined'), 1000);
         
         if (joinedBooth) {
           toast.success('Successfully joined booth!');

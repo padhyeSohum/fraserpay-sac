@@ -98,20 +98,6 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {routes.map((route, index) => {
         if (route.protected) {
-          if (route.requiredRoles) {
-            return (
-              <Route 
-                key={index} 
-                path={route.path} 
-                element={
-                  <RoleProtectedRoute allowedRoles={route.requiredRoles}>
-                    {route.element}
-                  </RoleProtectedRoute>
-                } 
-              />
-            );
-          }
-          
           return (
             <Route 
               key={index} 
