@@ -376,7 +376,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       console.log(`Joining booth ${boothId} for user ${userId}`);
       
       await updateDoc(boothRef, {
-        managers: arrayUnion(userId)
+        managers: arrayUnion(userId),
+        members: arrayUnion(userId)
       });
       
       const userRef = doc(firestore, 'users', userId);
@@ -388,6 +389,9 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         console.log('Booths refreshed after joining:', updatedBooths.length);
         setBooths(updatedBooths);
       });
+      
+      localStorage.setItem('boothJoined', Date.now().toString());
+      setTimeout(() => localStorage.removeItem('boothJoined'), 1000);
       
       toast.success('Successfully joined booth!');
       return true;

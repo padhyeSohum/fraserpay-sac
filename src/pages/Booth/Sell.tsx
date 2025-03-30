@@ -56,11 +56,10 @@ const BoothSell = () => {
   }, [boothId, getBoothById]);
 
   useEffect(() => {
-    if (user && booth && !booth.managers.includes(user.id)) {
-      toast.error("You don't have access to this booth");
-      navigate('/dashboard');
+    if (!booth) {
+      console.log("Booth not found or user doesn't have access");
     }
-  }, [user, booth, navigate]);
+  }, [booth]);
 
   const handleProductSelect = (product: Product) => {
     const existingItem = cart.find(item => item.productId === product.id);

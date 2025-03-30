@@ -46,13 +46,13 @@ const BoothTransactions = () => {
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
 
+  // Remove role-based restriction, just check if booth exists
   useEffect(() => {
-    // Check if user has access to this booth
-    if (user && booth && !booth.managers.includes(user.id)) {
-      toast.error("You don't have access to this booth");
-      navigate('/dashboard');
+    if (!booth) {
+      console.log("Booth not found or user doesn't have access");
+      // We'll handle this in the render method below
     }
-  }, [user, booth, navigate]);
+  }, [booth]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
