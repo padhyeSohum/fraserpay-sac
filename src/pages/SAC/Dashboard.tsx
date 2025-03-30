@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -198,13 +199,19 @@ const Dashboard = () => {
       console.log('SAC Dashboard: Loaded transactions from Firebase', txs.length);
       setTransactions(txs);
       
+      // Modified to account for refunds when calculating total revenue
       const fundTransactions = txs.filter(tx => tx.type === 'fund' && tx.amount > 0);
+      const refundTransactions = txs.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
+      
       const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+      const totalRefundAmount = refundTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+      
+      const netRevenue = (totalFundAmount - totalRefundAmount) / 100;
       
       setStats(prev => ({
         ...prev,
         totalTransactions: txs.length,
-        totalRevenue: totalFundAmount / 100
+        totalRevenue: netRevenue
       }));
     } catch (error) {
       console.error('Error loading transactions from Firebase:', error);
@@ -429,6 +436,12 @@ const Dashboard = () => {
             balance: (userData.tickets || 0) / 100
           });
         }
+        
+        // Update stats to reflect the refund
+        setStats(prev => ({
+          ...prev,
+          totalRevenue: Math.max(0, prev.totalRevenue - amount)
+        }));
         
         await loadUsers();
         await loadTransactions();
