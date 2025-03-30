@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -173,6 +174,42 @@ const Dashboard = () => {
     }
   }, [recentTransactions, user, loadUserTransactions]);
 
+  const handleRemoveBooth = async (boothId: string) => {
+    try {
+      // Remove the booth from the user's booths array in Supabase
+      if (user) {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            booth_access: user.booths.filter(id => id !== boothId)
+          })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error("Error removing booth:", error);
+          toast.error("Failed to remove booth");
+          return;
+        }
+        
+        // Update the local state
+        if (updateUserData) {
+          updateUserData({
+            ...user,
+            booths: user.booths.filter(id => id !== boothId)
+          });
+        }
+        
+        // Update the UI by refreshing the booths
+        refreshUserBooths();
+        
+        toast.success("Booth removed successfully");
+      }
+    } catch (error) {
+      console.error("Error removing booth:", error);
+      toast.error("Failed to remove booth");
+    }
+  };
+
   const handleViewQRCode = () => {
     navigate('/qr-code');
   };
@@ -281,9 +318,9 @@ const Dashboard = () => {
                 <BoothCard
                   key={booth.id}
                   booth={booth}
-                  userRole="manager"
                   earnings={booth.totalEarnings}
                   onClick={() => handleBoothCardClick(booth.id)}
+                  onRemove={handleRemoveBooth}
                 />
               ))
             ) : (

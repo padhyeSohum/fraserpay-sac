@@ -3,6 +3,8 @@ import React from 'react';
 import { Booth } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface BoothCardProps {
   booth: Booth;
@@ -10,6 +12,7 @@ interface BoothCardProps {
   earnings?: number;
   onClick?: () => void;
   showProductCount?: boolean;
+  onRemove?: (id: string) => void;
 }
 
 const BoothCard: React.FC<BoothCardProps> = ({ 
@@ -17,9 +20,17 @@ const BoothCard: React.FC<BoothCardProps> = ({
   userRole,
   earnings = 0,
   onClick,
-  showProductCount = false
+  showProductCount = false,
+  onRemove
 }) => {
   const { name, description, products = [] } = booth;
+  
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onClick of the card
+    if (onRemove) {
+      onRemove(booth.id);
+    }
+  };
   
   return (
     <Card 
@@ -35,10 +46,16 @@ const BoothCard: React.FC<BoothCardProps> = ({
             <h3 className="font-medium">{name}</h3>
           </div>
           
-          {userRole && (
-            <Badge variant="secondary" className="text-xs capitalize">
-              {userRole}
-            </Badge>
+          {onRemove && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleRemoveClick}
+              aria-label="Remove booth"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
         
