@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
@@ -7,13 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Trophy, Award, Medal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-
 const Leaderboard = () => {
-  const { getLeaderboard } = useTransactions();
-  const [leaderboardData, setLeaderboardData] = useState<{ boothId: string; boothName: string; earnings: number }[]>([]);
+  const {
+    getLeaderboard
+  } = useTransactions();
+  const [leaderboardData, setLeaderboardData] = useState<{
+    boothId: string;
+    boothName: string;
+    earnings: number;
+  }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       try {
@@ -27,10 +30,8 @@ const Leaderboard = () => {
         setIsLoading(false);
       }
     };
-
     fetchLeaderboardData();
   }, [getLeaderboard]);
-
   const getIcon = (position: number) => {
     switch (position) {
       case 0:
@@ -43,13 +44,10 @@ const Leaderboard = () => {
         return null;
     }
   };
-
   const handleBackClick = () => {
     navigate('/dashboard');
   };
-
-  return (
-    <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
+  return <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
       <div className="container mx-auto max-w-4xl py-4">
         <Card className="border shadow-sm">
           <CardHeader className="bg-card-header pb-2">
@@ -57,16 +55,10 @@ const Leaderboard = () => {
             <CardDescription className="text-center">Top performing booths by earnings</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center p-6">
+            {isLoading ? <div className="flex justify-center p-6">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            ) : leaderboardData.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No booth data available yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {leaderboardData.map((booth, index) => (
-                  <div key={booth.boothId}>
+              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8">The leaderboard is not active yet! Check back after day 1 of Charity Week :) </p> : <div className="space-y-4">
+                {leaderboardData.map((booth, index) => <div key={booth.boothId}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center justify-center w-8">
@@ -80,15 +72,11 @@ const Leaderboard = () => {
                       <div className="font-semibold">${booth.earnings.toFixed(2)}</div>
                     </div>
                     {index < leaderboardData.length - 1 && <Separator className="mt-4" />}
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </CardContent>
         </Card>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Leaderboard;
