@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -19,6 +20,9 @@ import BoothSettings from "@/pages/Booth/Settings";
 
 // SAC Pages
 import SACDashboard from "@/pages/SAC/Dashboard";
+
+// Teacher Pages
+import TeacherRoutes from "@/pages/Teacher";
 
 // Shared Pages
 import Leaderboard from "@/pages/Leaderboard";
@@ -82,6 +86,9 @@ export const routes = [
     protected: true,
     requiredRoles: ['sac']
   },
+  
+  // Teacher Routes - not protected since they authenticate separately
+  { path: "/teacher/*", element: <TeacherRoutes /> },
   
   // Shared Routes
   { 
