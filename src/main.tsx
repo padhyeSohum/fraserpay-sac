@@ -39,6 +39,7 @@ const mountApp = () => {
     // Create React root and render App
     const root = createRoot(rootElement);
     
+    // Important: Make sure to create only one React instance
     root.render(
       <React.StrictMode>
         <App />
