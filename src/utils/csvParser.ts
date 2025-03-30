@@ -148,14 +148,33 @@ export const generateBoothWithProductsCSVTemplate = (): string => {
  * Convert template to Blob for download
  */
 export const downloadCSVTemplate = (templateContent: string, filename: string): void => {
-  const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    // Create a blob with the content
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    
+    // Create a URL for the blob
+    const url = URL.createObjectURL(blob);
+    
+    // Set link attributes
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    // Add to document, click to download, then remove
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+    console.log('CSV download initiated for:', filename);
+  } catch (error) {
+    console.error('Error downloading CSV:', error);
+  }
 };

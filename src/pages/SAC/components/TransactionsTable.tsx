@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -12,6 +13,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
+import { downloadCSVTemplate } from '@/utils/csvParser';
 
 export interface TransactionsTableProps {
   transactions: any[];
@@ -91,31 +93,64 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   
   // Export transactions to CSV
   const exportToCSV = () => {
-    const headers = ['Date', 'Student', 'Booth', 'Type', 'Amount'];
-    
-    const csvRows = [
-      headers.join(','),
-      ...filteredTransactions.map(t => [
-        new Date(t.created_at).toISOString(),
-        t.student_name || 'N/A',
-        t.booth_name || 'System',
-        t.type,
-        formatCurrency(t.amount)
-      ].join(','))
-    ];
-    
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `transactions-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      console.log("Exporting transactions to CSV", filteredTransactions.length);
+      
+      // Create headers for CSV
+      const headers = ['Date', 'Student', 'Booth', 'Type', 'Amount'];
+      
+      // Create CSV rows with proper data formatting
+      const csvRows = [
+        headers.join(','),
+        ...filteredTransactions.map(t => {
+          // Format date - handle potential undefined/null values
+          let dateStr = 'N/A';
+          try {
+            if (t.created_at) {
+              dateStr = new Date(t.created_at).toISOString();
+            }
+          } catch (e) {
+            console.error("Error formatting date for CSV:", e);
+          }
+          
+          // Handle potential undefined values
+          const studentName = t.student_name || 'N/A';
+          const boothName = t.booth_name || 'System';
+          const type = t.type || 'Unknown';
+          
+          // Handle amount - ensure it's a number
+          let amountStr = '0.00';
+          try {
+            if (t.amount !== undefined && t.amount !== null) {
+              amountStr = formatCurrency(Number(t.amount));
+            }
+          } catch (e) {
+            console.error("Error formatting amount for CSV:", e);
+          }
+          
+          return [
+            dateStr,
+            studentName.replace(/,/g, ' '), // Replace commas to avoid CSV format issues
+            boothName.replace(/,/g, ' '),
+            type,
+            amountStr
+          ].join(',');
+        })
+      ];
+      
+      // Join rows to create CSV content
+      const csvContent = csvRows.join('\n');
+      
+      // Generate filename with current date
+      const filename = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      // Use the utility function for download
+      downloadCSVTemplate(csvContent, filename);
+      
+      console.log("CSV export completed successfully");
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+    }
   };
 
   return (
