@@ -13,7 +13,9 @@ import {
   getDoc, 
   orderBy,
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  updateDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { deleteBooth as deleteBoothService } from '@/contexts/transactions/boothService';
 

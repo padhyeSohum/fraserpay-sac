@@ -366,6 +366,14 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       
       const boothId = querySnapshot.docs[0].id;
       const boothRef = doc(firestore, 'booths', boothId);
+      const boothDoc = await getDoc(boothRef);
+      
+      if (!boothDoc.exists()) {
+        toast.error('Booth not found');
+        return false;
+      }
+      
+      console.log(`Joining booth ${boothId} for user ${userId}`);
       
       await updateDoc(boothRef, {
         managers: arrayUnion(userId)
@@ -376,9 +384,12 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         booth_access: arrayUnion(boothId)
       });
       
-      await boothManagement.fetchAllBooths().then(setBooths);
+      await boothManagement.fetchAllBooths().then(updatedBooths => {
+        console.log('Booths refreshed after joining:', updatedBooths.length);
+        setBooths(updatedBooths);
+      });
       
-      toast.success('Successfully joined booth');
+      toast.success('Successfully joined booth!');
       return true;
     } catch (error) {
       console.error('Error joining booth:', error);

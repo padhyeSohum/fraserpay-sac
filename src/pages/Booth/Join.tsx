@@ -9,43 +9,52 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { toast } from 'sonner';
 import { Info, Loader2 } from 'lucide-react';
+
 const BoothJoin: React.FC = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    joinBooth,
-    fetchAllBooths
-  } = useTransactions();
+  const { user } = useAuth();
+  const { joinBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
+  
   const [pin, setPin] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPin(e.target.value);
     setError(null); // Clear error when pin is changed
   };
+  
   const handleJoinBooth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!pin.trim()) {
       setError('Please enter a PIN code');
       return;
     }
+    
     if (!user || !user.id) {
       toast.error('You must be logged in to join a booth');
       return;
     }
+    
     try {
       setIsJoining(true);
       setError(null);
+      
       console.log(`Attempting to join booth with PIN: ${pin}`);
       const success = await joinBooth(pin, user.id);
+      
       if (success) {
+        console.log('Successfully joined booth, refreshing data...');
+        
         // Refresh booths list to include the newly joined booth
         await fetchAllBooths();
-
-        // Redirect back to dashboard
-        navigate('/dashboard');
+        
+        // Give a moment for the UI to refresh
+        setTimeout(() => {
+          toast.success('Successfully joined booth!');
+          navigate('/dashboard');
+        }, 500);
       } else {
         setError('Invalid PIN code or unable to join booth. Please check and try again.');
       }
@@ -57,7 +66,9 @@ const BoothJoin: React.FC = () => {
       setIsJoining(false);
     }
   };
-  return <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
+
+  return (
+    <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader>
@@ -111,6 +122,8 @@ const BoothJoin: React.FC = () => {
           </Button>
         </div>
       </div>
-    </Layout>;
+    </Layout>
+  );
 };
+
 export default BoothJoin;
