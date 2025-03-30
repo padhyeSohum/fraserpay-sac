@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -31,7 +30,7 @@ export const routes = [
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   
-  // Student Routes with ProtectedRoute
+  // All authenticated users can access these routes
   { 
     path: "/dashboard", 
     element: <Dashboard />,
@@ -48,12 +47,11 @@ export const routes = [
     protected: true 
   },
   
-  // Booth Routes with ProtectedRoute and Role restrictions
+  // Booth Routes - no role restrictions
   { 
     path: "/booth/join", 
     element: <BoothJoin />,
     protected: true
-    // Removed the requiredRoles restriction to allow all authenticated users
   },
   { 
     path: "/booth/:boothId", 
@@ -76,7 +74,7 @@ export const routes = [
     protected: true 
   },
   
-  // SAC Routes with RoleProtectedRoute
+  // Only the SAC Dashboard requires the 'sac' role
   { 
     path: "/sac/dashboard", 
     element: <SACDashboard />,
@@ -100,7 +98,7 @@ export const routes = [
   { path: "/not-found", element: <NotFound /> },
 ];
 
-// Enhanced Loading component with timeout detection and more detailed feedback
+// Enhanced Loading screen with timeout detection and more detailed feedback
 export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
   <div className="flex flex-col items-center justify-center h-screen p-4">
     <p className="text-sm mb-2">Loading Fraser Pay...</p>
@@ -139,7 +137,7 @@ export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
   </div>
 );
 
-// Simplified Protected Route
+// Simplified Protected Route - no role checks
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
@@ -152,7 +150,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Simplified Role-based protected route
+// Role-based protected route - only used for SAC dashboard now
 export const RoleProtectedRoute = ({ 
   children, 
   allowedRoles 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
@@ -28,6 +29,7 @@ export interface UseBoothManagementReturn {
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   deleteBooth: (boothId: string) => Promise<boolean>;
+  joinBooth: (pin: string, userId: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -88,7 +90,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     }
   }, []);
   
-  // Load booths where a user is a manager
+  // Load booths where a user is a member
   const loadStudentBooths = useCallback(async (userId?: string) => {
     const userIdToUse = userId || (user ? user.id : undefined);
     
@@ -154,6 +156,65 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     }
   }, [user]);
   
+  // Function to join a booth using PIN
+  const joinBooth = async (pin: string, userId: string): Promise<boolean> => {
+    console.log('Attempting to join booth with PIN:', pin);
+    setIsLoading(true);
+    
+    try {
+      // Find the booth with the matching PIN
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsQuery = query(boothsCollection, where('pin', '==', pin));
+      const boothsSnapshot = await getDocs(boothsQuery);
+      
+      if (boothsSnapshot.empty) {
+        console.log('No booth found with the provided PIN');
+        return false;
+      }
+      
+      // Get the booth document
+      const boothDoc = boothsSnapshot.docs[0];
+      const boothId = boothDoc.id;
+      const boothData = boothDoc.data();
+      
+      console.log('Found booth with matching PIN:', boothId);
+      
+      // Check if user is already a member
+      const members = boothData.members || [];
+      if (members.includes(userId)) {
+        console.log('User is already a member of this booth');
+        return true; // Return true since the user is already connected to the booth
+      }
+      
+      // Update the booth document to add the user as a member
+      await updateDoc(doc(firestore, 'booths', boothId), {
+        members: arrayUnion(userId)
+      });
+      
+      console.log('Added user to booth members list');
+      
+      // Also update the user's booth_access array
+      const userRef = doc(firestore, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        await updateDoc(userRef, {
+          booth_access: arrayUnion(boothId)
+        });
+        console.log('Updated user booth_access list');
+      } else {
+        console.warn('User document not found:', userId);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error joining booth:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Fetch all booths and update state
   const fetchAllBooths = useCallback(async () => {
     setIsLoading(true);
@@ -186,7 +247,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       const boothData = {
         name,
         description,
-        members: [managerId], // Initial manager
+        members: [managerId], // Initial member - not just manager but member
         pin,
         sales: 0,
         created_at: new Date().toISOString(),
@@ -194,6 +255,12 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       };
       
       const boothRef = await addDoc(collection(firestore, 'booths'), boothData);
+      
+      // Also update the user's booth_access array
+      const userRef = doc(firestore, 'users', managerId);
+      await updateDoc(userRef, {
+        booth_access: arrayUnion(boothRef.id)
+      });
       
       // Update booth list
       await fetchAllBooths();
@@ -253,6 +320,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     fetchAllBooths,
     createBooth,
     deleteBooth,
+    joinBooth,
     isLoading
   };
 };

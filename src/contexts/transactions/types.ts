@@ -11,6 +11,7 @@ export interface TransactionContextType {
   fetchAllBooths: () => Promise<Booth[]>;
   createBooth: (name: string, description: string, userId: string, customPin?: string) => Promise<string | null>;
   deleteBooth: (boothId: string) => Promise<boolean>;
+  joinBooth: (pin: string, userId: string) => Promise<boolean>;
   
   // Product management
   loadBoothProducts: (boothId: string) => Product[];
