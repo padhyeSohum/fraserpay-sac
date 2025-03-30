@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -9,23 +10,17 @@ import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+
 const BoothDashboard = () => {
-  const {
-    boothId
-  } = useParams<{
-    boothId: string;
-  }>();
-  const {
-    user
-  } = useAuth();
-  const {
-    getBoothById,
-    loadBoothTransactions
-  } = useTransactions();
+  const { boothId } = useParams<{ boothId: string; }>();
+  const { user } = useAuth();
+  const { getBoothById, loadBoothTransactions } = useTransactions();
   const navigate = useNavigate();
+  
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
   const [transactions, setTransactions] = useState<ReturnType<typeof loadBoothTransactions>>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
+  
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
@@ -37,6 +32,7 @@ const BoothDashboard = () => {
       }
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
+  
   useEffect(() => {
     // Check if user has access to this booth
     if (user && booth && !booth.managers.includes(user.id)) {
@@ -44,6 +40,7 @@ const BoothDashboard = () => {
       navigate('/dashboard');
     }
   }, [user, booth, navigate]);
+  
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'sell') {
@@ -54,17 +51,22 @@ const BoothDashboard = () => {
       navigate(`/booth/${boothId}/settings`);
     }
   };
+  
   if (!booth) {
-    return <Layout title="Booth not found" showBack>
+    return (
+      <Layout title="Booth not found" showBack>
         <div className="text-center py-10">
           <p className="text-muted-foreground">The booth you're looking for could not be found</p>
           <Button variant="link" onClick={() => navigate('/dashboard')} className="mt-4">
             Return to Dashboard
           </Button>
         </div>
-      </Layout>;
+      </Layout>
+    );
   }
-  return <Layout title={booth.name} subtitle="Booth Management" showBack>
+  
+  return (
+    <Layout title={booth.name} subtitle="Booth Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="dashboard" className="tab-button">Dashboard</TabsTrigger>
@@ -89,8 +91,6 @@ const BoothDashboard = () => {
                 <span className="font-medium">Process a Sale</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Button>
-              
-              
             </div>
             
             {/* Recent Transactions */}
@@ -103,17 +103,29 @@ const BoothDashboard = () => {
                 </Button>
               </div>
               
-              {transactions.length > 0 ? <div className="space-y-3">
-                  {transactions.slice(0, 3).map(transaction => <TransactionItem key={transaction.id} transaction={transaction} showSupport />)}
-                </div> : <Card>
+              {transactions.length > 0 ? (
+                <div className="space-y-3">
+                  {transactions.slice(0, 3).map(transaction => (
+                    <TransactionItem 
+                      key={transaction.id} 
+                      transaction={transaction} 
+                      showSupport 
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
                   <CardContent className="p-6 text-center text-muted-foreground">
                     <p>No transactions yet</p>
                   </CardContent>
-                </Card>}
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>
       </Tabs>
-    </Layout>;
+    </Layout>
+  );
 };
+
 export default BoothDashboard;

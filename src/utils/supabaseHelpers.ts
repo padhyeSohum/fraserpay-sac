@@ -109,3 +109,57 @@ export const formatDatabaseValue = (
   // Convert cents to dollars
   return value / 100;
 };
+
+/**
+ * Manage hidden booths in localStorage
+ */
+export const hiddenBoothsManager = {
+  getHiddenBooths(): string[] {
+    try {
+      const storedBooths = localStorage.getItem('hiddenBooths');
+      return storedBooths ? JSON.parse(storedBooths) : [];
+    } catch (error) {
+      console.error('Error retrieving hidden booths:', error);
+      return [];
+    }
+  },
+  
+  saveHiddenBooths(boothIds: string[]): void {
+    try {
+      localStorage.setItem('hiddenBooths', JSON.stringify(boothIds));
+    } catch (error) {
+      console.error('Error saving hidden booths:', error);
+    }
+  },
+  
+  hideBooth(boothId: string): void {
+    const currentHidden = this.getHiddenBooths();
+    if (!currentHidden.includes(boothId)) {
+      const updatedHidden = [...currentHidden, boothId];
+      this.saveHiddenBooths(updatedHidden);
+    }
+  },
+  
+  showBooth(boothId: string): void {
+    const currentHidden = this.getHiddenBooths();
+    const updatedHidden = currentHidden.filter(id => id !== boothId);
+    this.saveHiddenBooths(updatedHidden);
+  },
+  
+  toggleBoothVisibility(boothId: string): boolean {
+    const currentHidden = this.getHiddenBooths();
+    const isCurrentlyHidden = currentHidden.includes(boothId);
+    
+    if (isCurrentlyHidden) {
+      this.showBooth(boothId);
+      return false; // no longer hidden
+    } else {
+      this.hideBooth(boothId);
+      return true; // now hidden
+    }
+  },
+  
+  clearAllHiddenBooths(): void {
+    localStorage.removeItem('hiddenBooths');
+  }
+};

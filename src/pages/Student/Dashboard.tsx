@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -23,7 +22,19 @@ const Dashboard = () => {
   const [dataInitialized, setDataInitialized] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const MAX_RETRIES = 3;
+
+  useEffect(() => {
+    const storedHiddenBooths = localStorage.getItem('hiddenBooths');
+    if (storedHiddenBooths) {
+      setHiddenBooths(JSON.parse(storedHiddenBooths));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hiddenBooths', JSON.stringify(hiddenBooths));
+  }, [hiddenBooths]);
 
   const refreshUserData = useCallback(async () => {
     if (!user) return;
@@ -64,7 +75,6 @@ const Dashboard = () => {
   const refreshUserBooths = useCallback(() => {
     if (!user) return;
     try {
-      // Get latest booths for this user
       const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
       console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
       setUserBooths(booths);
@@ -83,7 +93,6 @@ const Dashboard = () => {
       
       await refreshUserData();
       
-      // Get user booths with error handling
       try {
         refreshUserBooths();
       } catch (error) {
@@ -92,7 +101,6 @@ const Dashboard = () => {
         toast.error("Failed to load your booths");
       }
       
-      // Load transactions with error handling
       try {
         const userTxs = loadUserTransactions ? 
           loadUserTransactions(user.id) : 
@@ -132,26 +140,22 @@ const Dashboard = () => {
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
 
   useEffect(() => {
-    // Initial refresh for immediate data
     refreshUserData();
     refreshUserBooths();
     
-    // Set up polling interval for regular updates
     const intervalId = setInterval(() => {
       refreshUserData();
       refreshUserBooths();
-    }, 15000); // Refresh every 15 seconds
+    }, 15000);
     
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
 
   useEffect(() => {
-    // Listen for any new transactions and refresh booths
     const handleTransactionUpdate = () => {
       refreshUserBooths();
     };
     
-    // Set up a recurring check 
     const transactionCheckId = setInterval(handleTransactionUpdate, 5000);
     
     return () => {
@@ -167,47 +171,15 @@ const Dashboard = () => {
   }, [user?.booths, refreshUserBooths]);
 
   useEffect(() => {
-    // Update transactions when recentTransactions changes
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
     }
   }, [recentTransactions, user, loadUserTransactions]);
 
-  const handleRemoveBooth = async (boothId: string) => {
-    try {
-      // Remove the booth from the user's booths array in Supabase
-      if (user) {
-        const { error } = await supabase
-          .from('users')
-          .update({
-            booth_access: user.booths.filter(id => id !== boothId)
-          })
-          .eq('id', user.id);
-        
-        if (error) {
-          console.error("Error removing booth:", error);
-          toast.error("Failed to remove booth");
-          return;
-        }
-        
-        // Update the local state
-        if (updateUserData) {
-          updateUserData({
-            ...user,
-            booths: user.booths.filter(id => id !== boothId)
-          });
-        }
-        
-        // Update the UI by refreshing the booths
-        refreshUserBooths();
-        
-        toast.success("Booth removed successfully");
-      }
-    } catch (error) {
-      console.error("Error removing booth:", error);
-      toast.error("Failed to remove booth");
-    }
+  const handleHideBooth = (boothId: string) => {
+    setHiddenBooths(prev => [...prev, boothId]);
+    toast.success("Booth hidden from dashboard");
   };
 
   const handleViewQRCode = () => {
@@ -248,6 +220,8 @@ const Dashboard = () => {
       </Layout>
     );
   }
+
+  const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
 
   return (
     <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
@@ -313,14 +287,14 @@ const Dashboard = () => {
                   <p>Loading booths...</p>
                 </CardContent>
               </Card>
-            ) : userBooths.length > 0 ? (
-              userBooths.map(booth => (
+            ) : visibleBooths.length > 0 ? (
+              visibleBooths.map(booth => (
                 <BoothCard
                   key={booth.id}
                   booth={booth}
                   earnings={booth.totalEarnings}
                   onClick={() => handleBoothCardClick(booth.id)}
-                  onRemove={handleRemoveBooth}
+                  onRemove={handleHideBooth}
                 />
               ))
             ) : (
