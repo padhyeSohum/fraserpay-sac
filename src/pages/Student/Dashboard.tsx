@@ -11,7 +11,6 @@ import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
-
 const Dashboard = () => {
   const {
     user,
@@ -32,38 +31,31 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const MAX_RETRIES = 3;
-
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
     if (storedHiddenBooths) {
       setHiddenBooths(JSON.parse(storedHiddenBooths));
     }
   }, []);
-
   useEffect(() => {
     localStorage.setItem('hiddenBooths', JSON.stringify(hiddenBooths));
   }, [hiddenBooths]);
-
   const refreshUserData = useCallback(async () => {
     if (!user) return;
     try {
       const now = Date.now();
       const lastUserDataFetch = getVersionedStorageItem<number>('lastUserDataFetch', 0);
-      
       if (now - lastUserDataFetch < 30000) {
         const isBalanceOnlyUpdate = now - lastUserDataFetch > 5000;
-        
         if (isBalanceOnlyUpdate) {
           const {
             data: balanceData,
             error: balanceError
           } = await supabase.from('users').select('tickets').eq('id', user.id).single();
-          
           if (balanceError) {
             console.error("Error refreshing user balance:", balanceError);
             return;
           }
-          
           if (balanceData && user && balanceData.tickets / 100 !== user.balance) {
             console.log("Dashboard - refreshed user balance:", balanceData.tickets / 100);
             updateUserData({
@@ -71,28 +63,22 @@ const Dashboard = () => {
               balance: balanceData.tickets / 100
             });
           }
-          
           return;
         }
-        
         return;
       }
-      
       const {
         data: freshUserData,
         error: userError
       } = await supabase.from('users').select('tickets, booth_access').eq('id', user.id).single();
-      
       if (userError) {
         console.error("Error refreshing user data:", userError);
         return;
       }
-      
       if (freshUserData && user) {
         console.log("Dashboard - refreshed user data:", freshUserData);
         const newBalance = freshUserData.tickets / 100;
         const newBooths = freshUserData.booth_access || [];
-        
         if (newBalance !== user.balance || JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
           console.log("Updating user data with new booths:", newBooths);
           updateUserData({
@@ -101,14 +87,12 @@ const Dashboard = () => {
             booths: newBooths
           });
         }
-        
         setVersionedStorageItem('lastUserDataFetch', now);
       }
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }
   }, [user, updateUserData]);
-
   const refreshUserBooths = useCallback(() => {
     if (!user) return;
     try {
@@ -122,7 +106,6 @@ const Dashboard = () => {
       setUserBooths([]);
     }
   }, [user, getBoothsByUserId, fetchAllBooths]);
-
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
     try {
@@ -158,7 +141,6 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, loadUserTransactions, MAX_RETRIES]);
-
   useEffect(() => {
     let isMounted = true;
     if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
@@ -168,7 +150,6 @@ const Dashboard = () => {
       isMounted = false;
     };
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
-
   useEffect(() => {
     refreshUserData();
     refreshUserBooths();
@@ -178,7 +159,6 @@ const Dashboard = () => {
     }, 5000);
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
-
   useEffect(() => {
     const handleTransactionUpdate = () => {
       refreshUserBooths();
@@ -188,53 +168,43 @@ const Dashboard = () => {
       clearInterval(transactionCheckId);
     };
   }, [refreshUserBooths, recentTransactions]);
-
   useEffect(() => {
     if (user && user.booths) {
       console.log("Dashboard: User booths changed, refreshing...", user.booths);
       refreshUserBooths();
     }
   }, [user?.booths, refreshUserBooths]);
-
   useEffect(() => {
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
     }
   }, [recentTransactions, user, loadUserTransactions]);
-
   const handleHideBooth = (boothId: string) => {
     setHiddenBooths(prev => [...prev, boothId]);
     toast.success("Booth hidden from dashboard");
   };
-
   const handleViewQRCode = () => {
     navigate('/qr-code');
   };
-
   const handleViewLeaderboard = () => {
     navigate('/leaderboard');
   };
-
   const handleViewSettings = () => {
     navigate('/settings');
   };
-
   const handleJoinBooth = () => {
     navigate('/booth/join');
   };
-
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
   };
-
   const logo = <div className="flex items-center mb-2">
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
         <p className="text-sm text-muted-foreground">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</p>
       </div>
     </div>;
-
   if (!user) {
     return <Layout title="Loading...">
         <div className="flex items-center justify-center min-h-[70vh]">
@@ -242,19 +212,16 @@ const Dashboard = () => {
         </div>
       </Layout>;
   }
-
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
-
   useEffect(() => {
     if (user) {
       const pollingInterval = setInterval(() => {
         refreshUserBooths();
       }, 2000); // Poll every 2 seconds to catch new booth joins
-      
+
       return () => clearInterval(pollingInterval);
     }
   }, [user, refreshUserBooths]);
-
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === 'boothJoined') {
@@ -262,11 +229,9 @@ const Dashboard = () => {
         refreshUserBooths();
       }
     };
-    
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refreshUserBooths]);
-
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">
         <div className="balance-card rounded-xl overflow-hidden">
@@ -324,7 +289,7 @@ const Dashboard = () => {
         
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">Recent Transactions</h2>
+            <h2 className="text-lg font-semibold">Purchases You've made Recently</h2>
             <Button variant="ghost" size="sm" onClick={() => navigate('/transactions')}>Refresh</Button>
           </div>
           
@@ -343,5 +308,4 @@ const Dashboard = () => {
       </div>
     </Layout>;
 };
-
 export default Dashboard;
