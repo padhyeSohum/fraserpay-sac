@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
@@ -35,8 +36,12 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
         const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
         const now = Date.now();
         
-        // Use cache if it exists and is less than 2 minutes old
-        if (cachedTransactions.length > 0 && now - lastFetchTime < 2 * 60 * 1000) {
+        // Balance data needs to be fresh, so use a shorter cache time (45 seconds)
+        // This ensures balances are updated relatively quickly without excessive reads
+        const cacheTime = 45 * 1000; // 45 seconds, reduced from 2 minutes for more responsive balances
+        
+        // Use cache if it exists and is less than 45 seconds old
+        if (cachedTransactions.length > 0 && now - lastFetchTime < cacheTime) {
           console.log('Using cached transactions:', cachedTransactions.length);
           setTransactions(cachedTransactions);
           
@@ -53,8 +58,8 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
         console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
         
-        // Cache the transactions
-        setVersionedStorageItem('transactions', allTransactions, 2 * 60 * 1000); // 2 minutes
+        // Cache the transactions with updated timeout
+        setVersionedStorageItem('transactions', allTransactions, cacheTime);
         setVersionedStorageItem('lastTransactionsFetch', now);
         
         if (user && allTransactions.length > 0) {
@@ -70,8 +75,8 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     fetchTransactionsData();
     
     // Set up a polling interval for critical data (user balance)
-    // but at a reduced frequency to minimize Firebase reads
-    const intervalId = setInterval(fetchTransactionsData, 30000); // 30 seconds instead of more frequent
+    // Polling at 15 seconds provides a good balance between freshness and Firebase reads
+    const intervalId = setInterval(fetchTransactionsData, 15000); // 15 seconds instead of 30
     
     return () => clearInterval(intervalId);
   }, [user, isAuthenticated]);
@@ -142,8 +147,9 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       const lastLeaderboardFetch = getVersionedStorageItem<number>('lastLeaderboardFetch', 0);
       const now = Date.now();
       
-      // Use cache if it's less than 5 minutes old
-      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < 5 * 60 * 1000) {
+      // Use cache if it's less than 3 minutes old (reduced from 5 minutes)
+      // This makes booth earnings more up-to-date
+      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < 3 * 60 * 1000) {
         return cachedLeaderboard;
       }
       
@@ -151,7 +157,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       const leaderboard = await getLeaderboardService();
       
       // Cache the result
-      setVersionedStorageItem('leaderboard', leaderboard, 5 * 60 * 1000);
+      setVersionedStorageItem('leaderboard', leaderboard, 3 * 60 * 1000);
       setVersionedStorageItem('lastLeaderboardFetch', now);
       
       return leaderboard;

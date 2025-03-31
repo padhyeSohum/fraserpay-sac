@@ -21,7 +21,7 @@ import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
 import { firestore } from '@/integrations/firebase/client';
-import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { transformFirebaseUser } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
@@ -85,27 +85,29 @@ const Dashboard = () => {
   
   useEffect(() => {
     const initializeListeners = async () => {
-      const statsPollingInterval = setInterval(() => {
+      const criticalStatsPollingInterval = setInterval(() => {
         const now = Date.now();
         const lastCriticalStatsFetch = getVersionedStorageItem<number>('lastCriticalStatsFetch', 0);
         
-        if (now - lastCriticalStatsFetch > 10000) {
-          loadTransactions();
-          loadBoothLeaderboard();
+        if (now - lastCriticalStatsFetch > 5000) {
+          loadTransactions(true);
+          loadBoothLeaderboard(true);
           setVersionedStorageItem('lastCriticalStatsFetch', now);
+          setVersionedStorageItem('isUpdatingCriticalStats', true);
         }
-      }, 10000);
+      }, 5000);
       
       const fullDataPollingInterval = setInterval(() => {
         if (dataInitialized) {
+          setVersionedStorageItem('isUpdatingCriticalStats', false);
           loadUsers();
-          loadTransactions();
-          loadBoothLeaderboard();
+          loadTransactions(false);
+          loadBoothLeaderboard(false);
         }
       }, 60000);
       
       return () => {
-        clearInterval(statsPollingInterval);
+        clearInterval(criticalStatsPollingInterval);
         clearInterval(fullDataPollingInterval);
       };
     };
@@ -220,28 +222,57 @@ const Dashboard = () => {
     }
   };
   
-  const loadTransactions = async () => {
+  const loadTransactions = async (criticalUpdateOnly = false) => {
     setIsTransactionLoading(true);
     try {
-      const isFullRefresh = !getVersionedStorageItem<boolean>('isUpdatingCriticalStats', true);
       const cachedTransactions = getVersionedStorageItem<any[]>('sacTransactions', []);
       const lastTransactionsFetch = getVersionedStorageItem<number>('lastSacTransactionsFetch', 0);
       const now = Date.now();
       
-      if (!isFullRefresh && cachedTransactions.length > 0 && now - lastTransactionsFetch < 60 * 1000) {
-        const fundTransactions = cachedTransactions.filter(tx => tx.type === 'fund' && tx.amount > 0);
-        const refundTransactions = cachedTransactions.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
+      const cacheTime = criticalUpdateOnly ? 5000 : 60000;
+      
+      if (cachedTransactions.length > 0 && now - lastTransactionsFetch < cacheTime) {
+        updateRevenueStats(cachedTransactions);
+        setIsTransactionLoading(false);
+        return;
+      }
+      
+      if (criticalUpdateOnly && cachedTransactions.length > 0) {
+        const transactionsRef = collection(firestore, 'transactions');
+        const twoMinutesAgo = new Date();
+        twoMinutesAgo.setMinutes(twoMinutesAgo.getMinutes() - 2);
+        const q = query(
+          transactionsRef, 
+          orderBy('created_at', 'desc')
+        );
         
-        const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-        const totalRefundAmount = refundTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+        const querySnapshot = await getDocs(q);
         
-        const netRevenue = (totalFundAmount - totalRefundAmount) / 100;
-        
-        setStats(prev => ({
-          ...prev,
-          totalTransactions: cachedTransactions.length,
-          totalRevenue: netRevenue
-        }));
+        if (!querySnapshot.empty) {
+          const recentTxs = querySnapshot.docs
+            .map(doc => {
+              const txData = doc.data();
+              txData.id = doc.id;
+              return txData;
+            })
+            .filter(tx => {
+              return !cachedTransactions.some(cachedTx => cachedTx.id === tx.id);
+            });
+            
+          if (recentTxs.length > 0) {
+            console.log('SAC Dashboard: Found new transactions to add:', recentTxs.length);
+            const allTransactions = [...recentTxs, ...cachedTransactions];
+            setTransactions(allTransactions);
+            updateRevenueStats(allTransactions);
+            
+            setVersionedStorageItem('sacTransactions', allTransactions, cacheTime);
+            setVersionedStorageItem('lastSacTransactionsFetch', now);
+          } else {
+            updateRevenueStats(cachedTransactions);
+          }
+        } else {
+          updateRevenueStats(cachedTransactions);
+        }
         
         setIsTransactionLoading(false);
         return;
@@ -260,21 +291,9 @@ const Dashboard = () => {
       console.log('SAC Dashboard: Loaded transactions from Firebase', txs.length);
       setTransactions(txs);
       
-      const fundTransactions = txs.filter(tx => tx.type === 'fund' && tx.amount > 0);
-      const refundTransactions = txs.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
+      updateRevenueStats(txs);
       
-      const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-      const totalRefundAmount = refundTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
-      
-      const netRevenue = (totalFundAmount - totalRefundAmount) / 100;
-      
-      setStats(prev => ({
-        ...prev,
-        totalTransactions: txs.length,
-        totalRevenue: netRevenue
-      }));
-      
-      setVersionedStorageItem('sacTransactions', txs, 60 * 1000);
+      setVersionedStorageItem('sacTransactions', txs, cacheTime);
       setVersionedStorageItem('lastSacTransactionsFetch', now);
     } catch (error) {
       console.error('Error loading transactions from Firebase:', error);
@@ -285,14 +304,16 @@ const Dashboard = () => {
     }
   };
   
-  const loadBoothLeaderboard = async () => {
+  const loadBoothLeaderboard = async (criticalUpdateOnly = false) => {
     setIsBoothLoading(true);
     try {
       const cachedBooths = getVersionedStorageItem<any[]>('sacBooths', []);
       const lastBoothsFetch = getVersionedStorageItem<number>('lastSacBoothsFetch', 0);
       const now = Date.now();
       
-      if (cachedBooths.length > 0 && now - lastBoothsFetch < 30 * 1000) {
+      const cacheTime = criticalUpdateOnly ? 10000 : 30000;
+      
+      if (cachedBooths.length > 0 && now - lastBoothsFetch < cacheTime) {
         const sortedBooths = [...cachedBooths].sort((a, b) => b.totalEarnings - a.totalEarnings);
         setLeaderboard(sortedBooths);
         
@@ -318,7 +339,7 @@ const Dashboard = () => {
           totalBooths: booths.length
         }));
         
-        setVersionedStorageItem('sacBooths', booths, 30 * 1000);
+        setVersionedStorageItem('sacBooths', booths, cacheTime);
         setVersionedStorageItem('lastSacBoothsFetch', now);
       }
     } catch (error) {
@@ -328,6 +349,22 @@ const Dashboard = () => {
     } finally {
       setIsBoothLoading(false);
     }
+  };
+  
+  const updateRevenueStats = (txs: any[]) => {
+    const fundTransactions = txs.filter(tx => tx.type === 'fund' && tx.amount > 0);
+    const refundTransactions = txs.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
+    
+    const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    const totalRefundAmount = refundTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+    
+    const netRevenue = (totalFundAmount - totalRefundAmount) / 100;
+    
+    setStats(prev => ({
+      ...prev,
+      totalTransactions: txs.length,
+      totalRevenue: netRevenue
+    }));
   };
   
   const handleStudentFound = async (student: any, qrUrl: string) => {
