@@ -301,9 +301,7 @@ const BoothSettings = () => {
             
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  <Trash className="mr-2 h-4 w-4" /> Delete Booth
-                </Button>
+                
               </AlertDialogTrigger>
               
               <AlertDialogContent>
