@@ -289,7 +289,7 @@ const Dashboard = () => {
         
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">Purchases you've made recently</h2>
+            <h2 className="text-lg font-semibold">Your Recent Purchases</h2>
             <Button variant="ghost" size="sm" onClick={() => navigate('/transactions')}>Refresh</Button>
           </div>
           
