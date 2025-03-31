@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
@@ -7,6 +6,7 @@ import {
 } from '../boothService';
 import { fetchAllTransactions } from '../transactionService';
 import { toast } from 'sonner';
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export interface UseTransactionManagementReturn {
   transactions: Transaction[];
@@ -30,9 +30,32 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       
       console.log('Initializing transaction data fetch');
       try {
+        // Check if we have cached transactions first
+        const cachedTransactions = getVersionedStorageItem<Transaction[]>('transactions', []);
+        const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
+        const now = Date.now();
+        
+        // Use cache if it exists and is less than 2 minutes old
+        if (cachedTransactions.length > 0 && now - lastFetchTime < 2 * 60 * 1000) {
+          console.log('Using cached transactions:', cachedTransactions.length);
+          setTransactions(cachedTransactions);
+          
+          if (user && cachedTransactions.length > 0) {
+            const userTxs = cachedTransactions.filter(t => t.buyerId === user.id);
+            console.log('User transactions from cache:', userTxs.length);
+            setRecentTransactions(userTxs.slice(0, 5));
+          }
+          return;
+        }
+        
+        // Otherwise fetch from backend
         const allTransactions = await fetchAllTransactions();
         console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
+        
+        // Cache the transactions
+        setVersionedStorageItem('transactions', allTransactions, 2 * 60 * 1000); // 2 minutes
+        setVersionedStorageItem('lastTransactionsFetch', now);
         
         if (user && allTransactions.length > 0) {
           const userTxs = allTransactions.filter(t => t.buyerId === user.id);
@@ -45,6 +68,12 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     };
     
     fetchTransactionsData();
+    
+    // Set up a polling interval for critical data (user balance)
+    // but at a reduced frequency to minimize Firebase reads
+    const intervalId = setInterval(fetchTransactionsData, 30000); // 30 seconds instead of more frequent
+    
+    return () => clearInterval(intervalId);
   }, [user, isAuthenticated]);
 
   const loadBoothTransactions = (boothId: string) => {
@@ -108,11 +137,30 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
 
   const getLeaderboard = useCallback(async () => {
     try {
-      return await getLeaderboardService();
+      // Check if we have cached leaderboard
+      const cachedLeaderboard = getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
+      const lastLeaderboardFetch = getVersionedStorageItem<number>('lastLeaderboardFetch', 0);
+      const now = Date.now();
+      
+      // Use cache if it's less than 5 minutes old
+      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < 5 * 60 * 1000) {
+        return cachedLeaderboard;
+      }
+      
+      // Otherwise fetch fresh data
+      const leaderboard = await getLeaderboardService();
+      
+      // Cache the result
+      setVersionedStorageItem('leaderboard', leaderboard, 5 * 60 * 1000);
+      setVersionedStorageItem('lastLeaderboardFetch', now);
+      
+      return leaderboard;
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       toast.error('Failed to fetch leaderboard data');
-      return [];
+      
+      // Return cached data on error if available
+      return getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
     }
   }, []);
 

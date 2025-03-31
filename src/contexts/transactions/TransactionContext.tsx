@@ -44,6 +44,7 @@ import {
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { fetchAllTransactions } from './transactionService';
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
@@ -160,13 +161,42 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log("Initializing transaction context data...");
         
-        const fetchedBooths = await boothManagement.fetchAllBooths();
-        console.log("Loaded booths:", fetchedBooths.length);
-        setBooths(fetchedBooths);
+        // Check cache first for booths
+        const cachedBooths = getVersionedStorageItem<Booth[]>('allBooths', []);
+        const lastBoothsFetch = getVersionedStorageItem<number>('lastBoothsFetch', 0);
+        const now = Date.now();
         
-        const allTransactions = await fetchAllTransactions();
-        console.log("Loaded transactions:", allTransactions.length);
-        setRecentTransactions(allTransactions);
+        // Use cache if fresh (less than 5 minutes old)
+        if (cachedBooths.length > 0 && now - lastBoothsFetch < 5 * 60 * 1000) {
+          console.log("Using cached booths:", cachedBooths.length);
+          setBooths(cachedBooths);
+        } else {
+          const fetchedBooths = await boothManagement.fetchAllBooths();
+          console.log("Loaded booths:", fetchedBooths.length);
+          setBooths(fetchedBooths);
+          
+          // Cache the result
+          setVersionedStorageItem('allBooths', fetchedBooths, 5 * 60 * 1000);
+          setVersionedStorageItem('lastBoothsFetch', now);
+        }
+        
+        // Check cache for transactions
+        const cachedTransactions = getVersionedStorageItem<Transaction[]>('allTransactions', []);
+        const lastTransactionsFetch = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
+        
+        // Use cache if fresh (less than 2 minutes old)
+        if (cachedTransactions.length > 0 && now - lastTransactionsFetch < 2 * 60 * 1000) {
+          console.log("Using cached transactions:", cachedTransactions.length);
+          setRecentTransactions(cachedTransactions);
+        } else {
+          const allTransactions = await fetchAllTransactions();
+          console.log("Loaded transactions:", allTransactions.length);
+          setRecentTransactions(allTransactions);
+          
+          // Cache the result
+          setVersionedStorageItem('allTransactions', allTransactions, 2 * 60 * 1000);
+          setVersionedStorageItem('lastTransactionsFetch', now);
+        }
         
         setIsInitialized(true);
       } catch (error) {
@@ -184,18 +214,28 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     if (!isInitialized) return;
     
     console.log("Setting up transaction listener...");
+    
+    // Use snapshot listener instead of frequent polling
+    // This is more efficient as Firebase only sends updates when changes occur
     const transactionsRef = collection(firestore, 'transactions');
     const q = query(transactionsRef, orderBy('created_at', 'desc'));
     
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) return;
       
-      try {
-        console.log("Transaction update detected, refreshing data...");
-        const updatedTransactions = await fetchAllTransactions();
-        setRecentTransactions(updatedTransactions);
-      } catch (error) {
-        console.error("Error refreshing transactions:", error);
+      // Only process changes if there are actual changes
+      if (snapshot.docChanges().length > 0) {
+        try {
+          console.log("Transaction update detected, refreshing data...");
+          const updatedTransactions = await fetchAllTransactions();
+          setRecentTransactions(updatedTransactions);
+          
+          // Update the cache
+          setVersionedStorageItem('allTransactions', updatedTransactions, 2 * 60 * 1000);
+          setVersionedStorageItem('lastTransactionsFetch', Date.now());
+        } catch (error) {
+          console.error("Error refreshing transactions:", error);
+        }
       }
     }, (error) => {
       console.error("Error in transaction listener:", error);

@@ -1,13 +1,27 @@
-
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
     console.log('Fetching all transactions from Firebase');
+    
+    // Check if we have cached data first
+    const cachedTransactions = getVersionedStorageItem<Transaction[]>('allTransactions', []);
+    const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
+    const now = Date.now();
+    const cacheStaleTime = 2 * 60 * 1000; // 2 minutes
+    
+    // Use cache if it's fresh enough
+    if (cachedTransactions.length > 0 && now - lastFetchTime < cacheStaleTime) {
+      console.log('Using cached transactions:', cachedTransactions.length, 'records');
+      return cachedTransactions;
+    }
+    
+    // Otherwise fetch from Firebase
     const transactionsRef = collection(firestore, 'transactions');
     const q = query(transactionsRef, orderBy('created_at', 'desc'));
     const transactionsSnapshot = await getDocs(q);
@@ -19,20 +33,47 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     
     const transactions: Transaction[] = [];
     
-    for (const transactionDoc of transactionsSnapshot.docs) {
+    // Get all transaction documents first
+    const transactionDocs = transactionsSnapshot.docs;
+    
+    // Then prepare one query for all transaction products
+    const allTransactionIds = transactionDocs.map(doc => doc.id);
+    const transactionProductsRef = collection(firestore, 'transaction_products');
+    
+    // Batch transaction product fetching to reduce reads
+    // Firebase has a limit of 10 'in' clauses
+    const batchSize = 10;
+    const productsByTransactionId: Record<string, any[]> = {};
+    
+    for (let i = 0; i < allTransactionIds.length; i += batchSize) {
+      const batchIds = allTransactionIds.slice(i, i + batchSize);
+      if (batchIds.length > 0) {
+        const batchQuery = query(
+          transactionProductsRef, 
+          where('transaction_id', 'in', batchIds)
+        );
+        const productsSnapshot = await getDocs(batchQuery);
+        
+        productsSnapshot.docs.forEach(doc => {
+          const productData = doc.data();
+          productData.id = doc.id;
+          
+          if (!productsByTransactionId[productData.transaction_id]) {
+            productsByTransactionId[productData.transaction_id] = [];
+          }
+          
+          productsByTransactionId[productData.transaction_id].push(productData);
+        });
+      }
+    }
+    
+    // Now map through transaction docs and add their products
+    for (const transactionDoc of transactionDocs) {
       const transactionData = transactionDoc.data();
       transactionData.id = transactionDoc.id;
       
-      // Fetch transaction products
-      const transactionProductsRef = collection(firestore, 'transaction_products');
-      const q = query(transactionProductsRef, where('transaction_id', '==', transactionDoc.id));
-      const transactionProductsSnapshot = await getDocs(q);
-      
-      const transactionProducts = transactionProductsSnapshot.docs.map(doc => {
-        const productData = doc.data();
-        productData.id = doc.id;
-        return productData;
-      });
+      // Get transaction products from our batched results
+      const transactionProducts = productsByTransactionId[transactionDoc.id] || [];
       
       // Transform to our Transaction type and ensure valid timestamp
       const transformedTransaction = transformFirebaseTransaction(transactionData, transactionProducts);
@@ -46,12 +87,18 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
       transactions.push(transformedTransaction);
     }
     
+    // Cache the result
+    setVersionedStorageItem('allTransactions', transactions, cacheStaleTime);
+    setVersionedStorageItem('lastTransactionsFetch', now);
+    
     console.log('Transactions data received:', transactions.length, 'records');
     return transactions;
   } catch (error) {
     console.error('Error fetching transactions:', error);
     toast.error('Failed to load transactions');
-    return [];
+    
+    // Return cached data on error if available
+    return getVersionedStorageItem<Transaction[]>('allTransactions', []);
   }
 };
 

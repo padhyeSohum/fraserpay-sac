@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -24,6 +23,7 @@ import { formatCurrency } from '@/utils/format';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, where } from 'firebase/firestore';
 import { transformFirebaseUser } from '@/utils/firebase';
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export interface StatsData {
   totalUsers: number;
@@ -85,15 +85,29 @@ const Dashboard = () => {
   
   useEffect(() => {
     const initializeListeners = async () => {
-      const pollInterval = setInterval(() => {
+      const statsPollingInterval = setInterval(() => {
+        const now = Date.now();
+        const lastCriticalStatsFetch = getVersionedStorageItem<number>('lastCriticalStatsFetch', 0);
+        
+        if (now - lastCriticalStatsFetch > 10000) {
+          loadTransactions();
+          loadBoothLeaderboard();
+          setVersionedStorageItem('lastCriticalStatsFetch', now);
+        }
+      }, 10000);
+      
+      const fullDataPollingInterval = setInterval(() => {
         if (dataInitialized) {
           loadUsers();
           loadTransactions();
           loadBoothLeaderboard();
         }
-      }, 30000);
+      }, 60000);
       
-      return () => clearInterval(pollInterval);
+      return () => {
+        clearInterval(statsPollingInterval);
+        clearInterval(fullDataPollingInterval);
+      };
     };
     
     initializeListeners();
@@ -152,6 +166,26 @@ const Dashboard = () => {
   const loadUsers = async () => {
     setIsUserLoading(true);
     try {
+      const cachedUsers = getVersionedStorageItem<any[]>('sacUsers', []);
+      const lastUsersFetch = getVersionedStorageItem<number>('lastSacUsersFetch', 0);
+      const now = Date.now();
+      
+      if (cachedUsers.length > 0 && now - lastUsersFetch < 5 * 60 * 1000) {
+        console.log('Using cached users:', cachedUsers.length);
+        setUsersList(cachedUsers);
+        setFilteredUsers(cachedUsers);
+        
+        const totalTickets = cachedUsers.reduce((sum, user) => sum + (user.tickets || 0), 0) / 100;
+        setStats(prev => ({
+          ...prev,
+          totalUsers: cachedUsers.length,
+          totalTickets: totalTickets
+        }));
+        
+        setIsUserLoading(false);
+        return;
+      }
+      
       const usersRef = collection(firestore, 'users');
       const q = query(usersRef, orderBy('created_at', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -173,6 +207,9 @@ const Dashboard = () => {
         totalUsers: users.length,
         totalTickets: totalTickets
       }));
+      
+      setVersionedStorageItem('sacUsers', users, 5 * 60 * 1000);
+      setVersionedStorageItem('lastSacUsersFetch', now);
     } catch (error) {
       console.error('Error loading users from Firebase:', error);
       toast.error('Failed to load users');
@@ -186,6 +223,30 @@ const Dashboard = () => {
   const loadTransactions = async () => {
     setIsTransactionLoading(true);
     try {
+      const isFullRefresh = !getVersionedStorageItem<boolean>('isUpdatingCriticalStats', true);
+      const cachedTransactions = getVersionedStorageItem<any[]>('sacTransactions', []);
+      const lastTransactionsFetch = getVersionedStorageItem<number>('lastSacTransactionsFetch', 0);
+      const now = Date.now();
+      
+      if (!isFullRefresh && cachedTransactions.length > 0 && now - lastTransactionsFetch < 60 * 1000) {
+        const fundTransactions = cachedTransactions.filter(tx => tx.type === 'fund' && tx.amount > 0);
+        const refundTransactions = cachedTransactions.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
+        
+        const totalFundAmount = fundTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        const totalRefundAmount = refundTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+        
+        const netRevenue = (totalFundAmount - totalRefundAmount) / 100;
+        
+        setStats(prev => ({
+          ...prev,
+          totalTransactions: cachedTransactions.length,
+          totalRevenue: netRevenue
+        }));
+        
+        setIsTransactionLoading(false);
+        return;
+      }
+      
       const transactionsRef = collection(firestore, 'transactions');
       const q = query(transactionsRef, orderBy('created_at', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -199,7 +260,6 @@ const Dashboard = () => {
       console.log('SAC Dashboard: Loaded transactions from Firebase', txs.length);
       setTransactions(txs);
       
-      // Modified to account for refunds when calculating total revenue
       const fundTransactions = txs.filter(tx => tx.type === 'fund' && tx.amount > 0);
       const refundTransactions = txs.filter(tx => tx.type === 'refund' || (tx.type === 'fund' && tx.amount < 0));
       
@@ -213,6 +273,9 @@ const Dashboard = () => {
         totalTransactions: txs.length,
         totalRevenue: netRevenue
       }));
+      
+      setVersionedStorageItem('sacTransactions', txs, 60 * 1000);
+      setVersionedStorageItem('lastSacTransactionsFetch', now);
     } catch (error) {
       console.error('Error loading transactions from Firebase:', error);
       toast.error('Failed to load transactions');
@@ -225,6 +288,23 @@ const Dashboard = () => {
   const loadBoothLeaderboard = async () => {
     setIsBoothLoading(true);
     try {
+      const cachedBooths = getVersionedStorageItem<any[]>('sacBooths', []);
+      const lastBoothsFetch = getVersionedStorageItem<number>('lastSacBoothsFetch', 0);
+      const now = Date.now();
+      
+      if (cachedBooths.length > 0 && now - lastBoothsFetch < 30 * 1000) {
+        const sortedBooths = [...cachedBooths].sort((a, b) => b.totalEarnings - a.totalEarnings);
+        setLeaderboard(sortedBooths);
+        
+        setStats(prev => ({
+          ...prev,
+          totalBooths: cachedBooths.length
+        }));
+        
+        setIsBoothLoading(false);
+        return;
+      }
+      
       await fetchAllBooths();
       
       if (booths && booths.length > 0) {
@@ -237,6 +317,9 @@ const Dashboard = () => {
           ...prev,
           totalBooths: booths.length
         }));
+        
+        setVersionedStorageItem('sacBooths', booths, 30 * 1000);
+        setVersionedStorageItem('lastSacBoothsFetch', now);
       }
     } catch (error) {
       console.error('Error loading booths:', error);
@@ -437,7 +520,6 @@ const Dashboard = () => {
           });
         }
         
-        // Update stats to reflect the refund
         setStats(prev => ({
           ...prev,
           totalRevenue: Math.max(0, prev.totalRevenue - amount)

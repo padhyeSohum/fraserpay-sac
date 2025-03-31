@@ -10,6 +10,7 @@ import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 const Dashboard = () => {
   const {
@@ -46,6 +47,37 @@ const Dashboard = () => {
   const refreshUserData = useCallback(async () => {
     if (!user) return;
     try {
+      const now = Date.now();
+      const lastUserDataFetch = getVersionedStorageItem<number>('lastUserDataFetch', 0);
+      
+      if (now - lastUserDataFetch < 30000) {
+        const isBalanceOnlyUpdate = now - lastUserDataFetch > 5000;
+        
+        if (isBalanceOnlyUpdate) {
+          const {
+            data: balanceData,
+            error: balanceError
+          } = await supabase.from('users').select('tickets').eq('id', user.id).single();
+          
+          if (balanceError) {
+            console.error("Error refreshing user balance:", balanceError);
+            return;
+          }
+          
+          if (balanceData && user && balanceData.tickets / 100 !== user.balance) {
+            console.log("Dashboard - refreshed user balance:", balanceData.tickets / 100);
+            updateUserData({
+              ...user,
+              balance: balanceData.tickets / 100
+            });
+          }
+          
+          return;
+        }
+        
+        return;
+      }
+      
       const {
         data: freshUserData,
         error: userError
@@ -69,6 +101,8 @@ const Dashboard = () => {
             booths: newBooths
           });
         }
+        
+        setVersionedStorageItem('lastUserDataFetch', now);
       }
     } catch (error) {
       console.error('Error refreshing user data:', error);

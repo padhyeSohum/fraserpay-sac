@@ -1,17 +1,19 @@
 
 import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 // Create a client with robust error handling that won't freeze the app
+// Using longer staleTime and gcTime to reduce Firebase reads
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: true,  // Always refetch when window regains focus
-      refetchOnMount: true,        // Always refetch when component mounts
-      refetchOnReconnect: true,    // Always refetch when reconnecting
-      staleTime: 0,                // Data is immediately stale
-      gcTime: 5 * 60 * 1000,       // Only cache for 5 minutes (renamed from cacheTime)
+      refetchOnWindowFocus: false,   // Only refetch when explicitly requested
+      refetchOnMount: true,          // Still refetch when component mounts
+      refetchOnReconnect: false,     // Only refetch when explicitly requested
+      staleTime: 5 * 60 * 1000,      // Data stays fresh for 5 minutes
+      gcTime: 30 * 60 * 1000,        // Cache for 30 minutes (renamed from cacheTime)
       meta: {
         onError: (error: unknown) => {
           console.error('Query error:', error);
@@ -50,10 +52,25 @@ const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     event.preventDefault();
   };
   
-  // Function to clear query cache
+  // Modify clear query cache to be more selective
   const clearQueryCache = () => {
-    // Invalidate all queries to force refetch
-    queryClient.invalidateQueries();
+    // Instead of invalidating all queries, only invalidate specific ones
+    // based on what needs to be fresh vs what can stay cached longer
+    
+    // Critical data that should always be fresh
+    queryClient.invalidateQueries({ queryKey: ['userBalance'] });
+    queryClient.invalidateQueries({ queryKey: ['boothStats'] });
+    queryClient.invalidateQueries({ queryKey: ['sacRevenue'] });
+    
+    // Use storage to record last full invalidation time
+    const lastFullInvalidation = getVersionedStorageItem<number>('lastFullInvalidation', 0);
+    const now = Date.now();
+    
+    // Only do a full invalidation every hour
+    if (now - lastFullInvalidation > 60 * 60 * 1000) {
+      queryClient.invalidateQueries();
+      setVersionedStorageItem('lastFullInvalidation', now);
+    }
   };
 
   // Only use useEffect in the component body, not conditionally
@@ -62,7 +79,7 @@ const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     
     // Clear query cache initially
     clearQueryCache();
-    // Set up interval to clear cache every 15 minutes
+    // Set up interval to clear cache every 15 minutes for critical data only
     const interval = setInterval(clearQueryCache, 15 * 60 * 1000);
     
     return () => {
