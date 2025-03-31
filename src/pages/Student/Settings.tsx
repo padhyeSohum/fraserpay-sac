@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,16 @@ import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+
+// SAC admin credentials
+const SAC_ADMINS = [
+  { username: "sacadmin", password: "codyisabum" },
+  { username: "Akshat", password: "Password" },
+  { username: "teacher", password: "SAC1234" },
+  { username: "JFSS_Admin", password: "JFSS2025" },
+  { username: "sac", password: "sac2025" }
+];
+
 const Settings = () => {
   const {
     user,
@@ -22,15 +33,21 @@ const Settings = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  
   const handleSACAccess = () => {
     setIsOpen(true);
     setUsername('');
     setPassword('');
     setLoginError('');
   };
+  
   const handleLogin = () => {
-    // Validate credentials
-    if (username === "sacadmin" && password === "codyisabum") {
+    // Check if username/password match any of the allowed admin credentials
+    const isValidAdmin = SAC_ADMINS.some(
+      admin => admin.username === username && admin.password === password
+    );
+    
+    if (isValidAdmin) {
       // Use the existing verifySACPin function with the hardcoded PIN
       // This maintains the existing functionality while changing the UI
       const result = verifySACPin("123456");
@@ -43,9 +60,10 @@ const Settings = () => {
       }
       setIsOpen(false);
     } else {
-      setLoginError("Invalid username or password");
+      setLoginError("Invalid username or password. Please contact SAC if you need assistance.");
     }
   };
+  
   return <Layout title="Account Settings" showBack>
       <div className="space-y-6 animate-fade-in">
         <Card>
@@ -157,4 +175,5 @@ const Settings = () => {
       </AlertDialog>
     </Layout>;
 };
+
 export default Settings;
