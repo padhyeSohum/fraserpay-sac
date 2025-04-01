@@ -5,11 +5,13 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle 
+  CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Booth } from '@/types';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight } from 'lucide-react';
 
 interface BoothsListProps {
   booths: Booth[];
@@ -22,6 +24,7 @@ const BoothsList: React.FC<BoothsListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
+  const [visibleCount, setVisibleCount] = useState(5);
 
   const togglePinVisibility = (boothId: string) => {
     setShowPins(prev => ({
@@ -33,6 +36,13 @@ const BoothsList: React.FC<BoothsListProps> = ({
   const filteredBooths = booths.filter(booth => 
     booth.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const displayedBooths = filteredBooths.slice(0, visibleCount);
+  const hasMore = filteredBooths.length > visibleCount;
+
+  const handleViewMore = () => {
+    setVisibleCount(prev => prev + 5);
+  };
 
   return (
     <Card className="w-full shadow-sm">
@@ -57,10 +67,10 @@ const BoothsList: React.FC<BoothsListProps> = ({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredBooths.length === 0 ? (
+            {displayedBooths.length === 0 ? (
               <p className="text-muted-foreground">No booths found</p>
             ) : (
-              filteredBooths.map((booth) => (
+              displayedBooths.map((booth) => (
                 <div 
                   key={booth.id} 
                   className="flex items-center justify-between p-3 border rounded-md"
@@ -96,6 +106,18 @@ const BoothsList: React.FC<BoothsListProps> = ({
           </div>
         )}
       </CardContent>
+      {hasMore && (
+        <CardFooter className="flex justify-center pt-2 pb-4">
+          <Button 
+            variant="outline" 
+            onClick={handleViewMore}
+            className="flex items-center gap-1"
+          >
+            View More
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };
