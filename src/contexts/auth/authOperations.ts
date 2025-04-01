@@ -79,19 +79,61 @@ export const registerUser = async (
   password: string
 ): Promise<boolean> => {
   try {
-    // Check if user already exists
+  import { deleteDoc } from 'firebase/firestore';
+
+export const registerUser = async (
+  studentNumber: string, 
+  name: string, 
+  email: string, 
+  password: string
+): Promise<boolean> => {
+  try {
     const usersRef = collection(firestore, 'users');
     const studentQuery = query(usersRef, where('student_number', '==', studentNumber));
     const emailQuery = query(usersRef, where('email', '==', email));
-    
+
+    let previousTickets = 0;
+
     const [studentSnapshot, emailSnapshot] = await Promise.all([
-      withRetry(async () => await getDocs(studentQuery)),
-      withRetry(async () => await getDocs(emailQuery))
+      withRetry(() => getDocs(studentQuery)),
+      withRetry(() => getDocs(emailQuery))
     ]);
-    
-    if (!studentSnapshot.empty || !emailSnapshot.empty) {
-      throw new Error('Student number or email already registered');
+
+    const existingDoc = studentSnapshot.empty ? (emailSnapshot.empty ? null : emailSnapshot.docs[0]) : studentSnapshot.docs[0];
+
+    if (existingDoc) {
+      const existingData = existingDoc.data();
+      previousTickets = existingData.tickets || 0;
+
+      await withRetry(() => deleteDoc(doc(firestore, 'users', existingDoc.id)));
     }
+
+    const userCredential = await withRetry(() => createUserWithEmailAndPassword(auth, email, password));
+    if (!userCredential.user) throw new Error('Failed to create account');
+
+    const qrCode = `USER:${userCredential.user.uid}`;
+
+    await withRetry(() => setDoc(doc(firestore, 'users', userCredential.user.uid), {
+      name,
+      email,
+      student_number: studentNumber,
+      role: 'student',
+      tickets: previousTickets,
+      booth_access: [],
+      qr_code: qrCode,
+      created_at: new Date().toISOString()
+    }));
+
+    toast.success('Registration successful!');
+    return true;
+
+  } catch (error: any) {
+    toast.error(error?.message || 'Registration failed');
+    console.error(error);
+    throw error;
+  }
+};
+
     
     // Register user with Firebase Auth
     const userCredential = await withRetry(async () => {
