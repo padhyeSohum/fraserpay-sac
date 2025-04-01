@@ -20,6 +20,10 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
       ...userSnap.data()
     };
     
+    // Ensure all required fields have valid values
+    if (!userData.booth_access) userData.booth_access = [];
+    if (userData.tickets === undefined || userData.tickets === null) userData.tickets = 0;
+    
     return transformFirebaseUser(userData);
   } catch (error) {
     console.error('Unexpected error fetching user data:', error);
