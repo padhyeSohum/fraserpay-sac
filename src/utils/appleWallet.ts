@@ -1,12 +1,11 @@
 
-import { Template, Pass } from 'passkit-generator';
 import { firestore } from '@/integrations/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
 
 // Helper function to check if the device is iOS
 export const isIOSDevice = (): boolean => {
   const userAgent = navigator.userAgent || navigator.vendor;
-  return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+  return /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
 };
 
 // Helper function to check if browser is Safari
