@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, Plus, X, Dice } from 'lucide-react';
+import { Check, Plus, X, Dices } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateBoothDialogProps {
@@ -159,7 +159,7 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
                 onClick={generateRandomPin}
                 title="Generate random PIN"
               >
-                <Dice className="h-4 w-4" />
+                <Dices className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
