@@ -30,7 +30,12 @@ const AppleWalletButton: React.FC<AppleWalletButtonProps> = ({
       return;
     }
     
-    onAddToWallet();
+    try {
+      onAddToWallet();
+    } catch (error) {
+      console.error("Error handling wallet button click:", error);
+      toast.error("Failed to generate Apple Wallet pass");
+    }
   };
 
   return (

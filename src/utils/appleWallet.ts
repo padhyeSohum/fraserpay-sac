@@ -27,8 +27,7 @@ export const generateAppleWalletPass = async (
   qrCodeData: string
 ): Promise<void> => {
   try {
-    // The pass is actually created on the server side since we need private keys
-    // For client-side demo purposes, we'll create a pre-formatted URL with all the data
+    // For client-side demo purposes, create a formatted data object
     const passData = {
       userId,
       userName,
@@ -36,40 +35,42 @@ export const generateAppleWalletPass = async (
       qrCodeData
     };
     
+    console.log("Generating Apple Wallet pass with data:", passData);
+    
+    // Create a download blob with the pass data
     // In a real implementation, this would call a secure backend endpoint
-    // that would generate the .pkpass file with proper signatures
+    // that would generate the properly signed .pkpass file
     
-    // Create a download blob with a placeholder message
-    const apiUrl = `https://api.passkit-generator.example.com/generate-pass`;
+    // For demonstration purposes - create a simple text representation
+    // that mimics what the pass would contain
+    const passContent = `
+FraserPay Digital Pass
+----------------------
+Name: ${userName}
+Balance: $${balance.toFixed(2)}
+User ID: ${userId}
+QR Code Data: ${qrCodeData}
+
+This is a demonstration pass for FraserPay. 
+In a production environment, this would be a properly signed .pkpass file.
+    `.trim();
     
-    // This is a placeholder - in a real app, you would call your secure backend
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(passData)
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to generate Apple Wallet pass');
-    }
-    
-    // For demonstration purposes only - this simulates downloading a .pkpass file
-    // In a real application, you would return the actual .pkpass file from your server
-    const blob = new Blob([
-      `This is a placeholder for the Apple Wallet pass for ${userName}. 
-      In a real implementation, this would be a properly signed .pkpass file.`
-    ], { type: 'application/vnd.apple.pkpass' });
-    
+    // Create a blob that can be downloaded
+    const blob = new Blob([passContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
+    
+    // Create a download link and trigger it
     const a = document.createElement('a');
     a.href = url;
     a.download = `fraserpay-${userId}.pkpass`;
     document.body.appendChild(a);
     a.click();
+    
+    // Clean up
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+    
+    console.log("Pass generation completed successfully");
   } catch (error) {
     console.error('Error generating Apple Wallet pass:', error);
     throw error;
