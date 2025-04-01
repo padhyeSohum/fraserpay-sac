@@ -1,4 +1,3 @@
-
 import { auth, firestore } from '@/integrations/firebase/client';
 import { 
   createUserWithEmailAndPassword, 
@@ -79,20 +78,13 @@ export const registerUser = async (
   password: string
 ): Promise<boolean> => {
   try {
-    // Check if user already exists in Auth system
+    // Check if user already exists in Firestore by student number
     const usersRef = collection(firestore, 'users');
     const studentQuery = query(usersRef, where('student_number', '==', studentNumber));
-    const emailQuery = query(usersRef, where('email', '==', email));
     
-    const [studentSnapshot, emailSnapshot] = await Promise.all([
-      withRetry(async () => await getDocs(studentQuery)),
-      withRetry(async () => await getDocs(emailQuery))
-    ]);
-    
-    // Check if the email is already registered in Auth
-    if (!emailSnapshot.empty) {
-      throw new Error('Email already registered');
-    }
+    const studentSnapshot = await withRetry(async () => {
+      return await getDocs(studentQuery);
+    });
     
     // Register user with Firebase Auth
     const userCredential = await withRetry(async () => {
@@ -153,6 +145,8 @@ export const registerUser = async (
   } catch (error: any) {
     if (error.code === 'auth/network-request-failed') {
       toast.error('Network connection error. Please check your internet connection and try again.');
+    } else if (error.code === 'auth/email-already-in-use') {
+      toast.error('This email is already registered. Please use a different email or try logging in.');
     } else {
       toast.error(error instanceof Error ? error.message : 'Registration failed');
     }
