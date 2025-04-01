@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Plus, X, Dice } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateBoothDialogProps {
@@ -55,6 +55,11 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
       [field]: field === 'price' ? Number(value) : value,
     };
     setProducts(updatedProducts);
+  };
+
+  const generateRandomPin = () => {
+    const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
+    setPin(randomPin);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,18 +139,29 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="pin">PIN (6-digits)</Label>
-            <Input
-              id="pin"
-              value={pin}
-              onChange={(e) => {
-                // Allow only numeric input and limit to 6 chars
-                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                setPin(value);
-              }}
-              placeholder="Enter 6-digit PIN"
-              required
-              maxLength={6}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="pin"
+                value={pin}
+                onChange={(e) => {
+                  // Allow only numeric input and limit to 6 chars
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setPin(value);
+                }}
+                placeholder="Enter 6-digit PIN"
+                required
+                maxLength={6}
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon" 
+                onClick={generateRandomPin}
+                title="Generate random PIN"
+              >
+                <Dice className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground">
               This PIN will be used by booth operators to access the booth.
             </p>
