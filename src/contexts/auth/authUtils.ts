@@ -4,6 +4,20 @@ import { doc, getDoc } from 'firebase/firestore';
 import { User, UserRole } from '@/types';
 import { transformFirebaseUser } from '@/utils/firebase';
 
+// Define an interface for the raw user data from Firestore
+interface FirestoreUserData {
+  id: string;
+  name?: string;
+  email?: string;
+  student_number?: string;
+  role?: UserRole;
+  tickets?: number;
+  booth_access?: string[];
+  qr_code?: string;
+  created_at?: string;
+  [key: string]: any; // Allow for additional properties
+}
+
 // Fetch user data from Firestore
 export const fetchUserData = async (userId: string): Promise<User | null> => {
   try {
@@ -15,7 +29,7 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
       return null;
     }
     
-    const userData = {
+    const userData: FirestoreUserData = {
       id: userSnap.id,
       ...userSnap.data()
     };
