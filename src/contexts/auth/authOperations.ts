@@ -79,7 +79,19 @@ export const registerUser = async (
   password: string
 ): Promise<boolean> => {
   try {
-   
+    // Check if user already exists
+    const usersRef = collection(firestore, 'users');
+    const studentQuery = query(usersRef, where('student_number', '==', studentNumber));
+    const emailQuery = query(usersRef, where('email', '==', email));
+    
+    const [studentSnapshot, emailSnapshot] = await Promise.all([
+      withRetry(async () => await getDocs(studentQuery)),
+      withRetry(async () => await getDocs(emailQuery))
+    ]);
+    
+    if (!studentSnapshot.empty || !emailSnapshot.empty) {
+      throw new Error('Student number or email already registered');
+    }
     
     // Register user with Firebase Auth
     const userCredential = await withRetry(async () => {
