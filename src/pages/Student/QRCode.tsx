@@ -4,18 +4,18 @@ import { useAuth } from '@/contexts/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import { encodeUserData } from '@/utils/qrCode';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { firestore } from '@/integrations/firebase/client';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
-import AppleWalletButton from '@/components/AppleWalletButton';
-import { generateAppleWalletPass } from '@/utils/appleWallet';
 
 const QRCode = () => {
   const { user, updateUserData } = useAuth();
   const [qrCodeData, setQrCodeData] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingPass, setIsGeneratingPass] = useState(false);
 
   // Separate the user data refresh logic to make it reusable
   const refreshUserData = useCallback(async () => {
@@ -109,28 +109,31 @@ const QRCode = () => {
     };
   }, [user, refreshUserData]);
 
-  const handleAddToAppleWallet = async () => {
-    if (!user || !qrCodeData) {
-      toast.error("User data not available");
-      return;
-    }
+  const regenerateQR = async () => {
+    if (!user) return;
     
-    setIsGeneratingPass(true);
+    setIsRefreshing(true);
     
     try {
-      await generateAppleWalletPass(
-        user.id,
-        user.name,
-        user.balance,
-        qrCodeData
-      );
+      // Generate a new QR code
+      const newQrCode = encodeUserData(user.id);
       
-      toast.success("Apple Wallet pass created");
+      // Update the QR code in Firebase
+      const userRef = doc(firestore, 'users', user.id);
+      await updateDoc(userRef, { 
+        qr_code: newQrCode 
+      });
+      
+      // Add a small delay for UI feedback
+      setTimeout(() => {
+        setQrCodeData(newQrCode);
+        setIsRefreshing(false);
+        toast.success("QR code refreshed successfully");
+      }, 600);
     } catch (error) {
-      console.error("Error generating Apple Wallet pass:", error);
-      toast.error("Failed to generate Apple Wallet pass");
-    } finally {
-      setIsGeneratingPass(false);
+      console.error("Error refreshing QR code:", error);
+      toast.error("Failed to refresh QR code");
+      setIsRefreshing(false);
     }
   };
 
@@ -143,7 +146,7 @@ const QRCode = () => {
               <h2 className="text-xl font-semibold mb-4">Show this QR code to make purchases</h2>
               
               <div 
-                className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isLoading ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
+                className={`w-64 h-64 bg-white p-4 rounded-lg shadow-sm mb-6 transition-all duration-300 flex items-center justify-center ${isRefreshing || isLoading ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
               >
                 {qrCodeData && !isLoading ? (
                   <QRCodeSVG 
@@ -159,12 +162,17 @@ const QRCode = () => {
                 )}
               </div>
               
-              <AppleWalletButton
-                onAddToWallet={handleAddToAppleWallet}
-                isDisabled={isGeneratingPass || isLoading}
-              />
+              <Button
+                variant="outline"
+                onClick={regenerateQR}
+                disabled={isRefreshing || isLoading}
+                className="mb-4"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh QR Code
+              </Button>
               
-              <p className="text-sm text-muted-foreground text-center mt-4">
+              <p className="text-sm text-muted-foreground text-center">
                 This is your unique payment QR code. Present it to booth vendors to make purchases.
               </p>
               
