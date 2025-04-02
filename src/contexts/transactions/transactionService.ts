@@ -2,7 +2,7 @@ import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { transformFirebaseTransaction } from '@/utils/firebase';
+import { transformFirebaseTransaction, transformFirebaseTransactionWithReason } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
@@ -109,10 +109,11 @@ export const loadUserTransactions = (transactions: Transaction[], userId: string
 export const addFunds = async (
   userId: string, 
   amount: number, 
-  sacMemberId: string
+  sacMemberId: string,
+  reason?: string
 ): Promise<{ success: boolean, transaction?: Transaction, updatedBalance?: number }> => {
   try {
-    console.log("Starting addFunds process:", { amount, userId, sacMemberId });
+    console.log("Starting addFunds process:", { amount, userId, sacMemberId, reason });
     
     // Fetch the current user data to get their existing balance
     const userRef = doc(firestore, 'users', userId);
@@ -155,7 +156,8 @@ export const addFunds = async (
       amount: amountInCents,
       type: amount >= 0 ? 'fund' : 'refund',
       sac_member: sacMemberId,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      reason: reason || null // Store the reason
     };
     
     const transactionRef = await addDoc(transactionsRef, transactionData);
@@ -189,10 +191,12 @@ export const addFunds = async (
       type: amount >= 0 ? 'fund' : 'refund',
       paymentMethod: 'cash',
       sacMemberId,
-      sacMemberName: undefined
+      sacMemberName: undefined,
+      reason: reason // Include reason in transaction object
     };
     
-    toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
+    const reasonText = reason ? ` (Reason: ${reason})` : '';
+    toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account${reasonText}`);
     console.log("Funds processed successfully:", newTransaction);
     
     return { 

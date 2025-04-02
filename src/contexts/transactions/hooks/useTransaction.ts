@@ -20,7 +20,7 @@ export interface UseTransactionReturn {
     boothId?: string,
     boothName?: string
   ) => Promise<boolean>;
-  addFunds: (studentId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean; message: string }>;
+  addFunds: (studentId: string, amount: number, sacMemberId: string, reason?: string) => Promise<{ success: boolean; message: string }>;
   getTransactionsByDate: (dateRange: {startDate?: Date; endDate?: Date}, boothId?: string) => Promise<Transaction[]>;
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
@@ -32,7 +32,6 @@ export interface UseTransactionReturn {
 }
 
 export const useTransaction = (): UseTransactionReturn => {
-  // Implementation of record transaction
   const recordTransaction = async (
     buyerId: string,
     buyerName: string,
@@ -48,7 +47,6 @@ export const useTransaction = (): UseTransactionReturn => {
     boothName?: string
   ): Promise<boolean> => {
     try {
-      // Simulate recording a transaction
       console.log('Recording transaction:', {
         buyerId,
         buyerName,
@@ -59,7 +57,6 @@ export const useTransaction = (): UseTransactionReturn => {
         boothName
       });
       
-      // In a real app, this would write to a database
       return true;
     } catch (error) {
       console.error('Error recording transaction:', error);
@@ -67,14 +64,14 @@ export const useTransaction = (): UseTransactionReturn => {
     }
   };
 
-  // Implementation of add funds
   const addFunds = async (
     studentId: string, 
     amount: number, 
-    sacMemberId: string
+    sacMemberId: string,
+    reason?: string
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const result = await addFundsService(studentId, amount, sacMemberId);
+      const result = await addFundsService(studentId, amount, sacMemberId, reason);
       
       if (result.success) {
         return { 
@@ -96,31 +93,23 @@ export const useTransaction = (): UseTransactionReturn => {
     }
   };
 
-  // Get transactions by date range
   const getTransactionsByDate = async (
     dateRange: {startDate?: Date; endDate?: Date},
     boothId?: string
   ): Promise<Transaction[]> => {
-    // This would filter transactions by date in a real app
     return [];
   };
 
-  // Get transactions by booth
   const getTransactionsByBooth = async (boothId: string): Promise<Transaction[]> => {
-    // This would get transactions for a specific booth in a real app
     return [];
   };
 
-  // Get student transactions
   const getStudentTransactions = async (studentId: string): Promise<Transaction[]> => {
-    // This would get transactions for a specific student in a real app
     return [];
   };
 
-  // Get booth transactions
   const getBoothTransactions = async (boothId: string): Promise<Transaction[]> => {
     try {
-      // In a real implementation, this would query transactions from a database
       console.log(`Loading transactions for booth: ${boothId}`);
       return [];
     } catch (error) {
@@ -129,13 +118,10 @@ export const useTransaction = (): UseTransactionReturn => {
     }
   };
 
-  // Get leaderboard data
   const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
-    // This would calculate leaderboard data in a real app
     return [];
   };
 
-  // Find user by student number
   const findUserByStudentNumber = async (studentNumber: string): Promise<User | null> => {
     try {
       const usersRef = collection(firestore, 'users');
@@ -153,7 +139,7 @@ export const useTransaction = (): UseTransactionReturn => {
         email: userData.email,
         studentNumber: userData.student_number,
         role: userData.role,
-        balance: (userData.tickets || 0) / 100, // Convert to dollars
+        balance: (userData.tickets || 0) / 100,
         booths: userData.booth_access || []
       };
     } catch (error) {
@@ -162,15 +148,11 @@ export const useTransaction = (): UseTransactionReturn => {
     }
   };
 
-  // Get booth products
   const getBoothProducts = async (boothId: string): Promise<Product[]> => {
-    // This would get products for a specific booth in a real app
     return [];
   };
 
-  // Get user booths
   const getUserBooths = async (userId: string): Promise<any[]> => {
-    // This would get booths for a specific user in a real app
     return [];
   };
 

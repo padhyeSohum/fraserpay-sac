@@ -496,17 +496,20 @@ const Dashboard = () => {
     setIsRefundDialogOpen(true);
   };
   
-  const handleProcessAddFunds = async (studentId: string, amount: number) => {
+  const handleProcessAddFunds = async (studentId: string, amount: number, reason?: string) => {
     if (!user) {
       toast.error('You must be logged in to add funds');
       return;
     }
     
     try {
+      const isSelfTransaction = studentId === user.id;
+      
       const result = await addFunds(studentId, amount, user.id);
       
       if (result.success) {
-        toast.success(`Successfully added $${amount.toFixed(2)} to account`);
+        const reasonText = reason ? ` (Reason: ${reason})` : '';
+        toast.success(`Successfully added $${amount.toFixed(2)} to account${reasonText}`);
         
         const userRef = doc(firestore, 'users', studentId);
         const userSnap = await getDoc(userRef);
@@ -532,7 +535,7 @@ const Dashboard = () => {
     }
   };
   
-  const handleProcessRefund = async (studentId: string, amount: number) => {
+  const handleProcessRefund = async (studentId: string, amount: number, reason?: string) => {
     if (!user) {
       toast.error('You must be logged in to process refunds');
       return;
@@ -541,10 +544,16 @@ const Dashboard = () => {
     try {
       const negativeAmount = -amount;
       
+      if (negativeAmount < 0 && !reason) {
+        toast.error('A reason is required for processing refunds');
+        return;
+      }
+      
       const result = await addFunds(studentId, negativeAmount, user.id);
       
       if (result.success) {
-        toast.success(`Successfully refunded $${amount.toFixed(2)}`);
+        const reasonText = reason ? ` (Reason: ${reason})` : '';
+        toast.success(`Successfully refunded $${amount.toFixed(2)}${reasonText}`);
         
         const userRef = doc(firestore, 'users', studentId);
         const userSnap = await getDoc(userRef);

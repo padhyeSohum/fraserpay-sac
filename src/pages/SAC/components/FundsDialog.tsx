@@ -11,8 +11,11 @@ import {
   DialogHeader, 
   DialogTitle, 
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { AlertCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface FundsDialogProps {
   isOpen: boolean;
@@ -22,9 +25,15 @@ interface FundsDialogProps {
   confirmLabel: string;
   confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   studentId: string;
-  onSubmit: (studentId: string, amount: number) => Promise<void>;
+  onSubmit: (studentId: string, amount: number, reason?: string) => Promise<void>;
   readOnlyId?: boolean;
 }
+
+// Add cooldown tracking
+const lastTransactionTimes: Record<string, number> = {};
+const COOLDOWN_PERIOD = 10000; // 10 seconds in milliseconds
+const MAX_ADD_AMOUNT = 50; // Maximum $50 add limit
+const COPRESIDENT_PIN = "1234"; // Secure PIN for override (in production, this would be stored securely)
 
 const FundsDialog: React.FC<FundsDialogProps> = ({
   isOpen,
@@ -40,17 +49,27 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   const [localStudentId, setLocalStudentId] = useState(studentId);
   const [studentNumber, setStudentNumber] = useState('');
   const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
-
-  // Sync studentId with local state when it changes
+  const [pinCode, setPinCode] = useState('');
+  const [needsOverride, setNeedsOverride] = useState(false);
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [overrideReason, setOverrideReason] = useState<string | null>(null);
+  
+  // Reset state when dialog opens/closes
   useEffect(() => {
     setLocalStudentId(studentId);
     // Reset student info when dialog opens/closes
     if (!isOpen) {
       setStudentNumber('');
       setAmount('');
+      setReason('');
       setFoundStudent(null);
+      setPinCode('');
+      setShowPinInput(false);
+      setNeedsOverride(false);
+      setOverrideReason(null);
     }
   }, [studentId, isOpen]);
 
@@ -93,13 +112,81 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     }
   };
 
+  const checkRestrictions = (): boolean => {
+    const numAmount = parseFloat(amount);
+    const isAddingFunds = numAmount > 0;
+    const isRefund = numAmount < 0;
+    
+    // Check if user is adding funds to themselves (not permitted)
+    if (isAddingFunds && foundStudent?.isSelfTransaction) {
+      setOverrideReason("Users cannot add funds to their own accounts");
+      setNeedsOverride(true);
+      return false;
+    }
+    
+    // Check max amount restriction ($50)
+    if (isAddingFunds && numAmount > MAX_ADD_AMOUNT && !showPinInput) {
+      setOverrideReason(`Cannot add more than $${MAX_ADD_AMOUNT} in a single transaction`);
+      setNeedsOverride(true);
+      return false;
+    }
+    
+    // Check cooldown period
+    const lastTransactionTime = lastTransactionTimes[localStudentId] || 0;
+    const currentTime = Date.now();
+    const timeSinceLastTransaction = currentTime - lastTransactionTime;
+    
+    if (isAddingFunds && timeSinceLastTransaction < COOLDOWN_PERIOD && !showPinInput) {
+      const remainingSeconds = Math.ceil((COOLDOWN_PERIOD - timeSinceLastTransaction) / 1000);
+      setOverrideReason(`Please wait ${remainingSeconds} seconds before adding funds to this user again`);
+      setNeedsOverride(true);
+      return false;
+    }
+    
+    // Check reason requirement for refunds
+    if (isRefund && !reason.trim() && !showPinInput) {
+      setOverrideReason("A reason is required for processing refunds");
+      setNeedsOverride(true);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handlePinSubmit = () => {
+    if (pinCode === COPRESIDENT_PIN) {
+      setShowPinInput(true);
+      setNeedsOverride(false);
+      toast.success("PIN accepted. Override enabled.");
+    } else {
+      toast.error("Invalid PIN. Please try again or contact a copresident.");
+    }
+  };
+
   const handleSubmit = async () => {
+    if (needsOverride) {
+      setShowPinInput(true);
+      return;
+    }
+    
     if (localStudentId && amount) {
       try {
-        await onSubmit(localStudentId, parseFloat(amount));
+        const amountNum = parseFloat(amount);
+        
+        // If not in override mode, check restrictions
+        if (!showPinInput && !checkRestrictions()) {
+          return;
+        }
+
+        // Record transaction time for cooldown
+        lastTransactionTimes[localStudentId] = Date.now();
+        
+        // Pass reason if provided
+        await onSubmit(localStudentId, amountNum, reason || undefined);
         
         // Clear form fields after successful submission
         setAmount('');
+        setReason('');
         
         // If this was a new student search (not pre-filled), reset the student info
         if (!readOnlyId) {
@@ -108,10 +195,65 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           setLocalStudentId('');
         }
         
+        // Reset override state
+        setPinCode('');
+        setShowPinInput(false);
+        
       } catch (error) {
         console.error('Error submitting transaction:', error);
       }
     }
+  };
+
+  const renderRestrictionOverride = () => {
+    if (!needsOverride) return null;
+    
+    return (
+      <div className="space-y-4 my-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {overrideReason}
+          </AlertDescription>
+        </Alert>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="pinCode" className="text-right">
+            Copresident PIN
+          </Label>
+          <div className="col-span-3 flex gap-2">
+            <Input
+              id="pinCode"
+              type="password"
+              value={pinCode}
+              onChange={(e) => setPinCode(e.target.value)}
+              placeholder="Enter override PIN"
+              className="flex-1"
+            />
+            <Button 
+              onClick={handlePinSubmit}
+              disabled={!pinCode}
+              className="shrink-0"
+            >
+              Override
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPinNotification = () => {
+    if (!showPinInput) return null;
+    
+    return (
+      <Alert className="mb-4 bg-green-50 border-green-200">
+        <Info className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-600">
+          Override active: restrictions have been bypassed
+        </AlertDescription>
+      </Alert>
+    );
   };
 
   return (
@@ -123,6 +265,8 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
             {description}
           </DialogDescription>
         </DialogHeader>
+        
+        {renderPinNotification()}
         
         <div className="grid gap-4 py-4">
           {!readOnlyId && (
@@ -186,6 +330,25 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
               className="col-span-3"
             />
           </div>
+          
+          {/* Add reason field - required for refunds */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="reason" className="text-right">
+              Reason
+              {parseFloat(amount) < 0 && !showPinInput && (
+                <span className="text-red-500 ml-1">*</span>
+              )}
+            </Label>
+            <Textarea
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={parseFloat(amount) < 0 ? "Required for refunds" : "Optional for deposits"}
+              className="col-span-3 min-h-[80px]"
+            />
+          </div>
+          
+          {renderRestrictionOverride()}
         </div>
         
         <DialogFooter>
@@ -195,9 +358,15 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           <Button 
             variant={confirmVariant} 
             onClick={handleSubmit}
-            disabled={!localStudentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
+            disabled={
+              !localStudentId || 
+              !amount || 
+              isNaN(parseFloat(amount)) || 
+              parseFloat(amount) === 0 ||
+              (parseFloat(amount) < 0 && !reason.trim() && !showPinInput)
+            }
           >
-            {confirmLabel}
+            {needsOverride ? "Enter Override PIN" : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

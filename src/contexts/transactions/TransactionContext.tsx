@@ -61,7 +61,7 @@ export interface TransactionContextProps {
   removeProductFromBooth: (boothId: string, productId: string) => Promise<boolean>;
   
   recordTransaction: (buyerId: string, buyerName: string, products: { productId: string; productName: string; quantity: number; price: number; }[], amount: number, paymentMethod: PaymentMethod, boothId?: string, boothName?: string) => Promise<boolean>;
-  addFunds: (studentId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean; message: string }>;
+  addFunds: (studentId: string, amount: number, sacMemberId: string, reason?: string) => Promise<{ success: boolean; message: string }>;
   getTransactionsByDate: (dateRange: {startDate?: Date; endDate?: Date}, boothId?: string) => Promise<Transaction[]>;
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
