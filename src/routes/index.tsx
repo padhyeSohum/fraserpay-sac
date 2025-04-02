@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -108,6 +107,13 @@ export const routes = [
   {
     path: "/teacher-portal",
     element: <Navigate to="/register-initiative" replace />,
+    protected: false
+  },
+  
+  // NEW: Public subdomain route - accessible without authentication
+  {
+    path: "/public/initiative-form",
+    element: <TeacherPortal />,
     protected: false
   },
   

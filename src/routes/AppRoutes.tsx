@@ -43,8 +43,8 @@ const AppRoutes: React.FC = () => {
       
       console.log("Initializing routes on path:", location.pathname);
       
-      // Handle direct URL access
-      if (isAuthenticated && !isLoading) {
+      // Handle direct URL access - exclude public routes
+      if (isAuthenticated && !isLoading && !location.pathname.startsWith('/public/')) {
         // For root path, redirect to dashboard if authenticated
         if (location.pathname === '/' || location.pathname === '') {
           navigate('/dashboard', { replace: true });
@@ -81,13 +81,13 @@ const AppRoutes: React.FC = () => {
   }, [isLoading]);
   
   // Show loading screen for initial auth state determination, but with a timeout fallback
-  if (isLoading && !loadingTimeout) {
+  if (isLoading && !loadingTimeout && !location.pathname.startsWith('/public/')) {
     console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen timeout={false} />;
   }
   
   // If loading has timed out, show the loading screen with timeout message
-  if (isLoading && loadingTimeout) {
+  if (isLoading && loadingTimeout && !location.pathname.startsWith('/public/')) {
     console.log("Auth loading timed out, showing timeout screen");
     return <LoadingScreen timeout={true} />;
   }
