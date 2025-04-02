@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import TeacherForm from './components/TeacherForm';
 import BoothList from './components/BoothList';
+
 const TeacherPortal = () => {
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
@@ -133,4 +134,5 @@ const TeacherPortal = () => {
       </footer>
     </AuroraBackground>;
 };
+
 export default TeacherPortal;

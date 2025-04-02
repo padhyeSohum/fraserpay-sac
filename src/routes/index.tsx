@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -96,11 +97,18 @@ export const routes = [
     protected: true 
   },
   
-  // Teacher Form - Public, no authentication required
+  // Teacher Form - Public, no authentication required (renamed from teacher-portal to register-initiative)
   { 
-    path: "/teacher-portal", 
+    path: "/register-initiative", 
     element: <TeacherPortal />,
     protected: false 
+  },
+  
+  // Add redirect from old path to new path
+  {
+    path: "/teacher-portal",
+    element: <Navigate to="/register-initiative" replace />,
+    protected: false
   },
   
   // Explicit 404 route
