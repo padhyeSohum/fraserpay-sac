@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { firestore } from '@/integrations/firebase/client';
@@ -21,7 +22,7 @@ const TeacherPortal = () => {
           alt="Fraser Pay" 
           className="h-8 w-auto" 
         />
-        <h1 className="text-xl font-semibold">Teacher Portal</h1>
+        <h1 className="text-xl font-semibold">Initiative Sign Up</h1>
       </div>
     </header>
   );
@@ -30,9 +31,9 @@ const TeacherPortal = () => {
   const LandingPage = () => (
     <div className="container max-w-6xl mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">Welcome to FraserPay Teacher Portal</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Sign your class/homeroom up</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Register your homeroom, club, or initiative for FraserPay and help manage student activities at Fraser Secondary.
+          Add your initiative, view other initiatives, or see past initiatives for inspiration!
         </p>
       </div>
       
@@ -41,14 +42,14 @@ const TeacherPortal = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileCheck className="h-6 w-6 text-primary" />
-              Register Your Initiative
+              Add your clubs/homeroom's Initiative
             </CardTitle>
             <CardDescription>
-              Submit your club or homeroom details for approval by the SAC
+              This form takes 1 min to fill out
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Complete a simple form to register your initiative on FraserPay. This will allow students to purchase products or services from your booth during events.</p>
+            <p>This form allows for your booth to automatically add itself to our list of initiatives</p>
           </CardContent>
           <CardFooter>
             <Button 
@@ -72,7 +73,7 @@ const TeacherPortal = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>See what other homerooms and clubs are offering. Get inspiration for your own initiative and stay updated on school activities.</p>
+            <p>See what other homerooms and clubs are doing for charity week! Get inspiration for your own class' initiative</p>
           </CardContent>
           <CardFooter>
             <Button 
@@ -143,7 +144,7 @@ const TeacherPortal = () => {
         </main>
         
         <footer className="px-6 py-4 text-center text-xs text-muted-foreground">
-          Made with ❤️ by John Fraser SAC
+          Made with ❤️ by Akshat Chopra for John Fraser SAC
         </footer>
       </div>
     );
@@ -155,7 +156,7 @@ const TeacherPortal = () => {
       <Header />
       <LandingPage />
       <footer className="absolute bottom-0 left-0 right-0 px-6 py-4 text-center text-xs text-muted-foreground backdrop-blur-sm bg-white/30">
-        Made with ❤️ by John Fraser SAC
+        Made with ❤️ by Akshat Chopra for John Fraser SAC
       </footer>
     </AuroraBackground>
   );
