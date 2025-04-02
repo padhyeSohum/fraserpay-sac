@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import TeacherForm from './components/TeacherForm';
 import BoothList from './components/BoothList';
-
 const TeacherPortal = () => {
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
@@ -41,7 +40,7 @@ const TeacherPortal = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p> </p>
+            <p> This form takes 1 min to fill out. Add your class/club's initative now </p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => setActiveTab("register")} className="w-full group">
@@ -134,5 +133,4 @@ const TeacherPortal = () => {
       </footer>
     </AuroraBackground>;
 };
-
 export default TeacherPortal;
