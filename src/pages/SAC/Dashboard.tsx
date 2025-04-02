@@ -505,10 +505,10 @@ const Dashboard = () => {
     try {
       const isSelfTransaction = studentId === user.id;
       
-      const result = await addFunds(studentId, amount, user.id);
+      const result = await addFunds(studentId, amount, user.id, reason);
       
       if (result.success) {
-        const reasonText = reason ? ` (Reason: ${reason})` : '';
+        const reasonText = reason && amount >= 0 ? ` (Reason: ${reason})` : '';
         toast.success(`Successfully added $${amount.toFixed(2)} to account${reasonText}`);
         
         const userRef = doc(firestore, 'users', studentId);

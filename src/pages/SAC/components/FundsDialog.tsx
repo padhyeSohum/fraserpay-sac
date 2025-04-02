@@ -181,8 +181,10 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
         // Record transaction time for cooldown
         lastTransactionTimes[localStudentId] = Date.now();
         
-        // Pass reason if provided
-        await onSubmit(localStudentId, amountNum, reason || undefined);
+        // Pass reason only if it's a refund or if a reason was provided
+        const isRefund = amountNum < 0;
+        const reasonToUse = isRefund ? reason : (reason.trim() ? reason : undefined);
+        await onSubmit(localStudentId, amountNum, reasonToUse);
         
         // Clear form fields after successful submission
         setAmount('');
@@ -255,6 +257,9 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       </Alert>
     );
   };
+
+  // Check if the current operation is a refund based on the amount
+  const isRefund = parseFloat(amount) < 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -335,7 +340,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="reason" className="text-right">
               Reason
-              {parseFloat(amount) < 0 && !showPinInput && (
+              {isRefund && !showPinInput && (
                 <span className="text-red-500 ml-1">*</span>
               )}
             </Label>
@@ -343,7 +348,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder={parseFloat(amount) < 0 ? "Required for refunds" : "Optional for deposits"}
+              placeholder={isRefund ? "Required for refunds" : "Optional for deposits"}
               className="col-span-3 min-h-[80px]"
             />
           </div>
@@ -363,7 +368,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
               !amount || 
               isNaN(parseFloat(amount)) || 
               parseFloat(amount) === 0 ||
-              (parseFloat(amount) < 0 && !reason.trim() && !showPinInput)
+              (isRefund && !reason.trim() && !showPinInput)
             }
           >
             {needsOverride ? "Enter Override PIN" : confirmLabel}

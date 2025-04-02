@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { Transaction, User, Product, PaymentMethod } from '@/types';
 import { toast } from 'sonner';
@@ -71,12 +72,21 @@ export const useTransaction = (): UseTransactionReturn => {
     reason?: string
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const result = await addFundsService(studentId, amount, sacMemberId, reason);
+      // Only pass reason when it's a refund (negative amount) or when a reason is provided
+      const shouldPassReason = amount < 0 || (reason && reason.trim().length > 0);
+      const result = await addFundsService(
+        studentId, 
+        amount, 
+        sacMemberId, 
+        shouldPassReason ? reason : undefined
+      );
       
       if (result.success) {
+        // Don't show reason in the success message if it's not a refund and no reason was provided
+        const reasonText = shouldPassReason && reason ? ` (Reason: ${reason})` : '';
         return { 
           success: true, 
-          message: `Successfully added $${amount.toFixed(2)} to account` 
+          message: `Successfully ${amount < 0 ? 'refunded' : 'added'} $${Math.abs(amount).toFixed(2)}${reasonText}`
         };
       } else {
         return { 
