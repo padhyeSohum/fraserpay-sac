@@ -1,124 +1,124 @@
 
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  CardFooter
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import BoothCard from '@/components/BoothCard';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, School } from 'lucide-react';
+import CreateBoothDialog from './CreateBoothDialog';
+import PendingBoothsDialog from './PendingBoothsDialog';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useTransactions } from '@/contexts/transactions';
 import { Booth } from '@/types';
-import { Eye, EyeOff, ChevronRight } from 'lucide-react';
 
 interface BoothsListProps {
   booths: Booth[];
   isLoading?: boolean;
 }
 
-const BoothsList: React.FC<BoothsListProps> = ({ 
-  booths = [],
-  isLoading = false 
-}) => {
+const BoothsList: React.FC<BoothsListProps> = ({ booths, isLoading = false }) => {
+  const { deleteBooth } = useTransactions();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showPins, setShowPins] = useState<Record<string, boolean>>({});
-  const [visibleCount, setVisibleCount] = useState(5);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const togglePinVisibility = (boothId: string) => {
-    setShowPins(prev => ({
-      ...prev,
-      [boothId]: !prev[boothId]
-    }));
-  };
-
+  // Filter booths based on search term
   const filteredBooths = booths.filter(booth => 
-    booth.name.toLowerCase().includes(searchTerm.toLowerCase())
+    booth.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    booth.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const displayedBooths = filteredBooths.slice(0, visibleCount);
-  const hasMore = filteredBooths.length > visibleCount;
-
-  const handleViewMore = () => {
-    setVisibleCount(prev => prev + 5);
+  // Handle booth deletion
+  const handleDeleteBooth = async (boothId: string) => {
+    if (window.confirm('Are you sure you want to delete this booth? This action cannot be undone.')) {
+      const success = await deleteBooth(boothId);
+      
+      if (success) {
+        toast.success('Booth deleted successfully');
+      } else {
+        toast.error('Failed to delete booth');
+      }
+    }
   };
 
   return (
-    <Card className="w-full shadow-sm">
-      <CardHeader>
-        <CardTitle>Booths</CardTitle>
-        <CardDescription>All active booths with their access PINs</CardDescription>
-        <div className="mt-2">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search booths..."
+            className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
           />
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-muted animate-pulse rounded"></div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {displayedBooths.length === 0 ? (
-              <p className="text-muted-foreground">No booths found</p>
-            ) : (
-              displayedBooths.map((booth) => (
-                <div 
-                  key={booth.id} 
-                  className="flex items-center justify-between p-3 border rounded-md"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{booth.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{booth.description}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-[100px]">
-                      <span className="text-sm font-medium">PIN:</span>
-                      {showPins[booth.id] ? (
-                        <span className="font-mono">{booth.pin}</span>
-                      ) : (
-                        <span className="font-mono">••••••</span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => togglePinVisibility(booth.id)}
-                      className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showPins[booth.id] ? "Hide PIN" : "Show PIN"}
-                    >
-                      {showPins[booth.id] ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </CardContent>
-      {hasMore && (
-        <CardFooter className="flex justify-center pt-2 pb-4">
-          <Button 
-            variant="outline" 
-            onClick={handleViewMore}
+        
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             className="flex items-center gap-1"
+            onClick={() => setIsPendingDialogOpen(true)}
           >
-            View More
-            <ChevronRight className="h-4 w-4" />
+            <School className="h-4 w-4" />
+            <span className="hidden sm:inline">Teacher</span> Requests
+            <Badge variant="secondary" className="ml-1">
+              {/* Count could be fetched from context in a real implementation */}
+              New
+            </Badge>
           </Button>
-        </CardFooter>
+          
+          <Button
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Create</span> Booth
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="py-10 text-center">
+          <div className="w-8 h-8 border-t-2 border-primary rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-sm text-muted-foreground">Loading booths...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredBooths.map((booth: Booth) => (
+            <BoothCard
+              key={booth.id}
+              booth={booth}
+              onClick={() => navigate(`/booth/${booth.id}`)}
+              onRemove={handleDeleteBooth}
+              showProductCount={true}
+            />
+          ))}
+          
+          {filteredBooths.length === 0 && (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-muted-foreground">
+                {searchTerm ? 'No booths match your search.' : 'No booths available.'}
+              </p>
+            </div>
+          )}
+        </div>
       )}
-    </Card>
+      
+      <CreateBoothDialog 
+        isOpen={isCreateDialogOpen} 
+        onOpenChange={setIsCreateDialogOpen} 
+      />
+      
+      <PendingBoothsDialog
+        open={isPendingDialogOpen}
+        onOpenChange={setIsPendingDialogOpen}
+      />
+    </div>
   );
 };
 

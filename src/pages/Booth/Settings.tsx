@@ -276,7 +276,7 @@ const BoothSettings = () => {
                 {products && products.length > 0 ? <div className="space-y-4">
                     {products.map(product => <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                         <div className="flex items-center space-x-3">
-                          
+                          <Package className="h-5 w-5 text-gray-500" />
                           <div>
                             <h4 className="font-medium">{product.name}</h4>
                             <p className="text-sm text-gray-500">

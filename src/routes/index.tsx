@@ -25,6 +25,9 @@ import SACDashboard from "@/pages/SAC/Dashboard";
 import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/NotFound";
 
+// Teacher Form Page - Public
+import TeacherPortal from "@/pages/Teacher/TeacherPortal";
+
 // Route configuration for the application
 export const routes = [
   // Auth Routes
@@ -92,6 +95,20 @@ export const routes = [
     path: "/transactions", 
     element: <Navigate to="/dashboard" replace />,
     protected: true 
+  },
+  
+  // Teacher Form - Public, no authentication required (renamed from teacher-portal to register-initiative)
+  { 
+    path: "/register-initiative", 
+    element: <TeacherPortal />,
+    protected: false 
+  },
+  
+  // Add redirect from old path to new path
+  {
+    path: "/teacher-portal",
+    element: <Navigate to="/register-initiative" replace />,
+    protected: false
   },
   
   // Explicit 404 route
