@@ -125,7 +125,7 @@ const TeacherForm = () => {
         </div>
         <h3 className="text-xl font-medium mb-2">Submission Received!</h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          Thank you for registering your initiative. The SAC will review your submission and reach out via email once approved.
+          Thank you for registering your initiative. You will recieve a confirmation email shortly.
         </p>
         <Button onClick={() => setIsSuccess(false)}>Submit Another Initiative</Button>
       </div>
@@ -146,7 +146,7 @@ const TeacherForm = () => {
                 <FormItem>
                   <FormLabel>Teacher Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Smith" {...field} />
+                    <Input placeholder="Mr. Jimmy" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,7 +160,7 @@ const TeacherForm = () => {
                 <FormItem>
                   <FormLabel>Teacher Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="john.smith@pdsb.net" {...field} />
+                    <Input placeholder="p009097@pdsb.net" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -174,7 +174,7 @@ const TeacherForm = () => {
                 <FormItem>
                   <FormLabel>Initiative Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Homeroom 205 Bake Sale" {...field} />
+                    <Input placeholder="EASA Bubble Tea booth" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
