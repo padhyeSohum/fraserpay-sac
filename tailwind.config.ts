@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -123,14 +124,6 @@ export default {
 					from: { opacity: '0', transform: 'scale(0.95)' },
 					to: { opacity: '1', transform: 'scale(1)' }
 				},
-				aurora: {
-					from: {
-						backgroundPosition: "50% 50%, 50% 50%",
-					},
-					to: {
-						backgroundPosition: "350% 50%, 350% 50%",
-					},
-				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -141,7 +134,6 @@ export default {
 				'pulse-slow': 'pulse 3s ease-in-out infinite',
 				'float': 'float 3s ease-in-out infinite',
 				'fade-in-scale': 'fadeInScale 0.3s ease-out',
-				aurora: "aurora 60s linear infinite",
 			},
 			backdropFilter: {
 				'none': 'none',

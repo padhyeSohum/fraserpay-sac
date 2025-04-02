@@ -27,13 +27,6 @@ import NotFound from "@/pages/NotFound";
 // Teacher Form Page - Public
 import TeacherPortal from "@/pages/Teacher/TeacherPortal";
 
-// Helper function to check if a path is a public route - keep in sync with AppRoutes.tsx
-const isPublicRoute = (path: string) => {
-  return path.startsWith('/public/') || 
-         path === '/register-initiative' || 
-         path === '/teacher-portal';
-};
-
 // Route configuration for the application
 export const routes = [
   // Auth Routes
@@ -103,25 +96,11 @@ export const routes = [
     protected: true 
   },
   
-  // Teacher Form - Public, no authentication required (renamed from teacher-portal to register-initiative)
+  // Teacher Form - Public, no authentication required
   { 
-    path: "/register-initiative", 
+    path: "/teacher-portal", 
     element: <TeacherPortal />,
     protected: false 
-  },
-  
-  // Add redirect from old path to new path
-  {
-    path: "/teacher-portal",
-    element: <Navigate to="/register-initiative" replace />,
-    protected: false
-  },
-  
-  // NEW: Public subdomain route - accessible without authentication
-  {
-    path: "/public/initiative-form",
-    element: <TeacherPortal />,
-    protected: false
   },
   
   // Explicit 404 route
@@ -172,11 +151,6 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   
-  // Skip auth check for public routes (this is a fallback safety measure)
-  if (isPublicRoute(location.pathname)) {
-    return <>{children}</>;
-  }
-  
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace state={{ from: location }} />;
@@ -194,11 +168,6 @@ export const RoleProtectedRoute = ({
 }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  
-  // Skip auth check for public routes (this is a fallback safety measure)
-  if (isPublicRoute(location.pathname)) {
-    return <>{children}</>;
-  }
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
