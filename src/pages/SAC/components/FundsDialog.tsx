@@ -33,7 +33,7 @@ interface FundsDialogProps {
 const lastTransactionTimes: Record<string, number> = {};
 const COOLDOWN_PERIOD = 10000; // 10 seconds in milliseconds
 const MAX_ADD_AMOUNT = 50; // Maximum $50 add limit
-const COPRESIDENT_PIN = "1234"; // Secure PIN for override (in production, this would be stored securely)
+const COPRESIDENT_PIN = "90210"; // Secure PIN for override (in production, this would be stored securely)
 
 const FundsDialog: React.FC<FundsDialogProps> = ({
   isOpen,
