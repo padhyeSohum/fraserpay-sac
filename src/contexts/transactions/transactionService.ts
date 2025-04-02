@@ -1,8 +1,9 @@
+
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { transformFirebaseTransaction, transformFirebaseTransactionWithReason } from '@/utils/firebase';
+import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
