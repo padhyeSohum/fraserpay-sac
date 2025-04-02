@@ -1,3 +1,4 @@
+
 export type UserRole = 'student' | 'booth' | 'sac';
 
 export interface User {
@@ -55,7 +56,6 @@ export interface Transaction {
   paymentMethod?: PaymentMethod;
   sacMemberId?: string;
   sacMemberName?: string;
-  reason?: string; // Adding the reason property
 }
 
 export interface CartItem {
