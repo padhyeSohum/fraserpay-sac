@@ -12,6 +12,13 @@ const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
   const routeInitialized = useRef(false);
   
+  // Helper function to check if a path is a public route
+  const isPublicRoute = (path: string) => {
+    return path.startsWith('/public/') || 
+           path === '/register-initiative' || 
+           path === '/teacher-portal';
+  };
+  
   // Handle loading timeout state
   useEffect(() => {
     if (isLoading) {
@@ -44,7 +51,7 @@ const AppRoutes: React.FC = () => {
       console.log("Initializing routes on path:", location.pathname);
       
       // Handle direct URL access - exclude public routes
-      if (isAuthenticated && !isLoading && !location.pathname.startsWith('/public/')) {
+      if (isAuthenticated && !isLoading && !isPublicRoute(location.pathname)) {
         // For root path, redirect to dashboard if authenticated
         if (location.pathname === '/' || location.pathname === '') {
           navigate('/dashboard', { replace: true });
@@ -81,13 +88,13 @@ const AppRoutes: React.FC = () => {
   }, [isLoading]);
   
   // Show loading screen for initial auth state determination, but with a timeout fallback
-  if (isLoading && !loadingTimeout && !location.pathname.startsWith('/public/')) {
+  if (isLoading && !loadingTimeout && !isPublicRoute(location.pathname)) {
     console.log("App is in loading state, auth status not determined yet");
     return <LoadingScreen timeout={false} />;
   }
   
   // If loading has timed out, show the loading screen with timeout message
-  if (isLoading && loadingTimeout && !location.pathname.startsWith('/public/')) {
+  if (isLoading && loadingTimeout && !isPublicRoute(location.pathname)) {
     console.log("Auth loading timed out, showing timeout screen");
     return <LoadingScreen timeout={true} />;
   }
@@ -97,6 +104,12 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {routes.map((route, index) => {
+        // For public routes, don't wrap with ProtectedRoute
+        if (isPublicRoute(route.path)) {
+          return <Route key={index} path={route.path} element={route.element} />;
+        }
+        
+        // For protected routes
         if (route.protected) {
           return (
             <Route 
@@ -111,6 +124,7 @@ const AppRoutes: React.FC = () => {
           );
         }
         
+        // For other routes
         return <Route key={index} path={route.path} element={route.element} />;
       })}
       
