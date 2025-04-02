@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 
@@ -23,9 +24,6 @@ import SACDashboard from "@/pages/SAC/Dashboard";
 // Shared Pages
 import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/NotFound";
-
-// Teacher Form Page - Public
-import TeacherPortal from "@/pages/Teacher/TeacherPortal";
 
 // Route configuration for the application
 export const routes = [
@@ -94,13 +92,6 @@ export const routes = [
     path: "/transactions", 
     element: <Navigate to="/dashboard" replace />,
     protected: true 
-  },
-  
-  // Teacher Form - Public, no authentication required
-  { 
-    path: "/teacher-portal", 
-    element: <TeacherPortal />,
-    protected: false 
   },
   
   // Explicit 404 route
