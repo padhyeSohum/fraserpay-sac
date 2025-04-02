@@ -6,7 +6,9 @@ import { measurePerformance, registerConnectivityListeners, preloadCriticalResou
 import { toast } from 'sonner';
 import { auth } from './integrations/firebase/client';
 
+// Wrap everything in a proper React component
 const App: React.FC = () => {
+  // Move useState calls inside the component function
   const [isReady, setIsReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const initAttempted = useRef(false);
