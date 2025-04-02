@@ -49,7 +49,7 @@ const TeacherPortal = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>This form allows for your booth to automatically add itself to our list of initiatives</p>
+            <p> </p>
           </CardContent>
           <CardFooter>
             <Button 
