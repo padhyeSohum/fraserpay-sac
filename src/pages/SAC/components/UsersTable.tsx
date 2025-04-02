@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Trash2, UserX } from 'lucide-react';
+import { Trash2, UserX, ChevronDown } from 'lucide-react';
 
 interface User {
   id: string;
@@ -40,12 +40,21 @@ const UsersTable: React.FC<UsersTableProps> = ({
   onUserSelect,
   onUserDelete
 }) => {
+  const [visibleCount, setVisibleCount] = useState(10);
+
   const handleDeleteClick = (event: React.MouseEvent, userId: string) => {
     event.stopPropagation(); // Prevent row click event
     if (onUserDelete) {
       onUserDelete(userId);
     }
   };
+
+  const handleViewMore = () => {
+    setVisibleCount(prev => prev + 10);
+  };
+
+  const displayedUsers = users.slice(0, visibleCount);
+  const hasMore = users.length > visibleCount;
 
   return (
     <div>
@@ -81,14 +90,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 </div>
               </TableCell>
             </TableRow>
-          ) : users.length === 0 ? (
+          ) : displayedUsers.length === 0 ? (
             <TableRow>
               <TableCell colSpan={onUserDelete ? 6 : 5} className="text-center py-8 text-muted-foreground">
                 No users found
               </TableCell>
             </TableRow>
           ) : (
-            users.map((user) => (
+            displayedUsers.map((user) => (
               <TableRow 
                 key={user.id}
                 className="cursor-pointer hover:bg-muted/50"
@@ -119,8 +128,22 @@ const UsersTable: React.FC<UsersTableProps> = ({
           )}
         </TableBody>
       </Table>
+      
+      {hasMore && (
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="outline" 
+            onClick={handleViewMore}
+            className="flex items-center gap-1"
+          >
+            View More
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
 
 export default UsersTable;
+
