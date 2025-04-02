@@ -12,8 +12,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
 import { Booth } from '@/types';
 
-const BoothsList = () => {
-  const { booths, deleteBooth } = useTransactions();
+interface BoothsListProps {
+  booths: Booth[];
+  isLoading?: boolean;
+}
+
+const BoothsList: React.FC<BoothsListProps> = ({ booths, isLoading = false }) => {
+  const { deleteBooth } = useTransactions();
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
@@ -77,28 +82,35 @@ const BoothsList = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredBooths.map((booth: Booth) => (
-          <BoothCard
-            key={booth.id}
-            booth={booth}
-            onClick={() => navigate(`/booth/${booth.id}`)}
-            onRemove={handleDeleteBooth}
-            showProductCount={true}
-          />
-        ))}
-        
-        {filteredBooths.length === 0 && (
-          <div className="col-span-full py-10 text-center">
-            <p className="text-muted-foreground">
-              {searchTerm ? 'No booths match your search.' : 'No booths available.'}
-            </p>
-          </div>
-        )}
-      </div>
+      {isLoading ? (
+        <div className="py-10 text-center">
+          <div className="w-8 h-8 border-t-2 border-primary rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-sm text-muted-foreground">Loading booths...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredBooths.map((booth: Booth) => (
+            <BoothCard
+              key={booth.id}
+              booth={booth}
+              onClick={() => navigate(`/booth/${booth.id}`)}
+              onRemove={handleDeleteBooth}
+              showProductCount={true}
+            />
+          ))}
+          
+          {filteredBooths.length === 0 && (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-muted-foreground">
+                {searchTerm ? 'No booths match your search.' : 'No booths available.'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       
       <CreateBoothDialog 
-        open={isCreateDialogOpen} 
+        isOpen={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen} 
       />
       

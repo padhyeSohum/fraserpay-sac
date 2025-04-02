@@ -8,10 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Check, Plus, X, Dices } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface CreateBoothDialogProps {
+export interface CreateBoothDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBooth: (data: {
+  onCreateBooth?: (data: {
     name: string;
     description: string;
     pin: string;
@@ -21,7 +21,7 @@ interface CreateBoothDialogProps {
       image?: string;
     }[];
   }) => Promise<void>;
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
 const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
@@ -81,12 +81,14 @@ const CreateBoothDialog: React.FC<CreateBoothDialogProps> = ({
     setSubmitting(true);
     
     try {
-      await onCreateBooth({
-        name,
-        description,
-        pin,
-        products: validProducts,
-      });
+      if (onCreateBooth) {
+        await onCreateBooth({
+          name,
+          description,
+          pin,
+          products: validProducts,
+        });
+      }
       
       // Reset form
       setName('');
