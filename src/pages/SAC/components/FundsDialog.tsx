@@ -143,6 +143,13 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       return false;
     }
     
+    // Always require PIN verification for refunds
+    if (isRefund && !showPinInput) {
+      setOverrideReason("Copresident PIN required to process refunds");
+      setNeedsOverride(true);
+      return false;
+    }
+    
     // Check reason requirement for refunds
     if (isRefund && !reason.trim() && !showPinInput) {
       setOverrideReason("A reason is required for processing refunds");
