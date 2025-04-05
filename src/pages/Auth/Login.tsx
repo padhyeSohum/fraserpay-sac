@@ -11,6 +11,8 @@ import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -27,9 +29,7 @@ const Login = () => {
   } = useToast();
   const isMobile = useIsMobile();
 
-  // Effect to show PWA install banner on mobile devices
   useEffect(() => {
-    // Only show on mobile and when not already in PWA mode
     if (!isMobile || isPWA()) return;
     console.log("Login page: Setting up PWA install banner");
     return showInstallBanner(setShowPWAPrompt, 2000);
@@ -42,6 +42,7 @@ const Login = () => {
       });
     }
   }, [isAuthenticated, user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
@@ -66,14 +67,23 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
   const logo = <div className="flex items-center justify-center mb-6">
       <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
     </div>;
+
   return <Layout>
       <div className="flex flex-col items-center justify-center min-h-[80vh] animate-fade-in">
         {logo}
         
-        <div className="w-full max-w-md mx-auto">
+        <div className="w-full max-w-md mx-auto space-y-4">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              FraserPay does not work on the PDSB Media WiFi. Please Switch to PDSB WiFi or use mobile data where possible.
+            </AlertDescription>
+          </Alert>
+          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
@@ -120,4 +130,5 @@ const Login = () => {
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
     </Layout>;
 };
+
 export default Login;
