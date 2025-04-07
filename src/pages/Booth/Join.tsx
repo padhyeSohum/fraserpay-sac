@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -132,7 +131,7 @@ const BoothJoin: React.FC = () => {
         
         <div className="text-center">
           <h3 className="text-base font-medium mb-2">Need to Create a New Initiative?</h3>
-          <p className="text-sm text-muted-foreground mb-4">Find the SAC initiative and ask a SAC member there to help you out. </p>
+          <p className="text-sm text-muted-foreground mb-4">Find the SAC table and ask a SAC member there to help you out.</p>
           <Button variant="link" onClick={() => navigate('/dashboard')}>
             Return to Dashboard
           </Button>
