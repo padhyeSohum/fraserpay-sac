@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,50 +9,47 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { uniqueToast } from '@/utils/toastHelpers';
 import { Info, Loader2 } from 'lucide-react';
-
 const BoothJoin: React.FC = () => {
-  const { user, updateUserData } = useAuth();
-  const { joinBooth, fetchAllBooths } = useTransactions();
+  const {
+    user,
+    updateUserData
+  } = useAuth();
+  const {
+    joinBooth,
+    fetchAllBooths
+  } = useTransactions();
   const navigate = useNavigate();
-  
   const [pin, setPin] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPin(e.target.value);
     setError(null); // Clear error when pin is changed
   };
-  
   const handleJoinBooth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!pin.trim()) {
       setError('Please enter a PIN code');
       return;
     }
-    
     if (!user || !user.id) {
       uniqueToast.error('You must be logged in to join a booth');
       return;
     }
-    
     try {
       setIsJoining(true);
       setError(null);
-      
       console.log(`Attempting to join booth with PIN: ${pin}`);
       const success = await joinBooth(pin, user.id);
-      
       if (success) {
         console.log('Successfully joined booth, refreshing data...');
-        
+
         // Refresh booths list to include the newly joined booth
         const updatedBooths = await fetchAllBooths();
-        
+
         // Find the booth that matches the PIN
         const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
-        
+
         // Update user data to include the new booth
         if (user) {
           const currentBooths = user.booths || [];
@@ -65,10 +61,9 @@ const BoothJoin: React.FC = () => {
             });
           }
         }
-        
+
         // Trigger an event to refresh booths on the dashboard
         localStorage.setItem('boothJoined', Date.now().toString());
-        
         if (joinedBooth) {
           uniqueToast.success('Successfully joined booth!');
           // Navigate directly to the booth page
@@ -90,16 +85,12 @@ const BoothJoin: React.FC = () => {
       setIsJoining(false);
     }
   };
-
-  return (
-    <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
+  return <Layout title="Join a Booth" subtitle="Enter the booth PIN code" showBack>
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Join Existing Booth</CardTitle>
-            <CardDescription>
-              Enter the PIN code provided by the booth manager to join an existing booth.
-            </CardDescription>
+            <CardDescription>Enter the PIN code provided by your staff supervisor to join an existing booth.</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleJoinBooth}>
@@ -146,8 +137,6 @@ const BoothJoin: React.FC = () => {
           </Button>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default BoothJoin;
