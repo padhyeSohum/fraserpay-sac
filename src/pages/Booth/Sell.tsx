@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -40,10 +41,10 @@ const BoothSell = () => {
       await fetchAllBooths();
       
       const updatedBooth = getBoothById(boothId);
-      console.log('Refreshed booth data for sell page:', updatedBooth);
+      console.log('Refreshed initiative data for sell page:', updatedBooth);
       setBooth(updatedBooth);
     } catch (error) {
-      console.error('Error refreshing booth data:', error);
+      console.error('Error refreshing initiative data:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -57,7 +58,7 @@ const BoothSell = () => {
 
   useEffect(() => {
     if (!booth) {
-      console.log("Booth not found or user doesn't have access");
+      console.log("Initiative not found or user doesn't have access");
     }
   }, [booth]);
 
@@ -106,7 +107,7 @@ const BoothSell = () => {
   };
 
   const handleQRCodeScanned = async (decodedText: string) => {
-    console.log('QR code scanned in Booth Sell page:', decodedText);
+    console.log('QR code scanned in Initiative Sell page:', decodedText);
     
     if (isProcessingQR) {
       console.log('Already processing a QR code, ignoring duplicate scan');
@@ -276,9 +277,9 @@ const BoothSell = () => {
 
   if (!booth) {
     return (
-      <Layout title="Booth not found" showBack>
+      <Layout title="Initiative not found" showBack>
         <div className="text-center py-10">
-          <p className="text-muted-foreground">The booth you're looking for could not be found</p>
+          <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
           <Button 
             variant="link" 
             onClick={() => navigate('/dashboard')}
@@ -293,8 +294,8 @@ const BoothSell = () => {
 
   return (
     <Layout 
-      title={booth?.name || "Booth"} 
-      subtitle="Booth Management" 
+      title={booth?.name || "Initiative"} 
+      subtitle="Initiative Management" 
       showBack
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

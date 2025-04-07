@@ -38,9 +38,9 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Load all booths
+  // Load all initiatives
   const loadBooths = useCallback(async () => {
-    console.log('Loading all booths');
+    console.log('Loading all initiatives');
     setIsLoading(true);
     
     try {
@@ -53,7 +53,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       for (const boothDoc of boothsSnapshot.docs) {
         const boothData = boothDoc.data();
         
-        // Check if the booth already has products in the document
+        // Check if the initiative already has products in the document
         const products = boothData.products || [];
         
         // Map the products to our Product type
@@ -79,18 +79,18 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         });
       }
       
-      console.log('Loaded booths:', boothsData.length);
+      console.log('Loaded initiatives:', boothsData.length);
       return boothsData;
     } catch (error) {
-      console.error('Error loading booths:', error);
-      uniqueToast.error('Failed to load booths');
+      console.error('Error loading initiatives:', error);
+      uniqueToast.error('Failed to load initiatives');
       return [];
     } finally {
       setIsLoading(false);
     }
   }, []);
   
-  // Load booths where a user is a member
+  // Load initiatives where a user is a member
   const loadStudentBooths = useCallback(async (userId?: string) => {
     const userIdToUse = userId || (user ? user.id : undefined);
     
@@ -99,7 +99,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       return [];
     }
     
-    console.log('Loading booths for user:', userIdToUse);
+    console.log('Loading initiatives for user:', userIdToUse);
     setIsLoading(true);
     
     try {
@@ -116,7 +116,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       for (const boothDoc of boothsSnapshot.docs) {
         const boothData = boothDoc.data();
         
-        // Load booth products
+        // Load initiative products
         const productsCollection = collection(firestore, 'products');
         const productsQuery = query(productsCollection, where('booth_id', '==', boothDoc.id));
         const productsSnapshot = await getDocs(productsQuery);
@@ -145,53 +145,53 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         });
       }
       
-      console.log('Loaded user booths:', boothsData.length);
+      console.log('Loaded user initiatives:', boothsData.length);
       return boothsData;
     } catch (error) {
-      console.error('Error loading user booths:', error);
-      uniqueToast.error('Failed to load your booths');
+      console.error('Error loading user initiatives:', error);
+      uniqueToast.error('Failed to load your initiatives');
       return [];
     } finally {
       setIsLoading(false);
     }
   }, [user]);
   
-  // Function to join a booth using PIN
+  // Function to join an initiative using PIN
   const joinBooth = async (pin: string, userId: string): Promise<boolean> => {
-    console.log('Attempting to join booth with PIN:', pin);
+    console.log('Attempting to join initiative with PIN:', pin);
     setIsLoading(true);
     
     try {
-      // Find the booth with the matching PIN
+      // Find the initiative with the matching PIN
       const boothsCollection = collection(firestore, 'booths');
       const boothsQuery = query(boothsCollection, where('pin', '==', pin));
       const boothsSnapshot = await getDocs(boothsQuery);
       
       if (boothsSnapshot.empty) {
-        console.log('No booth found with the provided PIN');
+        console.log('No initiative found with the provided PIN');
         return false;
       }
       
-      // Get the booth document
+      // Get the initiative document
       const boothDoc = boothsSnapshot.docs[0];
       const boothId = boothDoc.id;
       const boothData = boothDoc.data();
       
-      console.log('Found booth with matching PIN:', boothId);
+      console.log('Found initiative with matching PIN:', boothId);
       
       // Check if user is already a member
       const members = boothData.members || [];
       if (members.includes(userId)) {
-        console.log('User is already a member of this booth');
-        return true; // Return true since the user is already connected to the booth
+        console.log('User is already a member of this initiative');
+        return true; // Return true since the user is already connected to the initiative
       }
       
-      // Update the booth document to add the user as a member
+      // Update the initiative document to add the user as a member
       await updateDoc(doc(firestore, 'booths', boothId), {
         members: arrayUnion(userId)
       });
       
-      console.log('Added user to booth members list');
+      console.log('Added user to initiative members list');
       
       // Also update the user's booth_access array in Firebase
       const userRef = doc(firestore, 'users', userId);
@@ -203,11 +203,11 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         });
         console.log('Updated user booth_access list in Firebase');
         
-        // Update the user context with the new booth access
+        // Update the user context with the new initiative access
         if (user && user.id === userId) {
           const currentBooths = user.booths || [];
           if (!currentBooths.includes(boothId)) {
-            console.log('Updating user state with new booth access');
+            console.log('Updating user state with new initiative access');
             updateUserData({
               ...user,
               booths: [...currentBooths, boothId]
@@ -218,26 +218,26 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         console.warn('User document not found:', userId);
       }
       
-      // Refresh the booths list after joining
+      // Refresh the initiatives list after joining
       const updatedBooths = await loadBooths();
       setBooths(updatedBooths);
       
       return true;
     } catch (error) {
-      console.error('Error joining booth:', error);
+      console.error('Error joining initiative:', error);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Fetch all booths and update state
+  // Fetch all initiatives and update state
   const fetchAllBooths = useCallback(async () => {
     setIsLoading(true);
     try {
       const boothsData = await loadBooths();
       setBooths(boothsData);
-      return boothsData; // Return the booths data to match the interface
+      return boothsData; // Return the initiatives data to match the interface
     } catch (error) {
       console.error('Error in fetchAllBooths:', error);
       return []; // Return empty array on error to match the interface
@@ -246,20 +246,20 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     }
   }, [loadBooths]);
   
-  // Effect to load booths when authenticated
+  // Effect to load initiatives when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       fetchAllBooths();
     }
   }, [isAuthenticated, fetchAllBooths]);
   
-  // Create a new booth
+  // Create a new initiative
   const createBooth = async (name: string, description: string, managerId: string, pin: string): Promise<string | null> => {
-    console.log('Creating booth:', { name, description, managerId, pin });
+    console.log('Creating initiative:', { name, description, managerId, pin });
     setIsLoading(true);
     
     try {
-      // Create the booth
+      // Create the initiative
       const boothData = {
         name,
         description,
@@ -278,23 +278,23 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         booth_access: arrayUnion(boothRef.id)
       });
       
-      // Update booth list
+      // Update initiative list
       await fetchAllBooths();
       
-      console.log('Booth created with ID:', boothRef.id);
-      uniqueToast.success('Booth created successfully');
+      console.log('Initiative created with ID:', boothRef.id);
+      uniqueToast.success('Initiative created successfully');
       
       return boothRef.id;
     } catch (error) {
-      console.error('Error creating booth:', error);
-      uniqueToast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Error creating initiative:', error);
+      uniqueToast.error('Failed to create initiative: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return null;
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Delete a booth
+  // Delete an initiative
   const deleteBooth = async (boothId: string): Promise<boolean> => {
     setIsLoading(true);
     
@@ -302,27 +302,27 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       const success = await deleteBoothService(boothId);
       
       if (success) {
-        // Update the local booths state by removing the deleted booth
+        // Update the local initiatives state by removing the deleted initiative
         setBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
-        uniqueToast.success('Booth deleted successfully');
+        uniqueToast.success('Initiative deleted successfully');
       }
       
       return success;
     } catch (error) {
-      console.error('Error deleting booth:', error);
-      uniqueToast.error('Failed to delete booth');
+      console.error('Error deleting initiative:', error);
+      uniqueToast.error('Failed to delete initiative');
       return false;
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Get booth by ID
+  // Get initiative by ID
   const getBoothById = useCallback((id: string): Booth | undefined => {
     return booths.find(booth => booth.id === id);
   }, [booths]);
   
-  // Get booths by user ID
+  // Get initiatives by user ID
   const getBoothsByUserId = useCallback((userId: string): Booth[] => {
     return booths.filter(booth => booth.managers.includes(userId));
   }, [booths]);

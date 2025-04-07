@@ -54,9 +54,9 @@ const BoothDashboard = () => {
   
   if (!booth) {
     return (
-      <Layout title="Booth not found" showBack>
+      <Layout title="Initiative not found" showBack>
         <div className="text-center py-10">
-          <p className="text-muted-foreground">The booth you're looking for could not be found</p>
+          <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
           <Button variant="link" onClick={() => navigate('/dashboard')} className="mt-4">
             Return to Dashboard
           </Button>
@@ -66,7 +66,7 @@ const BoothDashboard = () => {
   }
   
   return (
-    <Layout title={booth.name} subtitle="Booth Management" showBack>
+    <Layout title={booth.name} subtitle="Initiative Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="dashboard" className="tab-button">Dashboard</TabsTrigger>

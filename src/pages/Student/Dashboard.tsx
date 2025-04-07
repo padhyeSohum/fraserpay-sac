@@ -11,6 +11,7 @@ import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
+
 const Dashboard = () => {
   const {
     user,
@@ -31,15 +32,18 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const MAX_RETRIES = 3;
+
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
     if (storedHiddenBooths) {
       setHiddenBooths(JSON.parse(storedHiddenBooths));
     }
   }, []);
+
   useEffect(() => {
     localStorage.setItem('hiddenBooths', JSON.stringify(hiddenBooths));
   }, [hiddenBooths]);
+
   const refreshUserData = useCallback(async () => {
     if (!user) return;
     try {
@@ -93,6 +97,7 @@ const Dashboard = () => {
       console.error('Error refreshing user data:', error);
     }
   }, [user, updateUserData]);
+
   const refreshUserBooths = useCallback(() => {
     if (!user) return;
     try {
@@ -106,6 +111,7 @@ const Dashboard = () => {
       setUserBooths([]);
     }
   }, [user, getBoothsByUserId, fetchAllBooths]);
+
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
     try {
@@ -141,6 +147,7 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, loadUserTransactions, MAX_RETRIES]);
+
   useEffect(() => {
     let isMounted = true;
     if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
@@ -150,6 +157,7 @@ const Dashboard = () => {
       isMounted = false;
     };
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
+
   useEffect(() => {
     refreshUserData();
     refreshUserBooths();
@@ -159,6 +167,7 @@ const Dashboard = () => {
     }, 5000);
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
+
   useEffect(() => {
     const handleTransactionUpdate = () => {
       refreshUserBooths();
@@ -168,43 +177,53 @@ const Dashboard = () => {
       clearInterval(transactionCheckId);
     };
   }, [refreshUserBooths, recentTransactions]);
+
   useEffect(() => {
     if (user && user.booths) {
       console.log("Dashboard: User booths changed, refreshing...", user.booths);
       refreshUserBooths();
     }
   }, [user?.booths, refreshUserBooths]);
+
   useEffect(() => {
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
     }
   }, [recentTransactions, user, loadUserTransactions]);
+
   const handleHideBooth = (boothId: string) => {
     setHiddenBooths(prev => [...prev, boothId]);
-    toast.success("Booth hidden from dashboard");
+    toast.success("Initiative hidden from dashboard");
   };
+
   const handleViewQRCode = () => {
     navigate('/qr-code');
   };
+
   const handleViewLeaderboard = () => {
     navigate('/leaderboard');
   };
+
   const handleViewSettings = () => {
     navigate('/settings');
   };
+
   const handleJoinBooth = () => {
     navigate('/booth/join');
   };
+
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
   };
+
   const logo = <div className="flex items-center mb-2">
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
         <p className="text-sm text-muted-foreground">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</p>
       </div>
     </div>;
+
   if (!user) {
     return <Layout title="Loading...">
         <div className="flex items-center justify-center min-h-[70vh]">
@@ -212,7 +231,9 @@ const Dashboard = () => {
         </div>
       </Layout>;
   }
+
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
+
   useEffect(() => {
     if (user) {
       const pollingInterval = setInterval(() => {
@@ -221,6 +242,7 @@ const Dashboard = () => {
       return () => clearInterval(pollingInterval);
     }
   }, [user, refreshUserBooths]);
+
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === 'boothJoined') {
@@ -231,6 +253,7 @@ const Dashboard = () => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refreshUserBooths]);
+
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">
         <div className="balance-card rounded-xl overflow-hidden">
@@ -239,7 +262,7 @@ const Dashboard = () => {
             <span className="text-3xl font-bold">${user.balance.toFixed(2)}</span>
             
             <p className="mt-4 text-sm text-white/80">
-              Visit the SAC booth to add funds to your account
+              Visit the SAC initiative to add funds to your account
             </p>
           </div>
         </div>
@@ -266,20 +289,20 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold">Your initiatives</h2>
             <Button variant="ghost" size="sm" onClick={handleJoinBooth} className="gap-1">
               <Plus className="h-4 w-4" />
-              <span>Join Booth</span>
+              <span>Join Initiative</span>
             </Button>
           </div>
           
           <div className="grid grid-cols-1 gap-3">
             {isLoading ? <Card>
                 <CardContent className="p-6 text-center">
-                  <p>Loading booths... this page may take up to a minute to load on PDSB wifi.</p>
+                  <p>Loading initiatives... this page may take up to a minute to load on PDSB wifi.</p>
                 </CardContent>
               </Card> : visibleBooths.length > 0 ? visibleBooths.map(booth => <BoothCard key={booth.id} booth={booth} earnings={booth.totalEarnings} onClick={() => handleBoothCardClick(booth.id)} onRemove={handleHideBooth} />) : <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
-                  <p>You don't have access to any booths yet</p>
+                  <p>You don't have access to any initiatives yet</p>
                   <Button variant="link" onClick={handleJoinBooth} className="mt-2">
-                    Join a booth with PIN
+                    Join an initiative with PIN
                   </Button>
                 </CardContent>
               </Card>}
@@ -307,4 +330,5 @@ const Dashboard = () => {
       </div>
     </Layout>;
 };
+
 export default Dashboard;

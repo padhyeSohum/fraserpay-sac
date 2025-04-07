@@ -11,7 +11,7 @@ import Dashboard from "@/pages/Student/Dashboard";
 import QRCode from "@/pages/Student/QRCode";
 import Settings from "@/pages/Student/Settings";
 
-// Booth Pages
+// Initiative Pages
 import BoothJoin from "@/pages/Booth/Join";
 import BoothDashboard from "@/pages/Booth/Dashboard";
 import BoothSell from "@/pages/Booth/Sell";
@@ -48,7 +48,7 @@ export const routes = [
     protected: true 
   },
   
-  // Booth Routes - no role restrictions
+  // Initiative Routes - no role restrictions
   { 
     path: "/booth/join", 
     element: <BoothJoin />,

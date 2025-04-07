@@ -52,7 +52,7 @@ const BoothCard: React.FC<BoothCardProps> = ({
               size="icon" 
               className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               onClick={handleRemoveClick}
-              aria-label="Remove booth"
+              aria-label="Remove initiative"
             >
               <X className="h-4 w-4" />
             </Button>

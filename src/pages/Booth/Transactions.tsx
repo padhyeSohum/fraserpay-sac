@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -46,10 +45,9 @@ const BoothTransactions = () => {
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
 
-  // Remove role-based restriction, just check if booth exists
   useEffect(() => {
     if (!booth) {
-      console.log("Booth not found or user doesn't have access");
+      console.log("Initiative not found or user doesn't have access");
       // We'll handle this in the render method below
     }
   }, [booth]);
@@ -68,9 +66,9 @@ const BoothTransactions = () => {
 
   if (!booth) {
     return (
-      <Layout title="Booth not found" showBack>
+      <Layout title="Initiative not found" showBack>
         <div className="text-center py-10">
-          <p className="text-muted-foreground">The booth you're looking for could not be found</p>
+          <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
         </div>
       </Layout>
     );
@@ -79,7 +77,7 @@ const BoothTransactions = () => {
   return (
     <Layout 
       title={booth.name} 
-      subtitle="Booth Management" 
+      subtitle="Initiative Management" 
       showBack
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -93,7 +91,7 @@ const BoothTransactions = () => {
         <TabsContent value="transactions" className="animate-fade-in mt-6">
           <div className="space-y-6">
             <div className="text-muted-foreground text-sm mb-2">
-              Showing all transactions for this booth
+              Showing all transactions for this initiative
             </div>
             
             {loadingTransactions || isLoading ? (

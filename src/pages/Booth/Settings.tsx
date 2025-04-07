@@ -62,7 +62,7 @@ const BoothSettings = () => {
 
   useEffect(() => {
     if (!booth) {
-      console.log("Booth not found or user doesn't have access");
+      console.log("Initiative not found or user doesn't have access");
     }
   }, [booth]);
 
@@ -90,14 +90,14 @@ const BoothSettings = () => {
       try {
         const success = await deleteBooth(boothId);
         if (success) {
-          uniqueToast.success('Booth deleted successfully');
+          uniqueToast.success('Initiative deleted successfully');
           navigate('/dashboard');
         } else {
-          uniqueToast.error('Failed to delete booth');
+          uniqueToast.error('Failed to delete initiative');
         }
       } catch (error) {
-        console.error('Error deleting booth:', error);
-        uniqueToast.error('Failed to delete booth');
+        console.error('Error deleting initiative:', error);
+        uniqueToast.error('Failed to delete initiative');
       } finally {
         setIsDeleting(false);
         setDeleteDialogOpen(false);
@@ -225,14 +225,14 @@ const BoothSettings = () => {
   };
 
   if (!booth) {
-    return <Layout title="Booth not found" showBack>
+    return <Layout title="Initiative not found" showBack>
         <div className="text-center py-10">
-          <p className="text-muted-foreground">The booth you're looking for could not be found</p>
+          <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
         </div>
       </Layout>;
   }
 
-  return <Layout title={booth.name} subtitle="Booth Management" showBack>
+  return <Layout title={booth.name} subtitle="Initiative Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="dashboard" className="tab-button">Dashboard</TabsTrigger>
@@ -245,13 +245,13 @@ const BoothSettings = () => {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Booth Information</CardTitle>
-                <CardDescription>View and manage your booth details.</CardDescription>
+                <CardTitle>Initiative Information</CardTitle>
+                <CardDescription>View and manage your initiative details.</CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Booth Name</Label>
+                  <Label htmlFor="name">Initiative Name</Label>
                   <Input id="name" value={booth.name} readOnly />
                 </div>
                 
@@ -268,7 +268,7 @@ const BoothSettings = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Products</CardTitle>
-                  <CardDescription>Manage products for this booth.</CardDescription>
+                  <CardDescription>Manage products for this initiative.</CardDescription>
                 </div>
                 <Dialog open={addProductDialogOpen} onOpenChange={setAddProductDialogOpen}>
                   <DialogTrigger asChild>
@@ -367,7 +367,7 @@ const BoothSettings = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your booth and all related data.
+                    This action cannot be undone. This will permanently delete your initiative and all related data.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 
