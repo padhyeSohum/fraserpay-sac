@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -84,7 +85,7 @@ const Login = () => {
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
               <CardDescription className="text-center">
-                Enter your credentials you created to log in
+                Use your Student Number and FraserPay Password to log in
               </CardDescription>
             </CardHeader>
             
