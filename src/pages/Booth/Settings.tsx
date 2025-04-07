@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -18,7 +17,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useForm } from 'react-hook-form';
 import ProductItem from '@/components/ProductItem';
 import { uniqueToast } from '@/utils/toastHelpers';
-
 const BoothSettings = () => {
   const {
     boothId
@@ -49,7 +47,6 @@ const BoothSettings = () => {
       description: ''
     }
   });
-
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
@@ -59,13 +56,11 @@ const BoothSettings = () => {
       }
     }
   }, [boothId, getBoothById]);
-
   useEffect(() => {
     if (!booth) {
       console.log("Initiative not found or user doesn't have access");
     }
   }, [booth]);
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'dashboard') {
@@ -76,14 +71,12 @@ const BoothSettings = () => {
       navigate(`/booth/${boothId}/transactions`);
     }
   };
-
   const handleCopyPin = () => {
     if (booth) {
       navigator.clipboard.writeText(booth.pin);
       uniqueToast.success('PIN code copied to clipboard');
     }
   };
-
   const handleDeleteBooth = async () => {
     setIsDeleting(true);
     if (boothId) {
@@ -104,7 +97,6 @@ const BoothSettings = () => {
       }
     }
   };
-
   const handleAddProduct = async (data: {
     name: string;
     price: string;
@@ -146,7 +138,6 @@ const BoothSettings = () => {
       setIsSubmitting(false);
     }
   };
-
   const handleDeleteProduct = async (productId: string) => {
     try {
       if (!boothId) {
@@ -169,45 +160,40 @@ const BoothSettings = () => {
       uniqueToast.error('An error occurred while removing the product');
     }
   };
-
   const handleUpdateProductPrice = async (productId: string, newPrice: number) => {
     try {
       if (!boothId) {
         uniqueToast.error('Booth ID is missing');
         return;
       }
-
       if (isNaN(newPrice) || newPrice <= 0) {
         uniqueToast.error('Please enter a valid price');
         return;
       }
-
       const productToUpdate = products.find(p => p.id === productId);
       if (!productToUpdate) {
         uniqueToast.error('Product not found');
         return;
       }
-
       const updatedProducts = products.map(p => {
         if (p.id === productId) {
-          return { ...p, price: newPrice };
+          return {
+            ...p,
+            price: newPrice
+          };
         }
         return p;
       });
-
       const removeSuccess = await removeProductFromBooth(boothId, productId);
       if (!removeSuccess) {
         uniqueToast.error('Failed to update product');
         return;
       }
-
       const updatedProduct = {
         ...productToUpdate,
         price: newPrice
       };
-      
       const addSuccess = await addProductToBooth(boothId, updatedProduct);
-      
       if (addSuccess) {
         uniqueToast.success('Product price updated successfully');
         const updatedBooth = getBoothById(boothId);
@@ -223,7 +209,6 @@ const BoothSettings = () => {
       uniqueToast.error('An error occurred while updating the product price');
     }
   };
-
   if (!booth) {
     return <Layout title="Initiative not found" showBack>
         <div className="text-center py-10">
@@ -231,7 +216,6 @@ const BoothSettings = () => {
         </div>
       </Layout>;
   }
-
   return <Layout title={booth.name} subtitle="Initiative Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
@@ -268,7 +252,7 @@ const BoothSettings = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Products</CardTitle>
-                  <CardDescription>Manage products for this initiative.</CardDescription>
+                  <CardDescription>Manage products for this initiative. Please refresh page after adding or editing a product.</CardDescription>
                 </div>
                 <Dialog open={addProductDialogOpen} onOpenChange={setAddProductDialogOpen}>
                   <DialogTrigger asChild>
@@ -331,28 +315,18 @@ const BoothSettings = () => {
               </CardHeader>
               
               <CardContent>
-                {products && products.length > 0 ? (
-                  <div className="space-y-4">
-                    {products.map(product => (
-                      <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                        <ProductItem 
-                          product={product}
-                          editable={true}
-                          onPriceChange={(newPrice) => handleUpdateProductPrice(product.id, newPrice)}
-                        />
+                {products && products.length > 0 ? <div className="space-y-4">
+                    {products.map(product => <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <ProductItem product={product} editable={true} onPriceChange={newPrice => handleUpdateProductPrice(product.id, newPrice)} />
                         <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} title="Remove product" className="ml-2">
                           <Trash className="h-4 w-4 text-red-500" />
                         </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
+                      </div>)}
+                  </div> : <div className="text-center py-6 text-muted-foreground">
                     <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
                     <p>No products added yet</p>
                     <p className="text-sm">Add products to start selling</p>
-                  </div>
-                )}
+                  </div>}
               </CardContent>
             </Card>
             
@@ -388,5 +362,4 @@ const BoothSettings = () => {
       </Tabs>
     </Layout>;
 };
-
 export default BoothSettings;
