@@ -149,7 +149,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       return boothsData;
     } catch (error) {
       console.error('Error loading user booths:', error);
-      toast.error('Failed to load your booths');
+      uniqueToast.error('Failed to load your booths');
       return [];
     } finally {
       setIsLoading(false);
@@ -282,12 +282,12 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       await fetchAllBooths();
       
       console.log('Booth created with ID:', boothRef.id);
-      toast.success('Booth created successfully');
+      uniqueToast.success('Booth created successfully');
       
       return boothRef.id;
     } catch (error) {
       console.error('Error creating booth:', error);
-      toast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      uniqueToast.error('Failed to create booth: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return null;
     } finally {
       setIsLoading(false);
@@ -304,13 +304,13 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       if (success) {
         // Update the local booths state by removing the deleted booth
         setBooths(prevBooths => prevBooths.filter(booth => booth.id !== boothId));
-        toast.success('Booth deleted successfully');
+        uniqueToast.success('Booth deleted successfully');
       }
       
       return success;
     } catch (error) {
       console.error('Error deleting booth:', error);
-      toast.error('Failed to delete booth');
+      uniqueToast.error('Failed to delete booth');
       return false;
     } finally {
       setIsLoading(false);
