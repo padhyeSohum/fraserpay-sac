@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Booth } from '@/types';
-import { toast } from 'sonner';
+import { uniqueToast } from '@/utils/toastHelpers';
 import { firestore } from '@/integrations/firebase/client';
 import { 
   collection, 
@@ -34,7 +34,7 @@ export interface UseBoothManagementReturn {
 }
 
 export const useBoothManagement = (): UseBoothManagementReturn => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUserData } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -83,7 +83,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       return boothsData;
     } catch (error) {
       console.error('Error loading booths:', error);
-      toast.error('Failed to load booths');
+      uniqueToast.error('Failed to load booths');
       return [];
     } finally {
       setIsLoading(false);
@@ -193,7 +193,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       
       console.log('Added user to booth members list');
       
-      // Also update the user's booth_access array
+      // Also update the user's booth_access array in Firebase
       const userRef = doc(firestore, 'users', userId);
       const userSnap = await getDoc(userRef);
       
@@ -201,7 +201,19 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         await updateDoc(userRef, {
           booth_access: arrayUnion(boothId)
         });
-        console.log('Updated user booth_access list');
+        console.log('Updated user booth_access list in Firebase');
+        
+        // Update the user context with the new booth access
+        if (user && user.id === userId) {
+          const currentBooths = user.booths || [];
+          if (!currentBooths.includes(boothId)) {
+            console.log('Updating user state with new booth access');
+            updateUserData({
+              ...user,
+              booths: [...currentBooths, boothId]
+            });
+          }
+        }
       } else {
         console.warn('User document not found:', userId);
       }

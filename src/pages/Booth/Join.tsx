@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
-import { toast } from 'sonner';
+import { uniqueToast } from '@/utils/toastHelpers';
 import { Info, Loader2 } from 'lucide-react';
 
 const BoothJoin: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUserData } = useAuth();
   const { joinBooth, fetchAllBooths } = useTransactions();
   const navigate = useNavigate();
   
@@ -34,7 +34,7 @@ const BoothJoin: React.FC = () => {
     }
     
     if (!user || !user.id) {
-      toast.error('You must be logged in to join a booth');
+      uniqueToast.error('You must be logged in to join a booth');
       return;
     }
     
@@ -54,27 +54,38 @@ const BoothJoin: React.FC = () => {
         // Find the booth that matches the PIN
         const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
         
+        // Update user data to include the new booth
+        if (user) {
+          const currentBooths = user.booths || [];
+          if (joinedBooth && !currentBooths.includes(joinedBooth.id)) {
+            const updatedUserBooths = [...currentBooths, joinedBooth.id];
+            updateUserData({
+              ...user,
+              booths: updatedUserBooths
+            });
+          }
+        }
+        
         // Trigger an event to refresh booths on the dashboard
         localStorage.setItem('boothJoined', Date.now().toString());
-        setTimeout(() => localStorage.removeItem('boothJoined'), 1000);
         
         if (joinedBooth) {
-          toast.success('Successfully joined booth!');
+          uniqueToast.success('Successfully joined booth!');
           // Navigate directly to the booth page
           navigate(`/booth/${joinedBooth.id}`);
         } else {
           // If for some reason we can't find the booth, navigate to dashboard
-          toast.success('Successfully joined booth!');
+          uniqueToast.success('Successfully joined booth!');
           navigate('/dashboard');
         }
       } else {
         setError('Invalid PIN code or unable to join booth. Please check and try again.');
-        toast.error('Failed to join booth');
+        uniqueToast.error('Failed to join booth');
       }
     } catch (error) {
       console.error('Error joining booth:', error);
       setError('An unexpected error occurred. Please try again.');
-      toast.error('Failed to join booth');
+      uniqueToast.error('Failed to join booth');
     } finally {
       setIsJoining(false);
     }
