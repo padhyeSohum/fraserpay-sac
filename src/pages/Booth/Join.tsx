@@ -89,7 +89,7 @@ const BoothJoin: React.FC = () => {
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>Join Existing Booth</CardTitle>
+            <CardTitle>Join Initiative</CardTitle>
             <CardDescription>Enter the PIN code provided by your staff supervisor to join an existing booth.</CardDescription>
           </CardHeader>
           
