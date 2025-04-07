@@ -83,7 +83,7 @@ const Login = () => {
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
               <CardDescription className="text-center">
-                Enter your student credentials to log in
+                Enter your credentials you created to log in
               </CardDescription>
             </CardHeader>
             
