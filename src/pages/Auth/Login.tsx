@@ -78,11 +78,6 @@ const Login = () => {
         {logo}
         
         <div className="w-full max-w-md mx-auto space-y-4">
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            <AlertDescription>FraserPay does not work on the PDSB Media WiFi Network. Please Switch to PDSB WiFi or use mobile data where possible.</AlertDescription>
-          </Alert>
-          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>

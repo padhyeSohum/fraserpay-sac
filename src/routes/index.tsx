@@ -1,6 +1,8 @@
 
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 // Auth Pages
 import Login from "@/pages/Auth/Login";
@@ -103,6 +105,11 @@ export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
   <div className="flex flex-col items-center justify-center h-screen p-4">
     <p className="text-sm mb-2">Loading Fraser Pay...</p>
     <p className="text-xs text-muted-foreground">This should only take a moment</p>
+    
+    <Alert variant="destructive" className="mb-4 mt-4 max-w-md">
+      <AlertCircle className="h-4 w-4 mr-2" />
+      <AlertDescription>FraserPay does not work on the PDSB Media WiFi Network. Please Switch to PDSB WiFi or use mobile data where possible.</AlertDescription>
+    </Alert>
     
     {timeout && (
       <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3 max-w-md">
