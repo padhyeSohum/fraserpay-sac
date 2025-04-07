@@ -1,5 +1,6 @@
 
 import { toast as sonnerToast } from 'sonner';
+import React from 'react';
 
 // Store to track active toast messages
 const activeToasts = new Map<string, string>();
@@ -100,7 +101,8 @@ export const uniqueToast = {
   },
   
   // For custom toast usage that doesn't fit the above methods
-  custom: (render: () => React.ReactNode, options?: any, message?: string) => {
+  // Update typing to match what sonner expects
+  custom: (render: (id: string | number) => React.ReactElement, options?: any, message?: string) => {
     const key = message ? getToastKey(message) : Math.random().toString();
     
     if (message && activeToasts.has(key)) {
