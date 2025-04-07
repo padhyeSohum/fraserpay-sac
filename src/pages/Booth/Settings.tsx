@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import ProductItem from '@/components/ProductItem';
+
 const BoothSettings = () => {
   const {
     boothId
@@ -47,6 +48,7 @@ const BoothSettings = () => {
       description: ''
     }
   });
+
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
@@ -57,13 +59,12 @@ const BoothSettings = () => {
     }
   }, [boothId, getBoothById]);
 
-  // Remove role-based restriction, just check if booth exists
   useEffect(() => {
     if (!booth) {
       console.log("Booth not found or user doesn't have access");
-      // We'll handle this in the render method below
     }
   }, [booth]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'dashboard') {
@@ -74,12 +75,14 @@ const BoothSettings = () => {
       navigate(`/booth/${boothId}/transactions`);
     }
   };
+
   const handleCopyPin = () => {
     if (booth) {
       navigator.clipboard.writeText(booth.pin);
       toast.success('PIN code copied to clipboard');
     }
   };
+
   const handleDeleteBooth = async () => {
     setIsDeleting(true);
     if (boothId) {
@@ -100,6 +103,7 @@ const BoothSettings = () => {
       }
     }
   };
+
   const handleAddProduct = async (data: {
     name: string;
     price: string;
@@ -125,8 +129,6 @@ const BoothSettings = () => {
       if (success) {
         toast.success('Product added successfully');
         productForm.reset();
-
-        // Refresh booth data to get updated products
         const updatedBooth = getBoothById(boothId);
         setBooth(updatedBooth);
         if (updatedBooth && updatedBooth.products) {
@@ -143,6 +145,7 @@ const BoothSettings = () => {
       setIsSubmitting(false);
     }
   };
+
   const handleDeleteProduct = async (productId: string) => {
     try {
       if (!boothId) {
@@ -152,8 +155,6 @@ const BoothSettings = () => {
       const success = await removeProductFromBooth(boothId, productId);
       if (success) {
         toast.success('Product removed successfully');
-
-        // Refresh booth data to get updated products
         const updatedBooth = getBoothById(boothId);
         setBooth(updatedBooth);
         if (updatedBooth && updatedBooth.products) {
@@ -167,6 +168,61 @@ const BoothSettings = () => {
       toast.error('An error occurred while removing the product');
     }
   };
+
+  const handleUpdateProductPrice = async (productId: string, newPrice: number) => {
+    try {
+      if (!boothId) {
+        toast.error('Booth ID is missing');
+        return;
+      }
+
+      if (isNaN(newPrice) || newPrice <= 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+
+      const productToUpdate = products.find(p => p.id === productId);
+      if (!productToUpdate) {
+        toast.error('Product not found');
+        return;
+      }
+
+      const updatedProducts = products.map(p => {
+        if (p.id === productId) {
+          return { ...p, price: newPrice };
+        }
+        return p;
+      });
+
+      const removeSuccess = await removeProductFromBooth(boothId, productId);
+      if (!removeSuccess) {
+        toast.error('Failed to update product');
+        return;
+      }
+
+      const updatedProduct = {
+        ...productToUpdate,
+        price: newPrice
+      };
+      
+      const addSuccess = await addProductToBooth(boothId, updatedProduct);
+      
+      if (addSuccess) {
+        toast.success('Product price updated successfully');
+        const updatedBooth = getBoothById(boothId);
+        setBooth(updatedBooth);
+        if (updatedBooth && updatedBooth.products) {
+          setProducts(updatedBooth.products);
+        }
+      } else {
+        toast.error('Failed to update product price');
+      }
+    } catch (error) {
+      console.error('Error updating product price:', error);
+      toast.error('An error occurred while updating the product price');
+    }
+  };
+
   if (!booth) {
     return <Layout title="Booth not found" showBack>
         <div className="text-center py-10">
@@ -174,6 +230,7 @@ const BoothSettings = () => {
         </div>
       </Layout>;
   }
+
   return <Layout title={booth.name} subtitle="Booth Management" showBack>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-4 w-full">
@@ -273,27 +330,28 @@ const BoothSettings = () => {
               </CardHeader>
               
               <CardContent>
-                {products && products.length > 0 ? <div className="space-y-4">
-                    {products.map(product => <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          <Package className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <h4 className="font-medium">{product.name}</h4>
-                            <p className="text-sm text-gray-500">
-                              ${product.price.toFixed(2)}
-                              {product.description && ` - ${product.description}`}
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} title="Remove product">
+                {products && products.length > 0 ? (
+                  <div className="space-y-4">
+                    {products.map(product => (
+                      <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <ProductItem 
+                          product={product}
+                          editable={true}
+                          onPriceChange={(newPrice) => handleUpdateProductPrice(product.id, newPrice)}
+                        />
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} title="Remove product" className="ml-2">
                           <Trash className="h-4 w-4 text-red-500" />
                         </Button>
-                      </div>)}
-                  </div> : <div className="text-center py-6 text-muted-foreground">
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
                     <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
                     <p>No products added yet</p>
                     <p className="text-sm">Add products to start selling</p>
-                  </div>}
+                  </div>
+                )}
               </CardContent>
             </Card>
             
@@ -329,4 +387,5 @@ const BoothSettings = () => {
       </Tabs>
     </Layout>;
 };
+
 export default BoothSettings;

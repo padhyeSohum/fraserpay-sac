@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface ProductItemProps {
   product: Product;
@@ -13,6 +14,8 @@ interface ProductItemProps {
   onClick?: () => void;
   selectable?: boolean;
   selected?: boolean;
+  onPriceChange?: (newPrice: number) => void;
+  editable?: boolean;
 }
 
 const ProductItem: React.FC<ProductItemProps> = ({
@@ -22,10 +25,36 @@ const ProductItem: React.FC<ProductItemProps> = ({
   onDecrement,
   onClick,
   selectable = false,
-  selected = false
+  selected = false,
+  onPriceChange,
+  editable = false
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [priceValue, setPriceValue] = useState(product.price.toFixed(2));
+
   const handleClick = () => {
     if (onClick) onClick();
+  };
+
+  const handleEditToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(!isEditing);
+    if (!isEditing) {
+      setPriceValue(product.price.toFixed(2));
+    }
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPriceValue(e.target.value);
+  };
+
+  const handlePriceSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newPrice = parseFloat(priceValue);
+    if (!isNaN(newPrice) && newPrice > 0 && onPriceChange) {
+      onPriceChange(newPrice);
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -39,7 +68,30 @@ const ProductItem: React.FC<ProductItemProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <h3 className="font-medium">{product.name}</h3>
-            <p className="text-muted-foreground">${product.price.toFixed(2)}</p>
+            {!isEditing ? (
+              <p className="text-muted-foreground">${product.price.toFixed(2)}</p>
+            ) : (
+              <div className="flex items-center mt-1">
+                <span className="mr-1">$</span>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={priceValue}
+                  onChange={handlePriceChange}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-20 h-8 text-sm p-1"
+                />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 px-2 ml-1" 
+                  onClick={handlePriceSave}
+                >
+                  Save
+                </Button>
+              </div>
+            )}
           </div>
           
           {onIncrement && onDecrement ? (
@@ -71,6 +123,16 @@ const ProductItem: React.FC<ProductItemProps> = ({
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+          ) : editable ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleEditToggle}
+              title={isEditing ? "Cancel" : "Edit price"}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
           ) : null}
         </div>
       </CardContent>
