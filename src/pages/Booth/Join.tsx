@@ -90,7 +90,7 @@ const BoothJoin: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Join Initiative</CardTitle>
-            <CardDescription>Enter the PIN code provided by your staff supervisor to join an existing booth.</CardDescription>
+            <CardDescription>Enter the PIN code provided by your staff supervisor to join an initiative.</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleJoinBooth}>
