@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
-import { toast } from 'sonner';
+import { uniqueToast } from './utils/toastHelpers';
 import { auth } from './integrations/firebase/client';
 
 // Wrap everything in a proper React component
@@ -66,14 +66,14 @@ const App: React.FC = () => {
         registerConnectivityListeners(
           // Online callback
           () => {
-            toast.success('You are back online!', {
+            uniqueToast.success('You are back online!', {
               id: 'network-status',
               duration: 2000
             });
           },
           // Offline callback
           () => {
-            toast.error('You are offline. Some features may be unavailable.', {
+            uniqueToast.error('You are offline. Some features may be unavailable.', {
               id: 'network-status',
               duration: 5000
             });

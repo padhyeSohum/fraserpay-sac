@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Minus, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { uniqueToast } from '@/utils/toastHelpers';
 
 interface ProductItemProps {
   product: Product;

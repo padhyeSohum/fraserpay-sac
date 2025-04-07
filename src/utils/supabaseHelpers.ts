@@ -1,5 +1,5 @@
 
-import { toast } from 'sonner';
+import { uniqueToast } from './toastHelpers';
 
 interface RetryOptions {
   maxRetries?: number;
@@ -23,11 +23,11 @@ export const withRetry = async <T>(
     retryDelay = 1000,
     onRetry = (attempt, max, error) => {
       console.warn(`Retry attempt ${attempt}/${max} due to: ${error.message}`);
-      toast.error(`Operation failed. Retrying... (${attempt}/${max})`);
+      uniqueToast.error(`Operation failed. Retrying... (${attempt}/${max})`);
     },
     onFail = (error) => {
       console.error('All retry attempts failed:', error);
-      toast.error('Operation failed after multiple attempts');
+      uniqueToast.error('Operation failed after multiple attempts');
     }
   } = options;
 

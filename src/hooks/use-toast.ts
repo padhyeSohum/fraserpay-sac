@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -71,6 +72,16 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// Track toast messages to prevent duplicates
+const activeToastMessages = new Map<string, string>();
+
+// Helper to get a unique key for a toast message
+const getToastKey = (props: { title?: React.ReactNode; description?: React.ReactNode }) => {
+  const title = props.title ? String(props.title) : '';
+  const description = props.description ? String(props.description) : '';
+  return `${title}:${description}`;
+}
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -114,11 +125,21 @@ export const reducer = (state: State, action: Action): State => {
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
+        // Clear all tracked messages when removing all toasts
+        activeToastMessages.clear();
         return {
           ...state,
           toasts: [],
         }
       }
+      
+      // Find the toast being removed and clean up its tracked message
+      const toastToRemove = state.toasts.find(t => t.id === action.toastId);
+      if (toastToRemove) {
+        const key = getToastKey(toastToRemove);
+        activeToastMessages.delete(key);
+      }
+      
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
@@ -141,12 +162,27 @@ type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
   const id = genId()
+  const toastKey = getToastKey(props);
+  
+  // Check if a toast with the same message is already active
+  if (activeToastMessages.has(toastKey)) {
+    // Do not add a duplicate toast
+    return {
+      id: activeToastMessages.get(toastKey) || id,
+      dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: activeToastMessages.get(toastKey) }),
+      update: () => {}, // No-op for duplicate toast attempts
+    }
+  }
+  
+  // Track this new toast message
+  activeToastMessages.set(toastKey, id);
 
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
+  
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({

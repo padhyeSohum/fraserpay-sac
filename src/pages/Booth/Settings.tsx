@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,13 +11,13 @@ import { Label } from '@/components/ui/label';
 import Layout from '@/components/Layout';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
 import { AlertCircle, Copy, Trash, Plus, Package } from 'lucide-react';
 import { Product } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import ProductItem from '@/components/ProductItem';
+import { uniqueToast } from '@/utils/toastHelpers';
 
 const BoothSettings = () => {
   const {
@@ -79,7 +80,7 @@ const BoothSettings = () => {
   const handleCopyPin = () => {
     if (booth) {
       navigator.clipboard.writeText(booth.pin);
-      toast.success('PIN code copied to clipboard');
+      uniqueToast.success('PIN code copied to clipboard');
     }
   };
 
@@ -89,14 +90,14 @@ const BoothSettings = () => {
       try {
         const success = await deleteBooth(boothId);
         if (success) {
-          toast.success('Booth deleted successfully');
+          uniqueToast.success('Booth deleted successfully');
           navigate('/dashboard');
         } else {
-          toast.error('Failed to delete booth');
+          uniqueToast.error('Failed to delete booth');
         }
       } catch (error) {
         console.error('Error deleting booth:', error);
-        toast.error('Failed to delete booth');
+        uniqueToast.error('Failed to delete booth');
       } finally {
         setIsDeleting(false);
         setDeleteDialogOpen(false);
@@ -112,12 +113,12 @@ const BoothSettings = () => {
     setIsSubmitting(true);
     try {
       if (!boothId) {
-        toast.error('Booth ID is missing');
+        uniqueToast.error('Booth ID is missing');
         return;
       }
       const priceValue = parseFloat(data.price);
       if (isNaN(priceValue) || priceValue <= 0) {
-        toast.error('Please enter a valid price');
+        uniqueToast.error('Please enter a valid price');
         return;
       }
       const newProduct = {
@@ -127,7 +128,7 @@ const BoothSettings = () => {
       };
       const success = await addProductToBooth(boothId, newProduct);
       if (success) {
-        toast.success('Product added successfully');
+        uniqueToast.success('Product added successfully');
         productForm.reset();
         const updatedBooth = getBoothById(boothId);
         setBooth(updatedBooth);
@@ -136,11 +137,11 @@ const BoothSettings = () => {
         }
         setAddProductDialogOpen(false);
       } else {
-        toast.error('Failed to add product');
+        uniqueToast.error('Failed to add product');
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('An error occurred while adding the product');
+      uniqueToast.error('An error occurred while adding the product');
     } finally {
       setIsSubmitting(false);
     }
@@ -149,41 +150,41 @@ const BoothSettings = () => {
   const handleDeleteProduct = async (productId: string) => {
     try {
       if (!boothId) {
-        toast.error('Booth ID is missing');
+        uniqueToast.error('Booth ID is missing');
         return;
       }
       const success = await removeProductFromBooth(boothId, productId);
       if (success) {
-        toast.success('Product removed successfully');
+        uniqueToast.success('Product removed successfully');
         const updatedBooth = getBoothById(boothId);
         setBooth(updatedBooth);
         if (updatedBooth && updatedBooth.products) {
           setProducts(updatedBooth.products);
         }
       } else {
-        toast.error('Failed to remove product');
+        uniqueToast.error('Failed to remove product');
       }
     } catch (error) {
       console.error('Error removing product:', error);
-      toast.error('An error occurred while removing the product');
+      uniqueToast.error('An error occurred while removing the product');
     }
   };
 
   const handleUpdateProductPrice = async (productId: string, newPrice: number) => {
     try {
       if (!boothId) {
-        toast.error('Booth ID is missing');
+        uniqueToast.error('Booth ID is missing');
         return;
       }
 
       if (isNaN(newPrice) || newPrice <= 0) {
-        toast.error('Please enter a valid price');
+        uniqueToast.error('Please enter a valid price');
         return;
       }
 
       const productToUpdate = products.find(p => p.id === productId);
       if (!productToUpdate) {
-        toast.error('Product not found');
+        uniqueToast.error('Product not found');
         return;
       }
 
@@ -196,7 +197,7 @@ const BoothSettings = () => {
 
       const removeSuccess = await removeProductFromBooth(boothId, productId);
       if (!removeSuccess) {
-        toast.error('Failed to update product');
+        uniqueToast.error('Failed to update product');
         return;
       }
 
@@ -208,18 +209,18 @@ const BoothSettings = () => {
       const addSuccess = await addProductToBooth(boothId, updatedProduct);
       
       if (addSuccess) {
-        toast.success('Product price updated successfully');
+        uniqueToast.success('Product price updated successfully');
         const updatedBooth = getBoothById(boothId);
         setBooth(updatedBooth);
         if (updatedBooth && updatedBooth.products) {
           setProducts(updatedBooth.products);
         }
       } else {
-        toast.error('Failed to update product price');
+        uniqueToast.error('Failed to update product price');
       }
     } catch (error) {
       console.error('Error updating product price:', error);
-      toast.error('An error occurred while updating the product price');
+      uniqueToast.error('An error occurred while updating the product price');
     }
   };
 

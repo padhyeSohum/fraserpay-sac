@@ -1,5 +1,5 @@
 
-import { toast } from 'sonner';
+import { uniqueToast } from './toastHelpers';
 
 /**
  * Captures and handles errors in a consistent way across the application
@@ -20,7 +20,7 @@ export const handleError = (
   console.error(`${context} failed:`, errorObj);
   
   if (showToast) {
-    toast.error(errorObj.message || `${context} failed`);
+    uniqueToast.error(errorObj.message || `${context} failed`);
   }
   
   return errorObj;
