@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -98,19 +99,22 @@ const Dashboard = () => {
     }
   }, [user, updateUserData]);
 
-  const refreshUserBooths = useCallback(() => {
+  const refreshUserBooths = useCallback(async () => {
     if (!user) return;
     try {
-      fetchAllBooths().then(() => {
-        const booths = getBoothsByUserId ? getBoothsByUserId(user.id) : [];
-        console.log("Dashboard: Refreshed user booths, found", booths.length, "booths for user", user.id);
-        setUserBooths(booths);
-      });
+      console.log("Dashboard: Refreshing user booths for user", user.id);
+      const booths = await fetchAllBooths();
+      const userInitiatives = booths.filter(booth => 
+        booth.managers.includes(user.id) || 
+        (user.booths && user.booths.includes(booth.id))
+      );
+      console.log("Dashboard: Refreshed user booths, found", userInitiatives.length, "initiatives for user", user.id);
+      setUserBooths(userInitiatives);
     } catch (error) {
       console.error("Error refreshing user booths:", error);
       setUserBooths([]);
     }
-  }, [user, getBoothsByUserId, fetchAllBooths]);
+  }, [user, fetchAllBooths]);
 
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
@@ -119,11 +123,11 @@ const Dashboard = () => {
       setLoadError(null);
       await refreshUserData();
       try {
-        refreshUserBooths();
+        await refreshUserBooths();
       } catch (error) {
         console.error("Error loading user booths:", error);
         setUserBooths([]);
-        toast.error("Failed to load your booths");
+        toast.error("Failed to load your initiatives");
       }
       try {
         const userTxs = loadUserTransactions ? loadUserTransactions(user.id) : [];
@@ -178,12 +182,34 @@ const Dashboard = () => {
     };
   }, [refreshUserBooths, recentTransactions]);
 
+  // Effect to handle when user.booths changes
   useEffect(() => {
     if (user && user.booths) {
       console.log("Dashboard: User booths changed, refreshing...", user.booths);
       refreshUserBooths();
     }
   }, [user?.booths, refreshUserBooths]);
+
+  // Effect to handle localStorage boothJoined event
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'boothJoined') {
+        console.log('Detected booth joined event, refreshing booths');
+        refreshUserBooths();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check for recently joined initiative on load
+    const boothJoinedTime = localStorage.getItem('boothJoined');
+    if (boothJoinedTime && Date.now() - parseInt(boothJoinedTime) < 10000) {
+      console.log('Found recent initiative join, refreshing initiatives');
+      refreshUserBooths();
+    }
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refreshUserBooths]);
 
   useEffect(() => {
     if (user && loadUserTransactions) {
@@ -233,26 +259,6 @@ const Dashboard = () => {
   }
 
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
-
-  useEffect(() => {
-    if (user) {
-      const pollingInterval = setInterval(() => {
-        refreshUserBooths();
-      }, 2000);
-      return () => clearInterval(pollingInterval);
-    }
-  }, [user, refreshUserBooths]);
-
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'boothJoined') {
-        console.log('Detected booth joined event, refreshing booths');
-        refreshUserBooths();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [refreshUserBooths]);
 
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">

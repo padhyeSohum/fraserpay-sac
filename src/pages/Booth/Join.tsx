@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -55,10 +56,11 @@ const BoothJoin: React.FC = () => {
           const currentBooths = user.booths || [];
           if (joinedBooth && !currentBooths.includes(joinedBooth.id)) {
             const updatedUserBooths = [...currentBooths, joinedBooth.id];
-            updateUserData({
+            await updateUserData({
               ...user,
               booths: updatedUserBooths
             });
+            console.log('Updated user data with new initiative access', updatedUserBooths);
           }
         }
 
