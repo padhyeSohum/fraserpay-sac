@@ -15,6 +15,7 @@ interface LayoutProps {
   showBack?: boolean;
   showLogout?: boolean;
   showAddButton?: boolean;
+  hideHeader?: boolean; // Added new prop
   onAddClick?: () => void;
   onBackClick?: () => void;
   logo?: React.ReactNode;
@@ -28,6 +29,7 @@ const Layout: React.FC<LayoutProps> = ({
   showBack = false,
   showLogout = false,
   showAddButton = false,
+  hideHeader = false, // Added new prop with default value false
   onAddClick,
   onBackClick,
   logo,
@@ -90,11 +92,13 @@ const Layout: React.FC<LayoutProps> = ({
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
-        <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            {defaultLogo}
-          </div>
-        </header>
+        {!hideHeader && (
+          <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+            <div className="flex items-center gap-2">
+              {defaultLogo}
+            </div>
+          </header>
+        )}
         
         <main className="flex-1 px-6 py-4 w-full flex flex-col items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -109,51 +113,53 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
-      <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          {showBack && (
-            <Button variant="ghost" size="icon" onClick={handleBack} className="rounded-full">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          )}
+      {!hideHeader && (
+        <header className="py-4 px-6 flex justify-between items-center border-b border-border/40 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            {showBack && (
+              <Button variant="ghost" size="icon" onClick={handleBack} className="rounded-full">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            )}
+            
+            <div className="flex items-center gap-2">
+              {logo || defaultLogo}
+              
+              {title && (
+                <h1 className="text-lg font-semibold">{title}</h1>
+              )}
+              
+              {subtitle && (
+                <p className="text-sm text-muted-foreground">{subtitle}</p>
+              )}
+            </div>
+          </div>
           
           <div className="flex items-center gap-2">
-            {logo || defaultLogo}
-            
-            {title && (
-              <h1 className="text-lg font-semibold">{title}</h1>
+            {showAddButton && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onAddClick}
+                className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+              >
+                <PlusCircle className="h-5 w-5" />
+              </Button>
             )}
             
-            {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            {showLogout && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleLogout}
+                className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             )}
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {showAddButton && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onAddClick}
-              className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
-            >
-              <PlusCircle className="h-5 w-5" />
-            </Button>
-          )}
-          
-          {showLogout && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout}
-              className="rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          )}
-        </div>
-      </header>
+        </header>
+      )}
       
       <main className="flex-1 px-6 py-4 w-full max-w-7xl mx-auto">
         {children}
