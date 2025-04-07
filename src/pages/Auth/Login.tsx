@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -74,7 +75,7 @@ const Login = () => {
     </div>;
 
   return <Layout hideHeader>
-      <div className="flex flex-col items-center justify-center min-h-[80vh] animate-fade-in">
+      <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in">
         {logo}
         
         <div className="w-full max-w-md mx-auto space-y-4">
