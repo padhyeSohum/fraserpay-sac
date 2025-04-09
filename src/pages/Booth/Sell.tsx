@@ -219,6 +219,15 @@ const BoothSell = () => {
       );
       
       if (success) {
+        // Update the customer's balance immediately after successful purchase
+        setCustomer(prevCustomer => {
+          if (!prevCustomer) return null;
+          return {
+            ...prevCustomer,
+            balance: prevCustomer.balance - total
+          };
+        });
+        
         setCart([]);
         
         setTimeout(() => {
