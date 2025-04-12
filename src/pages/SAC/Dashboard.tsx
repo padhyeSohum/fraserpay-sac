@@ -511,6 +511,12 @@ const Dashboard = () => {
       return;
     }
     
+    if (user.id === studentId) {
+      toast.error('You cannot add funds to your own account');
+      setIsFundsDialogOpen(false);
+      return;
+    }
+    
     try {
       const result = await addFunds(studentId, amount, user.id);
       
@@ -544,6 +550,12 @@ const Dashboard = () => {
   const handleProcessRefund = async (studentId: string, amount: number) => {
     if (!user) {
       toast.error('You must be logged in to process refunds');
+      return;
+    }
+    
+    if (user.id === studentId) {
+      toast.error('You cannot process refunds for your own account');
+      setIsRefundDialogOpen(false);
       return;
     }
     
