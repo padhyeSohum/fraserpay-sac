@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -12,7 +11,6 @@ import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
-
 const Dashboard = () => {
   const {
     user,
@@ -33,18 +31,15 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const MAX_RETRIES = 3;
-
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
     if (storedHiddenBooths) {
       setHiddenBooths(JSON.parse(storedHiddenBooths));
     }
   }, []);
-
   useEffect(() => {
     localStorage.setItem('hiddenBooths', JSON.stringify(hiddenBooths));
   }, [hiddenBooths]);
-
   const refreshUserData = useCallback(async () => {
     if (!user) return;
     try {
@@ -98,16 +93,12 @@ const Dashboard = () => {
       console.error('Error refreshing user data:', error);
     }
   }, [user, updateUserData]);
-
   const refreshUserBooths = useCallback(async () => {
     if (!user) return;
     try {
       console.log("Dashboard: Refreshing user booths for user", user.id);
       const booths = await fetchAllBooths();
-      const userInitiatives = booths.filter(booth => 
-        booth.managers.includes(user.id) || 
-        (user.booths && user.booths.includes(booth.id))
-      );
+      const userInitiatives = booths.filter(booth => booth.managers.includes(user.id) || user.booths && user.booths.includes(booth.id));
       console.log("Dashboard: Refreshed user booths, found", userInitiatives.length, "initiatives for user", user.id);
       setUserBooths(userInitiatives);
     } catch (error) {
@@ -115,7 +106,6 @@ const Dashboard = () => {
       setUserBooths([]);
     }
   }, [user, fetchAllBooths]);
-
   const fetchDataWithRetry = useCallback(async () => {
     if (!user || dataInitialized) return;
     try {
@@ -151,7 +141,6 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, loadUserTransactions, MAX_RETRIES]);
-
   useEffect(() => {
     let isMounted = true;
     if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
@@ -161,7 +150,6 @@ const Dashboard = () => {
       isMounted = false;
     };
   }, [fetchDataWithRetry, dataInitialized, retryCount, MAX_RETRIES]);
-
   useEffect(() => {
     refreshUserData();
     refreshUserBooths();
@@ -171,7 +159,6 @@ const Dashboard = () => {
     }, 5000);
     return () => clearInterval(intervalId);
   }, [refreshUserData, refreshUserBooths]);
-
   useEffect(() => {
     const handleTransactionUpdate = () => {
       refreshUserBooths();
@@ -198,58 +185,47 @@ const Dashboard = () => {
         refreshUserBooths();
       }
     };
-    
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Also check for recently joined initiative on load
     const boothJoinedTime = localStorage.getItem('boothJoined');
     if (boothJoinedTime && Date.now() - parseInt(boothJoinedTime) < 10000) {
       console.log('Found recent initiative join, refreshing initiatives');
       refreshUserBooths();
     }
-    
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refreshUserBooths]);
-
   useEffect(() => {
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
       setUserTransactions(userTxs.slice(0, 3));
     }
   }, [recentTransactions, user, loadUserTransactions]);
-
   const handleHideBooth = (boothId: string) => {
     setHiddenBooths(prev => [...prev, boothId]);
     toast.success("Initiative hidden from dashboard");
   };
-
   const handleViewQRCode = () => {
     navigate('/qr-code');
   };
-
   const handleViewLeaderboard = () => {
     navigate('/leaderboard');
   };
-
   const handleViewSettings = () => {
     navigate('/settings');
   };
-
   const handleJoinBooth = () => {
     navigate('/booth/join');
   };
-
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
   };
-
   const logo = <div className="flex items-center mb-2">
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
         <p className="text-sm text-muted-foreground">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</p>
       </div>
     </div>;
-
   if (!user) {
     return <Layout title="Loading...">
         <div className="flex items-center justify-center min-h-[70vh]">
@@ -257,9 +233,7 @@ const Dashboard = () => {
         </div>
       </Layout>;
   }
-
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
-
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">
         <div className="balance-card rounded-xl overflow-hidden">
@@ -267,9 +241,7 @@ const Dashboard = () => {
             <span className="text-white/80 mb-1">Your Balance</span>
             <span className="text-3xl font-bold">${user.balance.toFixed(2)}</span>
             
-            <p className="mt-4 text-sm text-white/80">
-              Visit the SAC initiative to add funds to your account
-            </p>
+            <p className="mt-4 text-sm text-white/80">Visit the SAC table to add funds to your account</p>
           </div>
         </div>
         
@@ -336,5 +308,4 @@ const Dashboard = () => {
       </div>
     </Layout>;
 };
-
 export default Dashboard;
