@@ -5,8 +5,19 @@ export const isPWA = (): boolean => {
          (window.navigator as any).standalone === true;
 };
 
+// Check if the current device is iOS
+export const isIOS = (): boolean => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
 // Check if the app can be installed (not already installed and on a compatible browser)
 export const canInstallPWA = (): boolean => {
+  // For iOS, we can't automatically install, but we can show instructions
+  if (isIOS()) {
+    return !isPWA();
+  }
+  
+  // For other platforms, check for browser install support
   return !isPWA() && 'serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window;
 };
 
@@ -17,7 +28,21 @@ export const setupInstallPrompt = (
 ) => {
   console.log("Setting up PWA install prompt event handler");
   
-  // Store the install prompt event for later use
+  // If we're in a PWA already, don't show the install prompt
+  if (isPWA()) {
+    console.log("Already running as PWA, not showing install prompt");
+    setCanInstall(false);
+    return;
+  }
+  
+  // For iOS, we need to show manual instructions since beforeinstallprompt is not supported
+  if (isIOS()) {
+    console.log("iOS detected, showing manual installation instructions");
+    setCanInstall(true);
+    return;
+  }
+  
+  // Store the install prompt event for later use (Android, desktop browsers)
   window.addEventListener('beforeinstallprompt', (e: Event) => {
     // Prevent Chrome 67 and earlier from automatically showing the prompt
     e.preventDefault();
@@ -41,17 +66,16 @@ export const setupInstallPrompt = (
     // Hide the install button
     setCanInstall(false);
   });
-  
-  // If we're in a PWA already, don't show the install prompt
-  if (isPWA()) {
-    console.log("Already running as PWA, not showing install prompt");
-    setCanInstall(false);
-    return;
-  }
 };
 
 // Show the install prompt
-export const showInstallPrompt = async (deferredPrompt: BeforeInstallPromptEvent): Promise<boolean> => {
+export const showInstallPrompt = async (deferredPrompt: BeforeInstallPromptEvent | null): Promise<boolean> => {
+  // For iOS, we can't automatically trigger install
+  if (isIOS()) {
+    console.log('iOS detected, cannot show automatic install prompt');
+    return false;
+  }
+  
   if (!deferredPrompt) {
     console.log('No deferred prompt available to show');
     return false;
@@ -76,7 +100,7 @@ export const showInstallPrompt = async (deferredPrompt: BeforeInstallPromptEvent
 
 // Function to manually show the install banner after a delay
 export const showInstallBanner = (setShowPWAPrompt: (show: boolean) => void, delay: number = 3000) => {
-  // Only show on mobile devices that aren't already PWAs
+  // Only show if not already a PWA
   if (isPWA()) {
     console.log("Already in PWA mode, not showing install banner");
     return;
@@ -84,11 +108,14 @@ export const showInstallBanner = (setShowPWAPrompt: (show: boolean) => void, del
   
   console.log("Setting up delayed PWA install banner");
   
+  // For iOS devices, show after a shorter delay to ensure it's seen
+  const actualDelay = isIOS() ? 2000 : delay;
+  
   // Show the banner after a delay for better user experience
   const timer = setTimeout(() => {
     console.log("Showing PWA install banner now");
     setShowPWAPrompt(true);
-  }, delay);
+  }, actualDelay);
   
   return () => clearTimeout(timer);
 };

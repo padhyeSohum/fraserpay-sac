@@ -1,6 +1,5 @@
-
 // Cache names
-const CACHE_NAME = 'fraser-pay-cache-v1';
+const CACHE_NAME = 'fraser-pay-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -19,6 +18,7 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         console.log('[Service Worker] Install completed');
+        // Force service worker activation by skipping waiting
         return self.skipWaiting();
       })
       .catch(error => {
@@ -27,29 +27,42 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating Service Worker...');
   const cacheWhitelist = [CACHE_NAME];
+  
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('[Service Worker] Activation completed');
-      return self.clients.claim();
+    Promise.all([
+      // Delete old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheWhitelist.indexOf(cacheName) === -1) {
+              console.log('[Service Worker] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      
+      // Take control of all clients immediately
+      self.clients.claim()
+    ])
+    .then(() => {
+      console.log('[Service Worker] Activation completed, now controlling all pages');
     })
   );
 });
 
 // Fetch event - network-first strategy for API requests, cache-first for static assets
 self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin) && 
+      !event.request.url.includes('lovable-uploads')) {
+    return;
+  }
+  
   // Skip navigation requests to let the SPA router handle them
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -77,7 +90,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // For other requests (static assets), check cache first, then network
+  // For images and assets, use a cache-first approach
+  if (event.request.url.includes('.png') || 
+      event.request.url.includes('.jpg') || 
+      event.request.url.includes('.svg') ||
+      event.request.url.includes('lovable-uploads')) {
+    
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          // Return cached response if available
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          
+          // Otherwise fetch from network and cache
+          return fetch(event.request)
+            .then((networkResponse) => {
+              // Cache the fetched response
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+              return networkResponse;
+            });
+        })
+    );
+    return;
+  }
+  
+  // For other requests (JS, CSS, etc.), check cache first, then network
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
@@ -120,6 +162,17 @@ self.addEventListener('message', (event) => {
             client.postMessage({ type: 'CACHE_CLEARED' });
           });
         });
+      })
+    );
+  }
+});
+
+// Handle periodic sync for background updates (if supported)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'update-cache') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(STATIC_ASSETS);
       })
     );
   }

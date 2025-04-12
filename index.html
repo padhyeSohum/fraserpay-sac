@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>Fraser Pay</title>
     <meta name="description" content="Payment system for John Fraser Secondary School" />
     <meta name="author" content="Akshat Chopra" />
@@ -19,6 +19,10 @@
     <link rel="apple-touch-icon" href="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fraser Pay" />
+
+    <!-- iOS splash screen images -->
+    <link rel="apple-touch-startup-image" href="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" />
 
     <!-- Open Graph / Social Media -->
     <meta property="og:title" content="Fraser Pay" />
@@ -46,6 +50,15 @@
         -moz-osx-font-smoothing: grayscale;
         background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
         min-height: 100vh;
+        width: 100%;
+        overflow-x: hidden;
+        position: relative;
+      }
+      
+      /* iOS specific fixes */
+      body.ios {
+        /* Add padding for iOS notch and home indicator */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
       
       /* Splash screen during initial load */
@@ -94,6 +107,7 @@
       #root {
         opacity: 0;
         transition: opacity 0.3s ease-in;
+        width: 100%;
       }
       
       #root.loaded {
@@ -118,6 +132,11 @@
     <script type="module" src="/src/main.tsx"></script>
     
     <script>
+      // Detect iOS and add class to body
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+        document.body.classList.add('ios');
+      }
+    
       // Register service worker for PWA functionality
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
