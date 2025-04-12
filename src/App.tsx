@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppProviders from "./providers/AppProviders";
 import AppRoutes from "./routes/AppRoutes";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { usePwaInstall } from './hooks/use-pwa-install';
 import { measurePerformance, registerConnectivityListeners, preloadCriticalResources } from './utils/performance';
 import { uniqueToast } from './utils/toastHelpers';
 import { auth } from './integrations/firebase/client';
@@ -12,6 +14,7 @@ const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const initAttempted = useRef(false);
+  const { showPWAPrompt, closePWAPrompt } = usePwaInstall();
 
   // Debug logging for initialization state
   useEffect(() => {
@@ -106,9 +109,13 @@ const App: React.FC = () => {
   }
   
   return (
-    <AppProviders>
-      <AppRoutes />
-    </AppProviders>
+    <>
+      <AppProviders>
+        <AppRoutes />
+      </AppProviders>
+      {/* Render the PWA install prompt when showPWAPrompt is true */}
+      {showPWAPrompt && <PWAInstallPrompt onClose={closePWAPrompt} />}
+    </>
   );
 };
 
