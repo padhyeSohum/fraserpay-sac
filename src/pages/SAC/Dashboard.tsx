@@ -773,7 +773,6 @@ const Dashboard = () => {
       setFilteredUsers([]);
       setTransactions([]);
       setLeaderboard([]);
-      setBooths([]);
       
       setStats({
         totalUsers: 0,
@@ -975,48 +974,4 @@ const Dashboard = () => {
                 ) : (
                   <>
                     <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />
-                    This will delete all booths, transactions, and reset revenue to $0.
-                    This action cannot be undone.
-                  </>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            
-            {!resetConfirmation ? (
-              <>
-                <Input
-                  type="password"
-                  placeholder="Enter password"
-                  value={resetPassword}
-                  onChange={(e) => setResetPassword(e.target.value)}
-                />
-                {resetError && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertDescription>{resetError}</AlertDescription>
-                  </Alert>
-                )}
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCheckPassword}>Validate</Button>
-                </DialogFooter>
-              </>
-            ) : (
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={handleResetFraserPay}
-                  disabled={isResetting}
-                >
-                  {isResetting ? "Resetting..." : "Confirm Reset"}
-                </Button>
-              </DialogFooter>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </Layout>
-  );
-};
-
-export default Dashboard;
+                    This will delete
