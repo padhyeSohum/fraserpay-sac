@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -6,6 +5,7 @@ import { useTransactions } from '@/contexts/transactions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import Layout from '@/components/Layout';
 import ProductItem from '@/components/ProductItem';
 import { CartItem, Product } from '@/types';
@@ -219,7 +219,6 @@ const BoothSell = () => {
       );
       
       if (success) {
-        // Update the customer's balance immediately after successful purchase
         setCustomer(prevCustomer => {
           if (!prevCustomer) return null;
           return {
@@ -433,16 +432,20 @@ const BoothSell = () => {
                 <div className="space-y-3">
                   <h3 className="font-medium">Select Products</h3>
                   
-                  {booth.products.map(product => (
-                    <ProductItem
-                      key={product.id}
-                      product={product}
-                      quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
-                      onIncrement={() => handleProductSelect(product)}
-                      onDecrement={() => handleDecrement(product.id)}
-                      selectable
-                    />
-                  ))}
+                  <ScrollArea className="h-[50vh] w-full pr-4">
+                    <div className="space-y-3">
+                      {booth.products.map(product => (
+                        <ProductItem
+                          key={product.id}
+                          product={product}
+                          quantity={cart.find(item => item.productId === product.id)?.quantity || 0}
+                          onIncrement={() => handleProductSelect(product)}
+                          onDecrement={() => handleDecrement(product.id)}
+                          selectable
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
                 
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border/50 shadow-lg">
