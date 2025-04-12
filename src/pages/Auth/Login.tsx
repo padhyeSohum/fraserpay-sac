@@ -4,22 +4,30 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
-  const { login, isAuthenticated, user } = useAuth();
+  const {
+    login,
+    isAuthenticated,
+    user
+  } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -62,136 +70,62 @@ const Login = () => {
     }
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
+  const logo = <div className="flex items-center justify-center mb-6">
+      <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
+    </div>;
 
-  return (
-    <Layout hideHeader={true}>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-sky-300 to-sky-100 bg-fixed">
-        <div className="w-full max-w-md p-6">
-          <div className="backdrop-blur-xl bg-white/30 rounded-3xl shadow-xl overflow-hidden p-6">
-            {/* Logo / Icon */}
-            <div className="flex justify-center mb-6">
-              <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center shadow-md">
-                <LogIn className="h-7 w-7 text-gray-700" />
-              </div>
-            </div>
+  return <Layout hideHeader={true}>
+      <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in">
+        {logo}
+        
+        <div className="w-full max-w-md mx-auto space-y-4">
+          
+          
+          <Card className="border-none shadow-lg glass-card">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
+              <CardDescription className="text-center">
+                Use your Student Number and FraserPay Password to log in
+              </CardDescription>
+            </CardHeader>
             
-            {/* Title */}
-            <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
-              Sign in with email
-            </h2>
-            
-            {/* Subtitle */}
-            <p className="text-center text-gray-600 mb-8 px-4">
-              Make a new doc to bring your words, data, and teams together. For free
-            </p>
-            
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-4">
-                <div className="bg-white/50 rounded-lg">
-                  <Input
-                    placeholder="Email"
-                    value={studentNumber}
-                    onChange={(e) => setStudentNumber(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 rounded-lg py-5"
-                  />
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="studentNumber">Student Number</Label>
+                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
                 </div>
                 
-                <div className="bg-white/50 rounded-lg relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 rounded-lg py-5 pr-10"
-                  />
-                  <button 
-                    type="button"
-                    onClick={toggleShowPassword}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
                 </div>
-              </div>
-              
-              <div className="text-right">
-                <Link to="/forgot-password" className="text-sm text-gray-600 hover:text-gray-900">
-                  Forgot password?
+                
+                <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
+                  {isLoading ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-2">
+              <div className="text-sm text-center text-muted-foreground">
+                <span>Don't have an account? </span>
+                <Link to="/register" className="text-brand-600 hover:underline">
+                  Create one
                 </Link>
               </div>
               
-              <Button 
-                type="submit" 
-                className="w-full py-6 bg-gray-900 hover:bg-gray-800 text-white rounded-lg"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Get Started"}
-              </Button>
-              
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300/50"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white/30 backdrop-blur-sm text-gray-600">Or sign in with</span>
-                </div>
+              <div className="flex items-center justify-center text-xs text-muted-foreground">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                <span className="text-center">Contact SAC if you need help signing in.</span>
               </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                <button 
-                  type="button" 
-                  className="flex justify-center items-center py-2.5 px-4 bg-white rounded-lg shadow hover:shadow-md transition-all"
-                >
-                  <img 
-                    src="https://www.svgrepo.com/show/475656/google-color.svg" 
-                    alt="Google" 
-                    className="h-5 w-5"
-                  />
-                </button>
-                <button 
-                  type="button"
-                  className="flex justify-center items-center py-2.5 px-4 bg-white rounded-lg shadow hover:shadow-md transition-all"
-                >
-                  <img 
-                    src="https://www.svgrepo.com/show/475647/facebook-color.svg" 
-                    alt="Facebook"
-                    className="h-5 w-5" 
-                  />
-                </button>
-                <button 
-                  type="button"
-                  className="flex justify-center items-center py-2.5 px-4 bg-white rounded-lg shadow hover:shadow-md transition-all"
-                >
-                  <img 
-                    src="https://www.svgrepo.com/show/475645/apple-color.svg" 
-                    alt="Apple"
-                    className="h-5 w-5" 
-                  />
-                </button>
-              </div>
-            </form>
-            
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link to="/register" className="font-medium text-gray-900 hover:underline">
-                Create one
-              </Link>
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
         </div>
       </div>
+      
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
-    </Layout>
-  );
+    </Layout>;
 };
 
 export default Login;
