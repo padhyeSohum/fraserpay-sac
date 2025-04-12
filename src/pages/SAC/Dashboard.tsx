@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Upload } from 'lucide-react';
+import { UserPlus, Upload, RefreshCw, AlertTriangle } from 'lucide-react';
 import StatCards from './components/StatCards';
 import UsersTable from './components/UsersTable';
 import StudentSearch from './components/StudentSearch';
@@ -21,9 +21,12 @@ import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
 import { firestore } from '@/integrations/firebase/client';
-import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, increment, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { transformFirebaseUser } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface StatsData {
   totalUsers: number;
@@ -83,6 +86,12 @@ const Dashboard = () => {
   
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
   
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmation, setResetConfirmation] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState('');
+
   useEffect(() => {
     const initializeListeners = async () => {
       const criticalStatsPollingInterval = setInterval(() => {
@@ -720,6 +729,82 @@ const Dashboard = () => {
     }
   };
   
+  const handleResetButtonClick = () => {
+    setIsResetDialogOpen(true);
+    setResetPassword('');
+    setResetConfirmation(false);
+    setResetError('');
+  };
+
+  const handleCheckPassword = () => {
+    if (resetPassword === "akshatmygoat") {
+      setResetConfirmation(true);
+      setResetError('');
+    } else {
+      setResetError('Incorrect password');
+    }
+  };
+
+  const handleResetFraserPay = async () => {
+    setIsResetting(true);
+    try {
+      const boothsCollection = collection(firestore, 'booths');
+      const boothsSnapshot = await getDocs(boothsCollection);
+      const boothDeletions = boothsSnapshot.docs.map(async (boothDoc) => {
+        await deleteDoc(doc(firestore, 'booths', boothDoc.id));
+      });
+      await Promise.all(boothDeletions);
+      
+      const transactionsCollection = collection(firestore, 'transactions');
+      const transactionsSnapshot = await getDocs(transactionsCollection);
+      const transactionDeletions = transactionsSnapshot.docs.map(async (transactionDoc) => {
+        await deleteDoc(doc(firestore, 'transactions', transactionDoc.id));
+      });
+      await Promise.all(transactionDeletions);
+
+      const transactionProductsCollection = collection(firestore, 'transaction_products');
+      const transactionProductsSnapshot = await getDocs(transactionProductsCollection);
+      const transactionProductDeletions = transactionProductsSnapshot.docs.map(async (productDoc) => {
+        await deleteDoc(doc(firestore, 'transaction_products', productDoc.id));
+      });
+      await Promise.all(transactionProductDeletions);
+
+      setUsersList([]);
+      setFilteredUsers([]);
+      setTransactions([]);
+      setLeaderboard([]);
+      setBooths([]);
+      
+      setStats({
+        totalUsers: 0,
+        totalTickets: 0,
+        totalBooths: 0,
+        totalTransactions: 0,
+        totalRevenue: 0
+      });
+
+      setVersionedStorageItem('sacUsers', []);
+      setVersionedStorageItem('sacTransactions', []);
+      setVersionedStorageItem('sacBooths', []);
+      setVersionedStorageItem('leaderboard', []);
+      
+      toast.success("FraserPay has been successfully reset");
+      
+      setIsResetDialogOpen(false);
+      
+      loadUsers();
+      loadTransactions();
+      loadBoothLeaderboard();
+      fetchAllBooths();
+      
+    } catch (error) {
+      console.error("Error resetting FraserPay:", error);
+      toast.error("Failed to reset FraserPay");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <Layout 
       title="SAC Dashboard" 
@@ -801,6 +886,18 @@ const Dashboard = () => {
           isLoading={isTransactionLoading}
         />
         
+        <div className="flex justify-end pt-4 border-t">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResetButtonClick}
+            className="text-destructive border-destructive hover:bg-destructive/10"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset FraserPay
+          </Button>
+        </div>
+        
         <CreateBoothDialog 
           isOpen={isBoothDialogOpen}
           onOpenChange={setIsBoothDialogOpen}
@@ -867,6 +964,56 @@ const Dashboard = () => {
           onConfirm={confirmDeleteUser}
           userName={userToDelete?.name || ''}
         />
+        
+        <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset FraserPay System</DialogTitle>
+              <DialogDescription>
+                {!resetConfirmation ? (
+                  "Please enter the system password to proceed with reset."
+                ) : (
+                  <>
+                    <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />
+                    This will delete all booths, transactions, and reset revenue to $0.
+                    This action cannot be undone.
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {!resetConfirmation ? (
+              <>
+                <Input
+                  type="password"
+                  placeholder="Enter password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                />
+                {resetError && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCheckPassword}>Validate</Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleResetFraserPay}
+                  disabled={isResetting}
+                >
+                  {isResetting ? "Resetting..." : "Confirm Reset"}
+                </Button>
+              </DialogFooter>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
