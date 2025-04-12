@@ -432,8 +432,8 @@ const BoothSell = () => {
                 <div className="space-y-3">
                   <h3 className="font-medium">Select Products</h3>
                   
-                  <ScrollArea className="h-[50vh] w-full pr-4">
-                    <div className="space-y-3">
+                  <ScrollArea className="h-[50vh] w-full pr-4 overflow-y-auto">
+                    <div className="space-y-3 pb-20">
                       {booth.products.map(product => (
                         <ProductItem
                           key={product.id}
