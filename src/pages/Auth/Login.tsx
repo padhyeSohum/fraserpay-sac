@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
-import { AlertCircle, User, Lock } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -69,98 +70,62 @@ const Login = () => {
     }
   };
 
+  const logo = <div className="flex items-center justify-center mb-6">
+      <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
+    </div>;
+
   return <Layout hideHeader={true}>
-    <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in bg-gradient-to-br from-brand-50 to-brand-100">
-      <div className="w-full max-w-md mx-auto space-y-4">
-        <Card className="border-none shadow-lg glass-card overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 bg-brand-600/10 h-24 -z-10"></div>
-          <div className="flex justify-center -mt-12 mb-4">
-            <img 
-              src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" 
-              alt="Fraser Pay" 
-              className="w-24 h-24 rounded-full border-4 border-white shadow-lg" 
-            />
-          </div>
+      <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in">
+        {logo}
+        
+        <div className="w-full max-w-md mx-auto space-y-4">
           
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl font-bold text-brand-600">FraserPay</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Sign in to your student account
-            </CardDescription>
-          </CardHeader>
           
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentNumber" className="flex items-center">
-                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Student Number
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="studentNumber" 
-                    type="text" 
-                    placeholder="Enter your student number" 
-                    value={studentNumber} 
-                    onChange={e => setStudentNumber(e.target.value)} 
-                    disabled={isLoading} 
-                    required 
-                    className="pl-10 bg-white/50" 
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center">
-                  <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    disabled={isLoading} 
-                    required 
-                    className="pl-10 bg-white/50" 
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-            </form>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-2">
-            <div className="text-sm text-center text-muted-foreground">
-              <span>Don't have an account? </span>
-              <Link to="/register" className="text-brand-600 hover:underline">
-                Create one
-              </Link>
-            </div>
+          <Card className="border-none shadow-lg glass-card">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
+              <CardDescription className="text-center">
+                Use your Student Number and FraserPay Password to log in
+              </CardDescription>
+            </CardHeader>
             
-            <div className="flex items-center justify-center text-xs text-muted-foreground">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              <span className="text-center">Contact SAC if you need help signing in.</span>
-            </div>
-          </CardFooter>
-        </Card>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="studentNumber">Student Number</Label>
+                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                </div>
+                
+                <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
+                  {isLoading ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-2">
+              <div className="text-sm text-center text-muted-foreground">
+                <span>Don't have an account? </span>
+                <Link to="/register" className="text-brand-600 hover:underline">
+                  Create one
+                </Link>
+              </div>
+              
+              <div className="flex items-center justify-center text-xs text-muted-foreground">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                <span className="text-center">Contact SAC if you need help signing in.</span>
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
       
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
-    </div>
-  </Layout>;
+    </Layout>;
 };
 
 export default Login;
-
