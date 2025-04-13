@@ -99,7 +99,7 @@ export const registerUser = async (
     const studentExists = await checkStudentNumberExists(studentNumber);
     
     if (studentExists) {
-      toast.error('Student number already exists. Please use a different student number or try logging in.');
+      toast.error('Only students from John Fraser SS can access FraserPay, please ensure you\'ve used the right student number or contact SAC');
       return false;
     }
     
@@ -141,7 +141,7 @@ export const registerUser = async (
       toast.error(error instanceof Error ? error.message : 'Registration failed');
     }
     console.error(error);
-    throw error; // Re-throw to allow the calling code to handle it
+    throw error;
   }
 };
 

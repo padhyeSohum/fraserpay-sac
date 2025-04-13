@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -66,8 +65,8 @@ const Register = () => {
       
       if (studentExists) {
         toast({
-          title: "Student number already exists",
-          description: "This student number is already registered. Please use a different student number or try logging in.",
+          title: "Registration Failed",
+          description: "Only students from John Fraser SS can access FraserPay, please ensure you've used the right student number or contact SAC",
           variant: "destructive"
         });
         setIsLoading(false);
