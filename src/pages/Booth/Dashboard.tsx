@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronRight, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BoothDashboard = () => {
@@ -90,6 +90,12 @@ const BoothDashboard = () => {
               <Button variant="outline" className="justify-between h-auto py-4 px-4 bg-white shadow-sm border-border/50" onClick={() => navigate(`/booth/${boothId}/sell`)}>
                 <span className="font-medium">Process a Sale</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Button>
+              
+              {/* Add Manage Products button here */}
+              <Button variant="outline" className="justify-between h-auto py-4 px-4 bg-white shadow-sm border-border/50" onClick={() => navigate(`/booth/${boothId}/settings`)}>
+                <span className="font-medium">Manage Products</span>
+                <Package className="h-5 w-5 text-muted-foreground" />
               </Button>
             </div>
             
