@@ -9,7 +9,6 @@ import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import { checkStudentNumberExists } from '@/contexts/auth/authOperations';
 
 const Register = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -60,19 +59,6 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      // Check if student number already exists
-      const studentExists = await checkStudentNumberExists(studentNumber);
-      
-      if (studentExists) {
-        toast({
-          title: "Registration Failed",
-          description: "Only students from John Fraser SS can access FraserPay, please ensure you've used the right student number or contact SAC",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
       await register(studentNumber, name, email, password);
       setSuccess(true);
       setStudentNumber('');
