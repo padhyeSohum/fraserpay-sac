@@ -96,17 +96,19 @@ const Login = () => {
                   <User className="mr-2 h-4 w-4 text-muted-foreground" />
                   Student Number
                 </Label>
-                <Input 
-                  id="studentNumber" 
-                  type="text" 
-                  placeholder="Enter your student number" 
-                  value={studentNumber} 
-                  onChange={e => setStudentNumber(e.target.value)} 
-                  disabled={isLoading} 
-                  required 
-                  className="pl-10 bg-white/50" 
-                  icon={<User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="studentNumber" 
+                    type="text" 
+                    placeholder="Enter your student number" 
+                    value={studentNumber} 
+                    onChange={e => setStudentNumber(e.target.value)} 
+                    disabled={isLoading} 
+                    required 
+                    className="pl-10 bg-white/50" 
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -114,17 +116,19 @@ const Login = () => {
                   <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
                   Password
                 </Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  disabled={isLoading} 
-                  required 
-                  className="pl-10 bg-white/50" 
-                  icon={<Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    disabled={isLoading} 
+                    required 
+                    className="pl-10 bg-white/50" 
+                  />
+                </div>
               </div>
               
               <Button 
