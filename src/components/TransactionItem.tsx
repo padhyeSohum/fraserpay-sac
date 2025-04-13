@@ -25,13 +25,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const formattedTime = formatDistance(new Date(validTimestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(validTimestamp).toLocaleString();
   
-  // Format the amount correctly depending on the source
-  // Only user-originated transactions (like funds added by admin) need to be divided by 100
-  // Booth-originated transactions are already in the correct format
-  const isUserOriginated = type === 'fund' || type === 'refund';
-  const displayAmount = typeof amount === 'number' 
-    ? (isUserOriginated ? amount / 100 : amount) 
-    : amount;
+  // Use the formatCurrency utility consistently for all transaction types
+  // This ensures proper formatting regardless of source
+  const displayAmount = formatCurrency(amount);
   
   const renderProductList = () => {
     if (!products || products.length === 0) return null;
@@ -66,7 +62,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         
         <div className="flex flex-col items-end">
           <div className="font-semibold text-right">
-            {type === 'fund' ? '+' : '-'}${displayAmount.toFixed(2)}
+            {type === 'fund' ? '+' : '-'}{displayAmount}
           </div>
           
           {showSupport && (
