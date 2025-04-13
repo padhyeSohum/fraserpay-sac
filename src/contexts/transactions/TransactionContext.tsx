@@ -40,7 +40,8 @@ import {
   arrayUnion,
   deleteDoc,
   onSnapshot,
-  orderBy
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { fetchAllTransactions } from './transactionService';
@@ -184,8 +185,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         const cachedTransactions = getVersionedStorageItem<Transaction[]>('allTransactions', []);
         const lastTransactionsFetch = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
         
-        // Use cache if fresh (less than 2 minutes old)
-        if (cachedTransactions.length > 0 && now - lastTransactionsFetch < 2 * 60 * 1000) {
+        // Use cache if fresh (less than 1 minute old) - reduced from 2 minutes for faster updates
+        if (cachedTransactions.length > 0 && now - lastTransactionsFetch < 1 * 60 * 1000) {
           console.log("Using cached transactions:", cachedTransactions.length);
           setRecentTransactions(cachedTransactions);
         } else {
@@ -194,7 +195,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
           setRecentTransactions(allTransactions);
           
           // Cache the result
-          setVersionedStorageItem('allTransactions', allTransactions, 2 * 60 * 1000);
+          setVersionedStorageItem('allTransactions', allTransactions, 1 * 60 * 1000);
           setVersionedStorageItem('lastTransactionsFetch', now);
         }
         
@@ -211,14 +212,13 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   }, [isInitialized, boothManagement]);
   
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !user) return;
     
     console.log("Setting up transaction listener...");
     
-    // Use snapshot listener instead of frequent polling
-    // This is more efficient as Firebase only sends updates when changes occur
+    // Use snapshot listener for real-time updates with limit to reduce reads
     const transactionsRef = collection(firestore, 'transactions');
-    const q = query(transactionsRef, orderBy('created_at', 'desc'));
+    const q = query(transactionsRef, orderBy('created_at', 'desc'), limit(30));
     
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) return;
@@ -231,7 +231,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
           setRecentTransactions(updatedTransactions);
           
           // Update the cache
-          setVersionedStorageItem('allTransactions', updatedTransactions, 2 * 60 * 1000);
+          setVersionedStorageItem('allTransactions', updatedTransactions, 1 * 60 * 1000);
           setVersionedStorageItem('lastTransactionsFetch', Date.now());
         } catch (error) {
           console.error("Error refreshing transactions:", error);
@@ -242,7 +242,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     });
     
     return () => unsubscribe();
-  }, [isInitialized]);
+  }, [isInitialized, user]);
   
   const processPurchase = async (
     boothId: string,

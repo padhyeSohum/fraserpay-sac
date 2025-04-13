@@ -1,6 +1,6 @@
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
-import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp, limit } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
@@ -13,7 +13,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     const cachedTransactions = getVersionedStorageItem<Transaction[]>('allTransactions', []);
     const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
     const now = Date.now();
-    const cacheStaleTime = 2 * 60 * 1000; // 2 minutes
+    const cacheStaleTime = 1 * 60 * 1000; // Reduced to 1 minute for more frequent updates
     
     // Use cache if it's fresh enough
     if (cachedTransactions.length > 0 && now - lastFetchTime < cacheStaleTime) {
@@ -21,9 +21,9 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
       return cachedTransactions;
     }
     
-    // Otherwise fetch from Firebase
+    // Otherwise fetch from Firebase - limit to 100 most recent transactions
     const transactionsRef = collection(firestore, 'transactions');
-    const q = query(transactionsRef, orderBy('created_at', 'desc'));
+    const q = query(transactionsRef, orderBy('created_at', 'desc'), limit(100));
     const transactionsSnapshot = await getDocs(q);
     
     if (transactionsSnapshot.empty) {
@@ -41,7 +41,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     const transactionProductsRef = collection(firestore, 'transaction_products');
     
     // Batch transaction product fetching to reduce reads
-    // Firebase has a limit of 10 'in' clauses
+    // Firebase has a limit of 10 'in' clauses per query
     const batchSize = 10;
     const productsByTransactionId: Record<string, any[]> = {};
     

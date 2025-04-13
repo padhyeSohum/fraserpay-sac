@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
@@ -34,7 +35,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
         const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
         const now = Date.now();
         
-        const cacheTime = 45 * 1000;
+        const cacheTime = 30 * 1000; // Reduced to 30 seconds for more responsive updates
         
         if (cachedTransactions.length > 0 && now - lastFetchTime < cacheTime) {
           console.log('Using cached transactions:', cachedTransactions.length);
@@ -67,7 +68,8 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     
     fetchTransactionsData();
     
-    const intervalId = setInterval(fetchTransactionsData, 15000);
+    // Poll more frequently (reduced from 15000ms to 10000ms)
+    const intervalId = setInterval(fetchTransactionsData, 10000);
     return () => clearInterval(intervalId);
   }, [user, isAuthenticated]);
 
