@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -9,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { checkStudentNumberExists } from '@/contexts/auth/authOperations';
 
 const Register = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -59,6 +61,19 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      // Check if student number already exists
+      const studentExists = await checkStudentNumberExists(studentNumber);
+      
+      if (studentExists) {
+        toast({
+          title: "Student number already exists",
+          description: "This student number is already registered. Please use a different student number or try logging in.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       await register(studentNumber, name, email, password);
       setSuccess(true);
       setStudentNumber('');

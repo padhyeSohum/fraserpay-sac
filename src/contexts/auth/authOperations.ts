@@ -28,6 +28,23 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = MAX_RETRIES):
   }
 };
 
+// Check if student number exists in Firebase
+export const checkStudentNumberExists = async (studentNumber: string): Promise<boolean> => {
+  try {
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('student_number', '==', studentNumber));
+    
+    const querySnapshot = await withRetry(async () => {
+      return await getDocs(q);
+    });
+    
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking student number:', error);
+    throw error;
+  }
+};
+
 // Login functionality
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
@@ -79,12 +96,12 @@ export const registerUser = async (
 ): Promise<boolean> => {
   try {
     // Check if user already exists in Firestore by student number
-    const usersRef = collection(firestore, 'users');
-    const studentQuery = query(usersRef, where('student_number', '==', studentNumber));
+    const studentExists = await checkStudentNumberExists(studentNumber);
     
-    const studentSnapshot = await withRetry(async () => {
-      return await getDocs(studentQuery);
-    });
+    if (studentExists) {
+      toast.error('Student number already exists. Please use a different student number or try logging in.');
+      return false;
+    }
     
     // Register user with Firebase Auth
     const userCredential = await withRetry(async () => {
@@ -98,46 +115,19 @@ export const registerUser = async (
     // Generate QR code for the user
     const qrCode = `USER:${userCredential.user.uid}`;
     
-    // Check if user with this student number already exists in Firestore
-    let existingUserData: any = null;
-    let existingUserDocId: string | null = null;
-    let existingTickets = 0;
-    let existingBoothAccess: string[] = [];
-    
-    if (!studentSnapshot.empty) {
-      existingUserDocId = studentSnapshot.docs[0].id;
-      existingUserData = studentSnapshot.docs[0].data();
-      existingTickets = existingUserData.tickets || 0;
-      existingBoothAccess = existingUserData.booth_access || [];
-      console.log(`Found existing user with student number ${studentNumber}, current balance: ${existingTickets}`);
-    }
-    
-    // Create user profile in Firestore users collection, merging existing data if found
+    // Create user profile in Firestore users collection
     await withRetry(async () => {
       return await setDoc(doc(firestore, 'users', userCredential.user.uid), {
         name,
         email,
         student_number: studentNumber,
         role: 'student',
-        tickets: existingTickets, // Transfer existing balance
-        booth_access: existingBoothAccess, // Transfer existing booth access
-        qr_code: qrCode || "", // Ensure qr_code is never null or undefined
+        tickets: 0,
+        booth_access: [], 
+        qr_code: qrCode || "", 
         created_at: new Date().toISOString()
       });
     });
-    
-    // If an existing user was found, delete the old record
-    if (existingUserDocId && existingUserDocId !== userCredential.user.uid) {
-      try {
-        await withRetry(async () => {
-          return await deleteDoc(doc(firestore, 'users', existingUserDocId));
-        });
-        console.log(`Deleted old user record: ${existingUserDocId}`);
-      } catch (deleteError) {
-        console.error('Error deleting old user record:', deleteError);
-        // Continue despite deletion error - we've already transferred the data
-      }
-    }
     
     toast.success('Registration successful!');
     return true;
