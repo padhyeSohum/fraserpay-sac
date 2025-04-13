@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { uniqueToast } from '@/utils/toastHelpers';
 import { Info, Loader2 } from 'lucide-react';
+
 const BoothJoin: React.FC = () => {
   const {
     user,
@@ -23,10 +23,12 @@ const BoothJoin: React.FC = () => {
   const [pin, setPin] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPin(e.target.value);
-    setError(null); // Clear error when pin is changed
+    setError(null);
   };
+
   const handleJoinBooth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pin.trim()) {
@@ -45,13 +47,9 @@ const BoothJoin: React.FC = () => {
       if (success) {
         console.log('Successfully joined initiative, refreshing data...');
 
-        // Refresh initiatives list to include the newly joined initiative
         const updatedBooths = await fetchAllBooths();
-
-        // Find the initiative that matches the PIN
         const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
 
-        // Update user data to include the new initiative
         if (user) {
           const currentBooths = user.booths || [];
           if (joinedBooth && !currentBooths.includes(joinedBooth.id)) {
@@ -64,16 +62,12 @@ const BoothJoin: React.FC = () => {
           }
         }
 
-        // Trigger an event to refresh initiatives on the dashboard
-        // Use a more specific event identifier with timestamp for improved reliability
         const eventData = JSON.stringify({
           timestamp: Date.now(),
           boothPin: pin,
           action: 'joined'
         });
         localStorage.setItem('boothJoined', eventData);
-        
-        // Also dispatch a storage event to notify other tabs
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'boothJoined',
           newValue: eventData
@@ -81,10 +75,8 @@ const BoothJoin: React.FC = () => {
 
         if (joinedBooth) {
           uniqueToast.success('Successfully joined initiative!');
-          // Navigate directly to the initiative page
           navigate(`/booth/${joinedBooth.id}`);
         } else {
-          // If for some reason we can't find the initiative, navigate to dashboard
           uniqueToast.success('Successfully joined initiative!');
           navigate('/dashboard');
         }
@@ -100,6 +92,7 @@ const BoothJoin: React.FC = () => {
       setIsJoining(false);
     }
   };
+
   return <Layout title="Join an Initiative" subtitle="Enter the initiative PIN code" showBack>
       <div className="max-w-md mx-auto">
         <Card>
@@ -114,7 +107,16 @@ const BoothJoin: React.FC = () => {
                 <label htmlFor="pin" className="text-sm font-medium">
                   Initiative PIN Code
                 </label>
-                <Input id="pin" type="text" value={pin} onChange={handlePinChange} placeholder="Enter 6-digit PIN" maxLength={6} className={error ? "border-destructive" : ""} disabled={isJoining} />
+                <Input 
+                  id="pin" 
+                  type="number" 
+                  value={pin} 
+                  onChange={handlePinChange} 
+                  placeholder="Enter 6-digit PIN" 
+                  maxLength={6} 
+                  className={error ? "border-destructive" : ""} 
+                  disabled={isJoining} 
+                />
                 
                 {error && <div className="text-destructive text-sm flex items-center gap-1.5">
                     <Info className="h-4 w-4" />
@@ -154,4 +156,5 @@ const BoothJoin: React.FC = () => {
       </div>
     </Layout>;
 };
+
 export default BoothJoin;
