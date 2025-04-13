@@ -13,16 +13,12 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import SACLoginForm from '../SuperAdmin/SACLoginForm';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("student");
-  
   const {
     login,
     isAuthenticated,
@@ -84,42 +80,32 @@ const Login = () => {
         
         <div className="w-full max-w-md mx-auto space-y-4">
           
+          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
               <CardDescription className="text-center">
-                Access the Fraser Pay system
+                Use your Student Number and FraserPay Password to log in
               </CardDescription>
-              
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="student">Student</TabsTrigger>
-                  <TabsTrigger value="sac">SAC Admin</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="student" className="mt-4">
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="studentNumber">Student Number</Label>
-                      <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
-                    </div>
-                    
-                    <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
-                      {isLoading ? "Signing In..." : "Sign In"}
-                    </Button>
-                  </form>
-                </TabsContent>
-                
-                <TabsContent value="sac" className="mt-4">
-                  <SACLoginForm />
-                </TabsContent>
-              </Tabs>
             </CardHeader>
+            
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="studentNumber">Student Number</Label>
+                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                </div>
+                
+                <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
+                  {isLoading ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            </CardContent>
             
             <CardFooter className="flex flex-col space-y-2">
               <div className="text-sm text-center text-muted-foreground">
@@ -132,13 +118,6 @@ const Login = () => {
               <div className="flex items-center justify-center text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3 mr-1" />
                 <span className="text-center">Contact SAC if you need help signing in.</span>
-              </div>
-              
-              {/* Super Admin Link */}
-              <div className="text-xs text-center text-muted-foreground mt-4">
-                <Link to="/super-admin/login" className="text-muted-foreground/50 hover:text-muted-foreground">
-                  System Administration
-                </Link>
               </div>
             </CardFooter>
           </Card>

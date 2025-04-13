@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/auth';
 import { Navigate, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,10 +22,6 @@ import BoothSettings from "@/pages/Booth/Settings";
 
 // SAC Pages
 import SACDashboard from "@/pages/SAC/Dashboard";
-
-// Super Admin Pages
-import SuperAdminLogin from "@/pages/SuperAdmin/Login";
-import SuperAdminDashboard from "@/pages/SuperAdmin/Dashboard";
 
 // Shared Pages
 import Leaderboard from "@/pages/Leaderboard";
@@ -86,10 +83,6 @@ export const routes = [
     element: <SACDashboard />,
     protected: true
   },
-  
-  // Super Admin Routes - not protected by regular auth
-  { path: "/super-admin/login", element: <SuperAdminLogin /> },
-  { path: "/super-admin/dashboard", element: <SuperAdminDashboard /> },
   
   // Shared Routes
   { 
