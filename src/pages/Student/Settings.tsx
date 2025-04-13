@@ -14,9 +14,9 @@ import { Input } from "@/components/ui/input";
 // SAC admin credentials
 const SAC_ADMINS = [
   { username: "sacadmin", password: "codyisabum" },
-  { username: "Akshat", password: "Password" },
-  { username: "Cody", password: "123456" },
-  { username: "Aleena", password: "654321" },
+  { username: "akshat", password: "Password" },
+  { username: "cody", password: "123456" },
+  { username: "aleena", password: "654321" },
   { username: "other", password: "sac2025" }
 ];
 
