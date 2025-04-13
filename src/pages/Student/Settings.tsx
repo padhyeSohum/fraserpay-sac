@@ -15,9 +15,9 @@ import { Input } from "@/components/ui/input";
 const SAC_ADMINS = [
   { username: "sacadmin", password: "codyisabum" },
   { username: "Akshat", password: "Password" },
-  { username: "teacher", password: "SAC1234" },
-  { username: "JFSS_Admin", password: "JFSS2025" },
-  { username: "sac", password: "sac2025" }
+  { username: "Cody", password: "123456" },
+  { username: "Aleena", password: "654321" },
+  { username: "other", password: "sac2025" }
 ];
 
 const Settings = () => {
