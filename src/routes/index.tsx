@@ -77,11 +77,12 @@ export const routes = [
     protected: true 
   },
   
-  // SAC Dashboard - no role restrictions anymore
+  // SAC Dashboard - special case handled in route protection
   { 
     path: "/sac/dashboard", 
     element: <SACDashboard />,
-    protected: true
+    protected: true,
+    sacAdmin: true  // Special flag for SAC admin access
   },
   
   // Shared Routes
@@ -144,10 +145,15 @@ export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
   </div>
 );
 
-// Simplified Protected Route - no role checks
+// Modified Protected Route to handle SAC admin access
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+  
+  // Special case for SAC dashboard - we already handled the authentication in the Login page
+  if (location.pathname === '/sac/dashboard' && sessionStorage.getItem('sac_admin_session')) {
+    return <>{children}</>;
+  }
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
@@ -159,13 +165,19 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Simple wrapper for backward compatibility - no longer does role checking
 export const RoleProtectedRoute = ({ 
-  children
+  children,
+  allowedRoles
 }: { 
   children: React.ReactNode; 
   allowedRoles?: string[] 
 }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+  
+  // Special case for SAC dashboard - we already handled the authentication in the Login page
+  if (location.pathname === '/sac/dashboard' && sessionStorage.getItem('sac_admin_session')) {
+    return <>{children}</>;
+  }
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");

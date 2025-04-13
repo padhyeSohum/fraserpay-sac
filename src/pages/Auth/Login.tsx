@@ -8,17 +8,29 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, User } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const Login = () => {
+  // Student login state
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
+  
+  // SAC Admin login state
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
+  const [activeTab, setActiveTab] = useState('student');
+  
   const {
     login,
     isAuthenticated,
@@ -45,7 +57,7 @@ const Login = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
       toast({
@@ -69,6 +81,54 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+  
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUsername || !adminPassword) {
+      toast({
+        title: "Missing information",
+        description: "Please enter both username and password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsAdminLoading(true);
+    try {
+      // Query the sac_admins collection to check credentials
+      const adminsRef = collection(firestore, 'sac_admins');
+      const q = query(
+        adminsRef, 
+        where('username', '==', adminUsername),
+        where('password', '==', adminPassword)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        throw new Error('Invalid username or password');
+      }
+      
+      // Admin authenticated - directly navigate to SAC dashboard
+      // In a production app, you would use a proper admin auth system
+      toast({
+        title: "Login successful",
+        description: "Welcome to the SAC dashboard"
+      });
+      
+      navigate('/sac/dashboard', { replace: true });
+      
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Please check your credentials and try again",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
 
   const logo = <div className="flex items-center justify-center mb-6">
       <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
@@ -79,45 +139,98 @@ const Login = () => {
         {logo}
         
         <div className="w-full max-w-md mx-auto space-y-4">
-          
-          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
               <CardDescription className="text-center">
-                Use your Student Number and FraserPay Password to log in
+                Login to access your account
               </CardDescription>
             </CardHeader>
             
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="studentNumber">Student Number</Label>
-                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
-                </div>
+              <Tabs defaultValue="student" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid grid-cols-2 w-full mb-4">
+                  <TabsTrigger value="student">Student</TabsTrigger>
+                  <TabsTrigger value="admin">SAC Admin</TabsTrigger>
+                </TabsList>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
-                </div>
+                <TabsContent value="student">
+                  <form onSubmit={handleStudentSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="studentNumber">Student Number</Label>
+                      <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="bg-white/50" />
+                    </div>
+                    
+                    <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
+                      {isLoading ? "Signing In..." : "Sign In"}
+                    </Button>
+                  </form>
+                </TabsContent>
                 
-                <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={isLoading}>
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </form>
+                <TabsContent value="admin">
+                  <form onSubmit={handleAdminSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="adminUsername">Username</Label>
+                      <Input 
+                        id="adminUsername" 
+                        type="text" 
+                        placeholder="Enter SAC admin username" 
+                        value={adminUsername} 
+                        onChange={e => setAdminUsername(e.target.value)} 
+                        disabled={isAdminLoading} 
+                        required 
+                        className="bg-white/50" 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="adminPassword">Password</Label>
+                      <Input 
+                        id="adminPassword" 
+                        type="password" 
+                        placeholder="••••••••" 
+                        value={adminPassword} 
+                        onChange={e => setAdminPassword(e.target.value)} 
+                        disabled={isAdminLoading} 
+                        required 
+                        className="bg-white/50" 
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-brand-600 hover:bg-brand-700" 
+                      disabled={isAdminLoading}
+                    >
+                      {isAdminLoading ? "Signing In..." : "Sign In as Admin"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
             </CardContent>
             
             <CardFooter className="flex flex-col space-y-2">
-              <div className="text-sm text-center text-muted-foreground">
-                <span>Don't have an account? </span>
-                <Link to="/register" className="text-brand-600 hover:underline">
-                  Create one
-                </Link>
-              </div>
+              {activeTab === "student" && (
+                <div className="text-sm text-center text-muted-foreground">
+                  <span>Don't have an account? </span>
+                  <Link to="/register" className="text-brand-600 hover:underline">
+                    Create one
+                  </Link>
+                </div>
+              )}
               
               <div className="flex items-center justify-center text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                <span className="text-center">Contact SAC if you need help signing in.</span>
+                <span className="text-center">
+                  {activeTab === "student" 
+                    ? "Contact SAC if you need help signing in."
+                    : "Contact a super admin if you need access."}
+                </span>
               </div>
             </CardFooter>
           </Card>
