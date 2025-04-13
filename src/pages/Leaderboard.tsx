@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
@@ -6,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Trophy, Award, Medal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+
 const Leaderboard = () => {
   const {
     getLeaderboard
@@ -17,6 +19,7 @@ const Leaderboard = () => {
   }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       try {
@@ -32,6 +35,7 @@ const Leaderboard = () => {
     };
     fetchLeaderboardData();
   }, [getLeaderboard]);
+
   const getIcon = (position: number) => {
     switch (position) {
       case 0:
@@ -44,9 +48,11 @@ const Leaderboard = () => {
         return null;
     }
   };
+
   const handleBackClick = () => {
     navigate('/dashboard');
   };
+
   return <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
       <div className="container mx-auto max-w-4xl py-4">
         <Card className="border shadow-sm">
@@ -69,7 +75,7 @@ const Leaderboard = () => {
                           <h3 className="font-medium">{booth.boothName}</h3>
                         </div>
                       </div>
-                      <div className="font-semibold">${booth.earnings.toFixed(2)}</div>
+                      {/* Removed dollar amount display */}
                     </div>
                     {index < leaderboardData.length - 1 && <Separator className="mt-4" />}
                   </div>)}
@@ -79,4 +85,5 @@ const Leaderboard = () => {
       </div>
     </Layout>;
 };
+
 export default Leaderboard;

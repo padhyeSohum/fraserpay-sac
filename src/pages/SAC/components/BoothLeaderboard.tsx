@@ -33,14 +33,14 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Booth</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead>Rank</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboard.slice(0, 5).map((booth) => (
+              {leaderboard.slice(0, 5).map((booth, index) => (
                 <TableRow key={booth.id}>
                   <TableCell className="font-medium">{booth.name}</TableCell>
-                  <TableCell className="text-right">${booth.totalEarnings.toFixed(2)}</TableCell>
+                  <TableCell>{index + 1}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

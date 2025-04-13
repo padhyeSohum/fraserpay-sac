@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction, TransactionStats, DateRange, Booth } from '@/types';
 import { useAuth } from '@/contexts/auth';
@@ -31,16 +30,12 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       
       console.log('Initializing transaction data fetch');
       try {
-        // Check if we have cached transactions first
         const cachedTransactions = getVersionedStorageItem<Transaction[]>('transactions', []);
         const lastFetchTime = getVersionedStorageItem<number>('lastTransactionsFetch', 0);
         const now = Date.now();
         
-        // Balance data needs to be fresh, so use a shorter cache time (45 seconds)
-        // This ensures balances are updated relatively quickly without excessive reads
-        const cacheTime = 45 * 1000; // 45 seconds, reduced from 2 minutes for more responsive balances
+        const cacheTime = 45 * 1000;
         
-        // Use cache if it exists and is less than 45 seconds old
         if (cachedTransactions.length > 0 && now - lastFetchTime < cacheTime) {
           console.log('Using cached transactions:', cachedTransactions.length);
           setTransactions(cachedTransactions);
@@ -53,12 +48,10 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
           return;
         }
         
-        // Otherwise fetch from backend
         const allTransactions = await fetchAllTransactions();
         console.log('Fetched transactions:', allTransactions.length);
         setTransactions(allTransactions);
         
-        // Cache the transactions with updated timeout
         setVersionedStorageItem('transactions', allTransactions, cacheTime);
         setVersionedStorageItem('lastTransactionsFetch', now);
         
@@ -74,10 +67,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     
     fetchTransactionsData();
     
-    // Set up a polling interval for critical data (user balance)
-    // Polling at 15 seconds provides a good balance between freshness and Firebase reads
-    const intervalId = setInterval(fetchTransactionsData, 15000); // 15 seconds instead of 30
-    
+    const intervalId = setInterval(fetchTransactionsData, 15000);
     return () => clearInterval(intervalId);
   }, [user, isAuthenticated]);
 
@@ -142,22 +132,21 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
 
   const getLeaderboard = useCallback(async () => {
     try {
-      // Check if we have cached leaderboard
       const cachedLeaderboard = getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
       const lastLeaderboardFetch = getVersionedStorageItem<number>('lastLeaderboardFetch', 0);
       const now = Date.now();
       
-      // Use cache if it's less than 3 minutes old (reduced from 5 minutes)
-      // This makes booth earnings more up-to-date
-      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < 3 * 60 * 1000) {
+      const cacheDuration = 15 * 60 * 1000;
+      
+      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < cacheDuration) {
+        console.log('Using cached leaderboard data');
         return cachedLeaderboard;
       }
       
-      // Otherwise fetch fresh data
+      console.log('Fetching fresh leaderboard data from Firebase');
       const leaderboard = await getLeaderboardService();
       
-      // Cache the result
-      setVersionedStorageItem('leaderboard', leaderboard, 3 * 60 * 1000);
+      setVersionedStorageItem('leaderboard', leaderboard, cacheDuration);
       setVersionedStorageItem('lastLeaderboardFetch', now);
       
       return leaderboard;
@@ -165,7 +154,6 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
       console.error('Error fetching leaderboard:', error);
       toast.error('Failed to fetch leaderboard data');
       
-      // Return cached data on error if available
       return getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
     }
   }, []);
