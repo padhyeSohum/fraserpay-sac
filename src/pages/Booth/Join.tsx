@@ -65,7 +65,20 @@ const BoothJoin: React.FC = () => {
         }
 
         // Trigger an event to refresh initiatives on the dashboard
-        localStorage.setItem('boothJoined', Date.now().toString());
+        // Use a more specific event identifier with timestamp for improved reliability
+        const eventData = JSON.stringify({
+          timestamp: Date.now(),
+          boothPin: pin,
+          action: 'joined'
+        });
+        localStorage.setItem('boothJoined', eventData);
+        
+        // Also dispatch a storage event to notify other tabs
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'boothJoined',
+          newValue: eventData
+        }));
+
         if (joinedBooth) {
           uniqueToast.success('Successfully joined initiative!');
           // Navigate directly to the initiative page

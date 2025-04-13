@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -30,6 +31,7 @@ const Dashboard = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
+  const [lastBoothJoinedTime, setLastBoothJoinedTime] = useState<number>(0);
   const MAX_RETRIES = 3;
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
@@ -45,7 +47,10 @@ const Dashboard = () => {
     try {
       const now = Date.now();
       const lastUserDataFetch = getVersionedStorageItem<number>('lastUserDataFetch', 0);
-      if (now - lastUserDataFetch < 30000) {
+      // Always refresh user data if we've recently joined a booth
+      const shouldForceRefresh = now - lastBoothJoinedTime < 10000;
+      
+      if (now - lastUserDataFetch < 30000 && !shouldForceRefresh) {
         const isBalanceOnlyUpdate = now - lastUserDataFetch > 5000;
         if (isBalanceOnlyUpdate) {
           const {
@@ -92,7 +97,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }
-  }, [user, updateUserData]);
+  }, [user, updateUserData, lastBoothJoinedTime]);
   const refreshUserBooths = useCallback(async () => {
     if (!user) return;
     try {
@@ -177,24 +182,66 @@ const Dashboard = () => {
     }
   }, [user?.booths, refreshUserBooths]);
 
-  // Effect to handle localStorage boothJoined event
+  // Improved effect to handle localStorage boothJoined event
   useEffect(() => {
+    // Handle storage events from other tabs or from this tab
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === 'boothJoined') {
         console.log('Detected booth joined event, refreshing booths');
-        refreshUserBooths();
+        
+        try {
+          // Try to parse the JSON data with timestamp
+          const eventData = event.newValue ? JSON.parse(event.newValue) : null;
+          if (eventData && eventData.timestamp) {
+            setLastBoothJoinedTime(eventData.timestamp);
+            // Force immediate refresh
+            refreshUserData();
+            refreshUserBooths();
+          }
+        } catch (err) {
+          // Fall back to old behavior if parsing fails
+          refreshUserBooths();
+        }
       }
     };
+    
     window.addEventListener('storage', handleStorageChange);
 
-    // Also check for recently joined initiative on load
-    const boothJoinedTime = localStorage.getItem('boothJoined');
-    if (boothJoinedTime && Date.now() - parseInt(boothJoinedTime) < 10000) {
-      console.log('Found recent initiative join, refreshing initiatives');
-      refreshUserBooths();
-    }
+    // Check for recently joined initiative on component mount
+    const checkForRecentJoin = () => {
+      try {
+        const boothJoinedData = localStorage.getItem('boothJoined');
+        if (boothJoinedData) {
+          try {
+            // Try to parse as JSON first (new format)
+            const eventData = JSON.parse(boothJoinedData);
+            if (eventData && eventData.timestamp && Date.now() - eventData.timestamp < 10000) {
+              console.log('Found recent initiative join, refreshing initiatives');
+              setLastBoothJoinedTime(eventData.timestamp);
+              refreshUserData();
+              refreshUserBooths();
+            }
+          } catch (err) {
+            // Fall back to old format (timestamp as string)
+            const joinTime = parseInt(boothJoinedData);
+            if (!isNaN(joinTime) && Date.now() - joinTime < 10000) {
+              console.log('Found recent initiative join, refreshing initiatives');
+              setLastBoothJoinedTime(joinTime);
+              refreshUserData();
+              refreshUserBooths();
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking for recent joins:', err);
+      }
+    };
+    
+    checkForRecentJoin();
+    
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [refreshUserBooths]);
+  }, [refreshUserBooths, refreshUserData]);
+  
   useEffect(() => {
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);

@@ -183,6 +183,34 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       const members = boothData.members || [];
       if (members.includes(userId)) {
         console.log('User is already a member of this initiative');
+        
+        // Even if already a member, ensure the user object is updated
+        // This helps sync Firebase and local state
+        if (user && user.id === userId) {
+          const currentBooths = user.booths || [];
+          if (!currentBooths.includes(boothId)) {
+            console.log('Syncing user state with Firebase - adding missing booth access');
+            updateUserData({
+              ...user,
+              booths: [...currentBooths, boothId]
+            });
+            
+            // Dispatch an event to notify the dashboard
+            const eventData = JSON.stringify({
+              timestamp: Date.now(),
+              boothId: boothId,
+              action: 'joined'
+            });
+            localStorage.setItem('boothJoined', eventData);
+            
+            // Also dispatch a storage event to notify other tabs
+            window.dispatchEvent(new StorageEvent('storage', {
+              key: 'boothJoined',
+              newValue: eventData
+            }));
+          }
+        }
+        
         return true; // Return true since the user is already connected to the initiative
       }
       
