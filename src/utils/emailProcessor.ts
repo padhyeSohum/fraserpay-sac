@@ -116,6 +116,11 @@ export async function processEmailQueue(): Promise<{
             if (safeData.products === undefined) {
               safeData.products = [];
             }
+            
+            // Add amount if missing - fixed shorthand property error
+            if (safeData.amount === undefined) {
+              safeData.amount = 0;
+            }
           }
           
           // Check for balance update fields
@@ -123,6 +128,20 @@ export async function processEmailQueue(): Promise<{
             if (safeData.addedAmount === undefined) {
               safeData.addedAmount = 0;
             }
+          }
+          
+          // Ensure products have all required properties - fixed shorthand property errors
+          if (Array.isArray(safeData.products)) {
+            safeData.products = safeData.products.map((product: any) => {
+              const processedProduct = { ...product };
+              if (processedProduct.price === undefined) {
+                processedProduct.price = 0;
+              }
+              if (processedProduct.subtotal === undefined) {
+                processedProduct.subtotal = 0;
+              }
+              return processedProduct;
+            });
           }
           
           const renderedHtml = renderTemplate(template, safeData);

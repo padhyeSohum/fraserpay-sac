@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -20,7 +21,7 @@ export interface BalanceUpdateEmailData {
   userEmail: string;
   studentNumber: string;
   date: string;
-  addedAmount: number; // Changed from optional to required
+  addedAmount: number; // This is still needed for typing purposes but we won't use it in template
 }
 
 export interface TransactionReceiptEmailData {
@@ -62,14 +63,10 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
   <p style="text-align: center; font-size: 12px; color: #888;">FraserPay: Fast, Secure, Easy</p>
 </div>`;
 
-// Helper function to replace template variables
+// Helper function to replace template variables - simplified since we're not using variables anymore
 export function renderTemplate(template: string, data: Record<string, any>): string {
-  let renderedTemplate = template;
-  
-  // Remove the complex variable checking since we no longer use specific variables
-  renderedTemplate = renderedTemplate.replace(/{{[^}]+}}/g, '');
-  
-  return renderedTemplate;
+  // Just return the template as is since we're not using variables
+  return template;
 }
 
 // Queue an email to be sent
