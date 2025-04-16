@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, update
 import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
+import { sendBalanceUpdateEmail } from '@/utils/emailService';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
@@ -191,6 +192,29 @@ export const addFunds = async (
       sacMemberId,
       sacMemberName: undefined
     };
+    
+    // Send email notification for balance update
+    try {
+      const user: User = {
+        id: userId,
+        studentNumber: userData.student_number,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        balance: newBalance / 100, // Convert to dollars
+        favoriteProducts: [],
+        booths: userData.booth_access || []
+      };
+      
+      // Only send email if it's a positive balance addition (not a refund)
+      if (amount > 0) {
+        console.log("Sending balance update email to user");
+        await sendBalanceUpdateEmail(user, amount, newBalance / 100);
+      }
+    } catch (emailError) {
+      console.error("Error sending balance update email:", emailError);
+      // Don't fail the transaction if email fails
+    }
     
     toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
     console.log("Funds processed successfully:", newTransaction);

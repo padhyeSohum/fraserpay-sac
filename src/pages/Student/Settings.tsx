@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
@@ -24,7 +25,8 @@ const Settings = () => {
   const {
     user,
     logout,
-    verifySACPin
+    verifySACPin,
+    updateUserData
   } = useAuth();
   const {
     toast
@@ -33,6 +35,7 @@ const Settings = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(user?.emailNotifications !== false);
   
   const handleSACAccess = () => {
     setIsOpen(true);
@@ -61,6 +64,37 @@ const Settings = () => {
       setIsOpen(false);
     } else {
       setLoginError("Invalid username or password. Please contact SAC if you need assistance.");
+    }
+  };
+  
+  const handleToggleEmailNotifications = async () => {
+    try {
+      if (!user) return;
+      
+      const newValue = !emailNotifications;
+      setEmailNotifications(newValue);
+      
+      // Update the user's preferences in the database
+      await updateUserData({
+        ...user,
+        emailNotifications: newValue
+      });
+      
+      toast({
+        title: newValue ? "Email notifications enabled" : "Email notifications disabled",
+        description: newValue 
+          ? "You will now receive email notifications for transactions and balance updates." 
+          : "You will no longer receive email notifications.",
+      });
+    } catch (error) {
+      console.error("Error updating notification preferences:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update notification preferences",
+        variant: "destructive"
+      });
+      // Revert UI state on error
+      setEmailNotifications(!emailNotifications);
     }
   };
   
@@ -94,9 +128,24 @@ const Settings = () => {
         <Card>
           <CardHeader>
             <CardTitle>Notifications</CardTitle>
-            <CardDescription>These features are still in development. Check back soon to try them out :)</CardDescription>
+            <CardDescription>Configure how you receive updates about your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center">
+                <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Email Notifications</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="email-notifications"
+                  checked={emailNotifications}
+                  onCheckedChange={handleToggleEmailNotifications}
+                />
+                <Label htmlFor="email-notifications" className="sr-only">Email Notifications</Label>
+              </div>
+            </div>
+            <Separator />
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center">
                 <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
