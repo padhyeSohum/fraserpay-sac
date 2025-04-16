@@ -1,4 +1,3 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -55,18 +54,18 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
 
   <!-- User Information -->
   <div style="margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 6px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> $\{'{{userName}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> $\{'{{userEmail}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> $\{'{{studentNumber}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> $$\{'{{currentBalance}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> ${{currentBalance}}</p>
   </div>
 
   <!-- Transaction Details -->
   <div style="margin-bottom: 20px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> $\{'{{date}}'}</p>
-    $\{'{{#if addedAmount}}'}
-    <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> $$\{'{{addedAmount}}'}</p>
-    $\{'{{/if}}'}
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
+    {{#if addedAmount}}
+    <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> ${{addedAmount}}</p>
+    {{/if}}
   </div>
 
   <!-- Thank You Message -->

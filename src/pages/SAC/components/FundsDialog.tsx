@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ import { toast } from 'sonner';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTransaction } from '@/contexts/transactions/hooks/useTransaction';
+import { triggerEmailProcessing } from '@/utils/emailProcessor';
 
 interface FundsDialogProps {
   isOpen: boolean;
@@ -46,10 +46,8 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   const [foundStudent, setFoundStudent] = useState<any>(null);
   const { findUserByStudentNumber } = useTransaction();
 
-  // Sync studentId with local state when it changes
   useEffect(() => {
     setLocalStudentId(studentId);
-    // Reset student info when dialog opens/closes
     if (!isOpen) {
       setStudentNumber('');
       setAmount('');
@@ -66,7 +64,6 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     setIsSearching(true);
     
     try {
-      // Use the findUserByStudentNumber function from useTransaction hook
       const user = await findUserByStudentNumber(studentNumber);
       
       if (user) {
@@ -92,16 +89,20 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       try {
         await onSubmit(localStudentId, parseFloat(amount));
         
-        // Clear form fields after successful submission
+        try {
+          console.log('Processing email notifications after funds transaction');
+          await triggerEmailProcessing();
+        } catch (emailError) {
+          console.error('Error processing email notifications:', emailError);
+        }
+        
         setAmount('');
         
-        // If this was a new student search (not pre-filled), reset the student info
         if (!readOnlyId) {
           setStudentNumber('');
           setFoundStudent(null);
           setLocalStudentId('');
         }
-        
       } catch (error) {
         console.error('Error submitting transaction:', error);
       }
