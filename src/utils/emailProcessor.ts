@@ -3,6 +3,64 @@ import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { renderTemplate, BALANCE_UPDATE_TEMPLATE } from './emailService';
 
+// Export the transaction receipt template
+export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins', Arial, sans-serif; background: #f9f9f9; max-width: 650px; margin: auto; padding: 20px; border-radius: 8px; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+  <!-- Header Image with cornered style -->
+  <div style="border-radius: 8px 8px 0 0; overflow: hidden; margin-bottom: 20px;">
+    <img src="https://i.imgur.com/hGzP8MC.png" alt="FraserPay Banner" style="width: 100%; height: auto; display: block;" />
+  </div>
+
+  <!-- Greeting -->
+  <p style="font-size: 18px; color: #333; margin-bottom: 20px; text-align: center;">Hey there! Here's your receipt for today. If you have any concerns, please feel free to reach out to SAC.</p>
+
+  <!-- Email Title -->
+  <h2 style="font-size: 28px; font-weight: bold; color: #6f42c1; text-align: center; margin-bottom: 20px;">Your Daily Receipt</h2>
+
+  <!-- User Information -->
+  <div style="margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 6px;">
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> ${{currentBalance}}</p>
+  </div>
+
+  <!-- Transaction Details -->
+  <div style="margin-bottom: 20px;">
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 15px;"><strong>Total Amount:</strong> ${{totalAmount}}</p>
+  </div>
+
+  <!-- Products List -->
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px;">
+    <thead>
+      <tr>
+        <th style="text-align: left; padding: 10px; border-bottom: 2px solid #ddd;">Product</th>
+        <th style="text-align: left; padding: 10px; border-bottom: 2px solid #ddd;">Quantity</th>
+        <th style="text-align: right; padding: 10px; border-bottom: 2px solid #ddd;">Price</th>
+        <th style="text-align: right; padding: 10px; border-bottom: 2px solid #ddd;">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each products}}
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{productName}}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{quantity}}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${{price}}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${{subtotal}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <!-- Thank You Message -->
+  <p style="font-size: 16px; color: #333; text-align: center; font-weight: bold;">Thank you for being part of Charity Week!</p>
+
+  <!-- Footer -->
+  <hr style="border: none; border-top: 2px solid #6f42c1; margin: 40px 0;" />
+  <p style="text-align: center; font-size: 12px; color: #888;">This is an automated message. For help, reply to this email or DM <a href="https://instagram.com/johnfrasersac" style="color: #6f42c1;">@johnfrasersac</a>.</p>
+  <p style="text-align: center; font-size: 12px; color: #888;">FraserPay: Fast, Secure, Easy</p>
+</div>`;
+
 // This would typically be a Cloud Function triggered by a schedule or HTTP request
 // For now, we'll make it a function that can be called manually or on a schedule
 
@@ -52,6 +110,8 @@ export async function processEmailQueue(): Promise<{
         let template = '';
         if (emailData.templateName === 'balance_update') {
           template = BALANCE_UPDATE_TEMPLATE;
+        } else if (emailData.templateName === 'transaction_receipt') {
+          template = TRANSACTION_RECEIPT_TEMPLATE;
         }
         // Add other templates as needed...
         
