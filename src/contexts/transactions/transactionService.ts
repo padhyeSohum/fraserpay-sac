@@ -1,4 +1,3 @@
-
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp, limit } from 'firebase/firestore';
@@ -214,7 +213,7 @@ export const addFunds = async (
         console.log("🔵 Sending balance update email to user:", user.email);
         console.log("User email notifications setting:", user.emailNotifications);
         
-        const emailSent = await sendBalanceUpdateEmail(user, amount, newBalance / 100);
+        const emailSent = await sendBalanceUpdateEmail(user, amount);
         console.log("Email queued result:", emailSent);
         
         if (emailSent) {

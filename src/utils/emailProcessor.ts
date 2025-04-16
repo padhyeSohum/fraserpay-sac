@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { renderTemplate, BALANCE_UPDATE_TEMPLATE } from './emailService';
@@ -24,7 +25,7 @@ export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins',
   <!-- Transaction Details -->
   <div style="margin-bottom: 20px;">
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 15px;"><strong>Total Amount:</strong> ${{totalAmount}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 15px;"><strong>Total Amount:</strong> ${{amount}}</p>
   </div>
 
   <!-- Products List -->
