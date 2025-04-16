@@ -108,7 +108,24 @@ export async function processEmailQueue(): Promise<{
         }
         
         if (template) {
-          const renderedHtml = renderTemplate(template, emailData.data);
+          // Ensure all required template variables exist in the data object
+          const safeData = { ...emailData.data };
+          
+          // Check for receipt-specific fields
+          if (emailData.templateName === 'transaction_receipt') {
+            if (safeData.products === undefined) {
+              safeData.products = [];
+            }
+          }
+          
+          // Check for balance update fields
+          if (emailData.templateName === 'balance_update') {
+            if (safeData.addedAmount === undefined) {
+              safeData.addedAmount = 0;
+            }
+          }
+          
+          const renderedHtml = renderTemplate(template, safeData);
           console.log('Email content would be:', renderedHtml.substring(0, 100) + '...');
         } else {
           console.error(`Unknown template: ${emailData.templateName}`);

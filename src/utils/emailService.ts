@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -28,7 +29,7 @@ export interface TransactionReceiptEmailData {
   userEmail: string;
   studentNumber: string;
   date: string;
-  totalAmount: number;
+  amount: number;
   products: Array<{
     productName: string;
     quantity: number;
@@ -60,9 +61,7 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
   <!-- Transaction Details -->
   <div style="margin-bottom: 20px;">
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
-    {{#if addedAmount}}
     <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> ${{addedAmount}}</p>
-    {{/if}}
   </div>
 
   <!-- Thank You Message -->
@@ -77,6 +76,33 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
 // Helper function to replace template variables
 export function renderTemplate(template: string, data: Record<string, any>): string {
   let renderedTemplate = template;
+  
+  // First check if the data object contains all required template variables
+  // This ensures we don't have missing variables that could cause runtime errors
+  const variableRegex = /{{([^}]+)}}/g;
+  let match;
+  
+  while ((match = variableRegex.exec(template)) !== null) {
+    const variableName = match[1].trim();
+    
+    // Skip conditional sections and loop sections
+    if (variableName.startsWith('#') || variableName.startsWith('/')) {
+      continue;
+    }
+    
+    // Make sure the variable exists in the data object, if not set a safe default
+    if (data[variableName] === undefined) {
+      console.warn(`Template variable ${variableName} is missing in data`, data);
+      // Set default safe values based on variable name
+      if (variableName === 'addedAmount') {
+        data[variableName] = 0;
+      } else if (variableName.includes('price') || variableName.includes('subtotal') || variableName.includes('amount')) {
+        data[variableName] = 0;
+      } else {
+        data[variableName] = '';
+      }
+    }
+  }
   
   // Replace simple variables
   Object.entries(data).forEach(([key, value]) => {
@@ -238,7 +264,7 @@ export async function sendTransactionReceiptEmail(
       userEmail: user.email,
       studentNumber: user.studentNumber,
       date: new Date().toLocaleDateString(),
-      totalAmount: totalAmount,
+      amount: totalAmount,
       products: products
     };
     
