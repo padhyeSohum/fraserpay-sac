@@ -117,7 +117,7 @@ export async function processEmailQueue(): Promise<{
               safeData.products = [];
             }
             
-            // Add amount if missing - fixed shorthand property error
+            // Add amount if missing - using property value assignment, not shorthand
             if (safeData.amount === undefined) {
               safeData.amount = 0;
             }
@@ -130,7 +130,7 @@ export async function processEmailQueue(): Promise<{
             }
           }
           
-          // Ensure products have all required properties - fixed shorthand property errors
+          // Ensure products have all required properties - using property value assignment, not shorthand
           if (Array.isArray(safeData.products)) {
             safeData.products = safeData.products.map((product: any) => {
               const processedProduct = { ...product };
