@@ -18,16 +18,16 @@ export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins',
 
   <!-- User Information -->
   <div style="margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 6px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> ${{currentBalance}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> ${'{{userName}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> ${'{{userEmail}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> ${'{{studentNumber}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> $${'{{currentBalance}}'}</p>
   </div>
 
   <!-- Transaction Details -->
   <div style="margin-bottom: 20px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 15px;"><strong>Total Amount:</strong> ${{totalAmount}}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> ${'{{date}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 15px;"><strong>Total Amount:</strong> $${'{{totalAmount}}'}</p>
   </div>
 
   <!-- Products List -->
@@ -41,14 +41,14 @@ export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins',
       </tr>
     </thead>
     <tbody>
-      {{#each products}}
+      ${'{{#each products}}'}
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{productName}}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{quantity}}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${{price}}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${{subtotal}}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd;">${'{{productName}}'}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd;">${'{{quantity}}'}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">$${'{{price}}'}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">$${'{{subtotal}}'}</td>
         </tr>
-      {{/each}}
+      ${'{{/each}}'}
     </tbody>
   </table>
 
