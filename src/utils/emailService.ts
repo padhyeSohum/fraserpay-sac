@@ -1,4 +1,3 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -46,23 +45,13 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
   </div>
 
   <!-- Greeting -->
-  <p style="font-size: 18px; color: #333; margin-bottom: 20px; text-align: center;">Hey there! Your FraserPay account has been updated.</p>
+  <p style="font-size: 18px; color: #333; margin-bottom: 20px; text-align: center;">Hey there!</p>
 
   <!-- Email Title -->
-  <h2 style="font-size: 28px; font-weight: bold; color: #6f42c1; text-align: center; margin-bottom: 20px;">Balance Update Notification</h2>
+  <h2 style="font-size: 28px; font-weight: bold; color: #6f42c1; text-align: center; margin-bottom: 20px;">FraserPay Account Update</h2>
 
-  <!-- User Information -->
-  <div style="margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 6px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
-  </div>
-
-  <!-- Transaction Details -->
-  <div style="margin-bottom: 20px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> {{date}}</p>
-    <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> ${{addedAmount}}</p>
-  </div>
+  <!-- Message -->
+  <p style="font-size: 16px; color: #333; text-align: center; margin-bottom: 20px;">A change was made to your FraserPay account balance. Please log in to check the details.</p>
 
   <!-- Thank You Message -->
   <p style="font-size: 16px; color: #333; text-align: center; font-weight: bold;">Thank you for being part of Charity Week!</p>
@@ -77,89 +66,8 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
 export function renderTemplate(template: string, data: Record<string, any>): string {
   let renderedTemplate = template;
   
-  // First check if the data object contains all required template variables
-  // This ensures we don't have missing variables that could cause runtime errors
-  const variableRegex = /{{([^}]+)}}/g;
-  let match;
-  
-  // Create a new safe data object with defaults
-  const safeData = { ...data };
-  
-  // Look for variables in the template that might be missing
-  while ((match = variableRegex.exec(template)) !== null) {
-    const variableName = match[1].trim();
-    
-    // Skip conditional sections and loop sections
-    if (variableName.startsWith('#') || variableName.startsWith('/')) {
-      continue;
-    }
-    
-    // Make sure the variable exists in the data object, if not set a safe default
-    if (safeData[variableName] === undefined) {
-      console.warn(`Template variable ${variableName} is missing in data`, data);
-      
-      // Set default safe values based on variable name
-      if (variableName === 'addedAmount') {
-        safeData[variableName] = 0;
-      } else if (variableName.includes('price') || variableName.includes('subtotal') || variableName.includes('amount')) {
-        safeData[variableName] = 0;
-      } else {
-        safeData[variableName] = '';
-      }
-    }
-  }
-  
-  // Replace simple variables
-  Object.entries(safeData).forEach(([key, value]) => {
-    // Handle currency formatting for monetary values
-    if (key.includes('balance') || key.includes('amount') || key.includes('price') || key.includes('subtotal')) {
-      if (typeof value === 'number') {
-        renderedTemplate = renderedTemplate.replace(
-          new RegExp(`{{${key}}}`, 'g'), 
-          value.toFixed(2)
-        );
-      }
-    } else {
-      renderedTemplate = renderedTemplate.replace(
-        new RegExp(`{{${key}}}`, 'g'), 
-        String(value || '')
-      );
-    }
-  });
-  
-  // Handle conditional sections (very basic implementation)
-  const conditionalRegex = /{{#if ([^}]+)}}([\s\S]*?){{\/if}}/g;
-  renderedTemplate = renderedTemplate.replace(conditionalRegex, (match, condition, content) => {
-    return safeData[condition] ? content : '';
-  });
-  
-  // Handle loop sections (very basic implementation)
-  // This is a simplified version that only handles 'each' loops
-  const loopRegex = /{{#each ([^}]+)}}([\s\S]*?){{\/each}}/g;
-  renderedTemplate = renderedTemplate.replace(loopRegex, (match, arrayName, template) => {
-    if (!safeData[arrayName] || !Array.isArray(safeData[arrayName])) return '';
-    
-    return safeData[arrayName].map((item: any) => {
-      let itemContent = template;
-      Object.entries(item).forEach(([key, value]) => {
-        // Handle currency formatting for monetary values
-        if (key.includes('price') || key.includes('subtotal')) {
-          if (typeof value === 'number') {
-            itemContent = itemContent.replace(
-              new RegExp(`{{${key}}}`, 'g'), 
-              (value as number).toFixed(2)
-            );
-          }
-        } else {
-          itemContent = itemContent.replace(
-            new RegExp(`{{${key}}}`, 'g'), 
-            String(value || '')
-          );
-        }
-      });
-      return itemContent;
-    }).join('');
-  });
+  // Remove the complex variable checking since we no longer use specific variables
+  renderedTemplate = renderedTemplate.replace(/{{[^}]+}}/g, '');
   
   return renderedTemplate;
 }
