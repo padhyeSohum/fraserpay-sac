@@ -1,4 +1,3 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -20,7 +19,6 @@ export interface BalanceUpdateEmailData {
   userName: string;
   userEmail: string;
   studentNumber: string;
-  currentBalance: number;
   date: string;
   addedAmount?: number; // Optional for balance updates
 }
@@ -29,7 +27,6 @@ export interface TransactionReceiptEmailData {
   userName: string;
   userEmail: string;
   studentNumber: string;
-  currentBalance: number;
   date: string;
   totalAmount: number;
   products: Array<{
@@ -58,7 +55,6 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> ${{currentBalance}}</p>
   </div>
 
   <!-- Transaction Details -->
@@ -172,8 +168,7 @@ export async function queueEmail(to: string, subject: string, templateName: stri
 // Send balance update email
 export async function sendBalanceUpdateEmail(
   user: User,
-  amount: number,
-  newBalance: number
+  amount: number
 ): Promise<boolean> {
   if (!user.email) {
     console.log('⚠️ User has no email address, skipping balance update email');
@@ -188,13 +183,12 @@ export async function sendBalanceUpdateEmail(
   
   try {
     console.log('🔵 Preparing balance update email for user:', user.name);
-    console.log('Email:', user.email, 'Amount:', amount, 'New Balance:', newBalance);
+    console.log('Email:', user.email, 'Amount:', amount);
     
     const emailData: BalanceUpdateEmailData = {
       userName: user.name,
       userEmail: user.email,
       studentNumber: user.studentNumber,
-      currentBalance: newBalance,
       date: new Date().toLocaleDateString(),
       addedAmount: amount
     };
@@ -212,8 +206,7 @@ export async function sendBalanceUpdateEmail(
 // Send transaction receipt email - can be used for daily digest
 export async function sendTransactionReceiptEmail(
   user: User,
-  transactions: Transaction[],
-  currentBalance: number
+  transactions: Transaction[]
 ): Promise<boolean> {
   if (!user.email || transactions.length === 0) {
     console.log('User has no email or no transactions, skipping receipt email');
@@ -244,7 +237,6 @@ export async function sendTransactionReceiptEmail(
       userName: user.name,
       userEmail: user.email,
       studentNumber: user.studentNumber,
-      currentBalance: currentBalance,
       date: new Date().toLocaleDateString(),
       totalAmount: totalAmount,
       products: products

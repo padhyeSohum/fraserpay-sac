@@ -1,9 +1,7 @@
-
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { renderTemplate, BALANCE_UPDATE_TEMPLATE } from './emailService';
 
-// Export the transaction receipt template
 export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins', Arial, sans-serif; background: #f9f9f9; max-width: 650px; margin: auto; padding: 20px; border-radius: 8px; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
   <!-- Header Image with cornered style -->
   <div style="border-radius: 8px 8px 0 0; overflow: hidden; margin-bottom: 20px;">
@@ -21,7 +19,6 @@ export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins',
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> {{userName}}</p>
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> {{userEmail}}</p>
     <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> {{studentNumber}}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> ${{currentBalance}}</p>
   </div>
 
   <!-- Transaction Details -->
@@ -61,9 +58,6 @@ export const TRANSACTION_RECEIPT_TEMPLATE = `<div style="font-family: 'Poppins',
   <p style="text-align: center; font-size: 12px; color: #888;">FraserPay: Fast, Secure, Easy</p>
 </div>`;
 
-// This would typically be a Cloud Function triggered by a schedule or HTTP request
-// For now, we'll make it a function that can be called manually or on a schedule
-
 export async function processEmailQueue(): Promise<{
   processed: number;
   sent: number;
@@ -77,7 +71,6 @@ export async function processEmailQueue(): Promise<{
   };
   
   try {
-    // Get all pending emails
     const emailsCollection = collection(firestore, 'emails');
     const pendingEmailsQuery = query(
       emailsCollection,
@@ -95,21 +88,17 @@ export async function processEmailQueue(): Promise<{
     
     console.log(`Processing ${pendingEmailsSnap.size} pending emails`);
     
-    // Process each email
     for (const emailDoc of pendingEmailsSnap.docs) {
       result.processed++;
       const emailData = emailDoc.data();
       const emailRef = doc(firestore, 'emails', emailDoc.id);
       
       try {
-        // In a real system, this would use a proper email sending service
-        // For now, just log it and mark as sent for demonstration
         console.log(`Sending email to: ${emailData.to}`);
         console.log(`Subject: ${emailData.subject}`);
         console.log(`Template: ${emailData.templateName}`);
         console.log(`Email data:`, emailData.data);
         
-        // Get the correct template based on the templateName
         let template = '';
         if (emailData.templateName === 'balance_update') {
           template = BALANCE_UPDATE_TEMPLATE;
@@ -117,7 +106,6 @@ export async function processEmailQueue(): Promise<{
           template = TRANSACTION_RECEIPT_TEMPLATE;
         }
         
-        // Render the template with the provided data
         if (template) {
           const renderedHtml = renderTemplate(template, emailData.data);
           console.log('Email content would be:', renderedHtml.substring(0, 100) + '...');
@@ -125,14 +113,6 @@ export async function processEmailQueue(): Promise<{
           console.error(`Unknown template: ${emailData.templateName}`);
         }
         
-        // In a real system, we would call an email API here
-        // await emailSendingAPI.send({
-        //   to: emailData.to,
-        //   subject: emailData.subject,
-        //   html: renderedHtml
-        // });
-        
-        // Mark as sent
         await updateDoc(emailRef, {
           status: 'sent',
           sentAt: serverTimestamp()
@@ -143,7 +123,6 @@ export async function processEmailQueue(): Promise<{
       } catch (error) {
         console.error(`Error sending email ${emailDoc.id}:`, error);
         
-        // Mark as failed
         await updateDoc(emailRef, {
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -162,14 +141,11 @@ export async function processEmailQueue(): Promise<{
   }
 }
 
-// This would typically be scheduled in a Cloud Function
-// For development/testing, we can export this function to call manually
 export async function scheduleDailyEmailProcessing() {
   console.log('Starting scheduled daily email processing');
   return processEmailQueue();
 }
 
-// Add a function to manually trigger email processing on demand
 export async function triggerEmailProcessing() {
   console.log('🚀 Manually triggering email processing');
   return processEmailQueue();
