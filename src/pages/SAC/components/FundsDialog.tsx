@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +12,6 @@ import {
   DialogTitle, 
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { firestore } from '@/integrations/firebase/client';
-import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTransaction } from '@/contexts/transactions/hooks/useTransaction';
 import { triggerEmailProcessing } from '@/utils/emailProcessor';
 
