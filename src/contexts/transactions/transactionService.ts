@@ -1,3 +1,4 @@
+
 import { Transaction, CartItem, User, PaymentMethod } from '@/types';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, increment, serverTimestamp, limit } from 'firebase/firestore';
@@ -205,30 +206,38 @@ export const addFunds = async (
         balance: newBalance / 100,
         favoriteProducts: [],
         booths: userData.booth_access || [],
-        emailNotifications: userData.email_notifications || true
+        emailNotifications: userData.email_notifications !== false // Default to true if not specified
       };
       
-      // Only send email if it's a positive balance addition (not a refund)
+      // Only send email if it's a positive balance addition (not a refund) and user has an email
       if (amount > 0 && user.email) {
-        console.log("Sending balance update email to user:", user.email);
+        console.log("🔵 Sending balance update email to user:", user.email);
+        console.log("User email notifications setting:", user.emailNotifications);
+        
         const emailSent = await sendBalanceUpdateEmail(user, amount, newBalance / 100);
         console.log("Email queued result:", emailSent);
         
-        // Immediately trigger email processing to send the email
-        try {
-          const result = await triggerEmailProcessing();
-          console.log("Email processing triggered:", result);
-        } catch (processingError) {
-          console.error("Error triggering email processing:", processingError);
+        if (emailSent) {
+          // Immediately trigger email processing to send the email
+          try {
+            console.log("🚀 Triggering immediate email processing...");
+            const result = await triggerEmailProcessing();
+            console.log("✅ Email processing triggered:", result);
+          } catch (processingError) {
+            console.error("❌ Error triggering email processing:", processingError);
+          }
+        } else {
+          console.error("❌ Failed to queue email notification");
         }
       } else {
-        console.log("Skipping email notification:", {
+        console.log("⚠️ Skipping email notification:", {
           hasEmail: !!user.email,
-          amount
+          amount,
+          emailNotificationsEnabled: user.emailNotifications
         });
       }
     } catch (emailError) {
-      console.error("Error sending balance update email:", emailError);
+      console.error("❌ Error sending balance update email:", emailError);
       // Don't fail the transaction if email fails
     }
     

@@ -55,18 +55,18 @@ export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Aria
 
   <!-- User Information -->
   <div style="margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 6px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> ${'{{userName}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> ${'{{userEmail}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> ${'{{studentNumber}}'}</p>
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> $${'{{currentBalance}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>User Name:</strong> $\{'{{userName}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Email:</strong> $\{'{{userEmail}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Student Number:</strong> $\{'{{studentNumber}}'}</p>
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Current Balance:</strong> $$\{'{{currentBalance}}'}</p>
   </div>
 
   <!-- Transaction Details -->
   <div style="margin-bottom: 20px;">
-    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> ${'{{date}}'}</p>
-    ${'{{#if addedAmount}}'}
-    <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> $${'{{addedAmount}}'}</p>
-    ${'{{/if}}'}
+    <p style="font-size: 16px; color: #333; margin-bottom: 5px;"><strong>Transaction Date:</strong> $\{'{{date}}'}</p>
+    $\{'{{#if addedAmount}}'}
+    <p style="font-size: 18px; color: #28a745; margin-bottom: 15px;"><strong>Amount Added:</strong> $$\{'{{addedAmount}}'}</p>
+    $\{'{{/if}}'}
   </div>
 
   <!-- Thank You Message -->
@@ -140,17 +140,18 @@ export function renderTemplate(template: string, data: Record<string, any>): str
 // Queue an email to be sent
 export async function queueEmail(to: string, subject: string, templateName: string, data: Record<string, any>): Promise<boolean> {
   try {
-    console.log(`Queueing email to: ${to}, subject: ${subject}, data:`, data);
+    console.log(`🔵 Queueing email to: ${to}, subject: ${subject}`);
+    console.log('Email data:', data);
     
     if (!to || to.trim() === '') {
-      console.error('Cannot queue email: recipient email is missing');
+      console.error('❌ Cannot queue email: recipient email is missing');
       return false;
     }
     
     // In production, we would send this directly to a cloud function
     // For now, we'll just store it in Firestore and assume a function will process it
     const emailsCollection = collection(firestore, 'emails');
-    await addDoc(emailsCollection, {
+    const docRef = await addDoc(emailsCollection, {
       to,
       subject,
       templateName,
@@ -159,10 +160,10 @@ export async function queueEmail(to: string, subject: string, templateName: stri
       createdAt: serverTimestamp()
     });
     
-    console.log('Email queued successfully');
+    console.log('✅ Email queued successfully with ID:', docRef.id);
     return true;
   } catch (error) {
-    console.error('Error queueing email:', error);
+    console.error('❌ Error queueing email:', error);
     toast.error('Failed to queue email notification');
     return false;
   }
@@ -175,12 +176,19 @@ export async function sendBalanceUpdateEmail(
   newBalance: number
 ): Promise<boolean> {
   if (!user.email) {
-    console.log('User has no email address, skipping balance update email');
+    console.log('⚠️ User has no email address, skipping balance update email');
+    return false;
+  }
+  
+  // Check if user has email notifications enabled (default to true if not specified)
+  if (user.emailNotifications === false) {
+    console.log('⚠️ User has disabled email notifications, skipping email');
     return false;
   }
   
   try {
-    console.log('Preparing balance update email for user:', user.name);
+    console.log('🔵 Preparing balance update email for user:', user.name);
+    console.log('Email:', user.email, 'Amount:', amount, 'New Balance:', newBalance);
     
     const emailData: BalanceUpdateEmailData = {
       userName: user.name,
@@ -196,7 +204,7 @@ export async function sendBalanceUpdateEmail(
     
     return await queueEmail(user.email, subject, 'balance_update', emailData);
   } catch (error) {
-    console.error('Error sending balance update email:', error);
+    console.error('❌ Error sending balance update email:', error);
     return false;
   }
 }
@@ -209,6 +217,12 @@ export async function sendTransactionReceiptEmail(
 ): Promise<boolean> {
   if (!user.email || transactions.length === 0) {
     console.log('User has no email or no transactions, skipping receipt email');
+    return false;
+  }
+  
+  // Check if user has email notifications enabled (default to true if not specified)
+  if (user.emailNotifications === false) {
+    console.log('⚠️ User has disabled email notifications, skipping receipt email');
     return false;
   }
   
