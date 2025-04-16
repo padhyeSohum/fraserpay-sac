@@ -4,8 +4,6 @@ import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, update
 import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
-import { sendBalanceUpdateEmail } from '@/utils/emailService';
-import { triggerEmailProcessing } from '@/utils/emailProcessor';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
@@ -194,59 +192,13 @@ export const addFunds = async (
       sacMemberName: undefined
     };
     
-    // Send email notification for balance update
-    try {
-      const user: User = {
-        id: userId,
-        studentNumber: userData.student_number,
-        name: userData.name,
-        email: userData.email || '',
-        role: userData.role,
-        balance: newBalance / 100,
-        favoriteProducts: [],
-        booths: userData.booth_access || [],
-        emailNotifications: userData.email_notifications !== false // Default to true if not specified
-      };
-      
-      // Only send email if it's a positive balance addition (not a refund) and user has an email
-      if (amount > 0 && user.email) {
-        console.log("🔵 Sending balance update email to user:", user.email);
-        console.log("User email notifications setting:", user.emailNotifications);
-        
-        const emailSent = await sendBalanceUpdateEmail(user, amount);
-        console.log("Email queued result:", emailSent);
-        
-        if (emailSent) {
-          // Immediately trigger email processing to send the email
-          try {
-            console.log("🚀 Triggering immediate email processing...");
-            const result = await triggerEmailProcessing();
-            console.log("✅ Email processing triggered:", result);
-          } catch (processingError) {
-            console.error("❌ Error triggering email processing:", processingError);
-          }
-        } else {
-          console.error("❌ Failed to queue email notification");
-        }
-      } else {
-        console.log("⚠️ Skipping email notification:", {
-          hasEmail: !!user.email,
-          amount,
-          emailNotificationsEnabled: user.emailNotifications
-        });
-      }
-    } catch (emailError) {
-      console.error("❌ Error sending balance update email:", emailError);
-      // Don't fail the transaction if email fails
-    }
-    
     toast.success(`${amount >= 0 ? 'Added' : 'Refunded'} $${Math.abs(amount).toFixed(2)} ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
     console.log("Funds processed successfully:", newTransaction);
     
     return { 
       success: true, 
       transaction: newTransaction, 
-      updatedBalance: newBalance / 100
+      updatedBalance: newBalance / 100 // Convert back to dollars for UI
     };
   } catch (error) {
     console.error('Error processing funds:', error);
@@ -376,7 +328,7 @@ export const processPurchase = async (
       
       await updateDoc(boothRef, {
         sales: newSales,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString() // Add timestamp to trigger updates
       });
       
       console.log('Booth sales updated:', {

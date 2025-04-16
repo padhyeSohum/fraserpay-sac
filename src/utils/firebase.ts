@@ -1,3 +1,4 @@
+
 import { User, Booth, Product, Transaction } from '@/types';
 import { DocumentData } from 'firebase/firestore';
 
@@ -11,8 +12,7 @@ export const transformFirebaseUser = (dbUser: DocumentData): User => {
     role: dbUser.role,
     balance: (dbUser.tickets || 0) / 100, // Database stores in cents
     favoriteProducts: [],
-    booths: dbUser.booth_access || [],
-    emailNotifications: dbUser.email_notifications !== false // Default to true if not specified
+    booths: dbUser.booth_access || []
   };
 };
 
@@ -25,8 +25,7 @@ export const transformUserToFirebase = (user: User): DocumentData => {
     email: user.email,
     role: user.role,
     tickets: Math.round(user.balance * 100), // Store in cents
-    booth_access: user.booths || [],
-    email_notifications: user.emailNotifications
+    booth_access: user.booths || []
   };
 };
 

@@ -12,8 +12,7 @@ import {
   DialogTitle, 
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useTransaction } from '@/contexts/transactions/hooks/useTransaction';
-import { triggerEmailProcessing } from '@/utils/emailProcessor';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FundsDialogProps {
   isOpen: boolean;
@@ -43,10 +42,11 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   const [amount, setAmount] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
-  const { findUserByStudentNumber } = useTransaction();
 
+  // Sync studentId with local state when it changes
   useEffect(() => {
     setLocalStudentId(studentId);
+    // Reset student info when dialog opens/closes
     if (!isOpen) {
       setStudentNumber('');
       setAmount('');
@@ -63,15 +63,25 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     setIsSearching(true);
     
     try {
-      const user = await findUserByStudentNumber(studentNumber);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('student_number', studentNumber)
+        .single();
       
-      if (user) {
-        setLocalStudentId(user.id);
+      if (error) {
+        console.error('Error finding student:', error);
+        toast.error('Error finding student');
+        return;
+      }
+      
+      if (data) {
+        setLocalStudentId(data.id);
         setFoundStudent({
-          name: user.name,
-          balance: user.balance
+          name: data.name,
+          balance: data.tickets / 100
         });
-        toast.success(`Found student: ${user.name}`);
+        toast.success(`Found student: ${data.name}`);
       } else {
         toast.error('No student found with that student number');
       }
@@ -88,27 +98,18 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       try {
         await onSubmit(localStudentId, parseFloat(amount));
         
-        try {
-          console.log('Processing email notifications after funds transaction');
-          // Explicitly trigger email processing after a transaction
-          await triggerEmailProcessing();
-        } catch (emailError) {
-          console.error('Error processing email notifications:', emailError);
-        }
-        
+        // Clear form fields after successful submission
         setAmount('');
         
+        // If this was a new student search (not pre-filled), reset the student info
         if (!readOnlyId) {
           setStudentNumber('');
           setFoundStudent(null);
           setLocalStudentId('');
         }
         
-        // Close the dialog after successful submission
-        onOpenChange(false);
       } catch (error) {
         console.error('Error submitting transaction:', error);
-        toast.error('Failed to process transaction');
       }
     }
   };
