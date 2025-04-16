@@ -1,4 +1,3 @@
-
 export type UserRole = 'student' | 'booth' | 'sac';
 
 export interface User {
@@ -10,6 +9,7 @@ export interface User {
   balance: number;
   favoriteProducts?: string[];
   booths?: string[];
+  emailNotifications?: boolean;
 }
 
 export interface Booth {

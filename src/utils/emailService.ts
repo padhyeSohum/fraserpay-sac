@@ -41,7 +41,7 @@ export interface TransactionReceiptEmailData {
 }
 
 // Templates as strings - in production these would be stored elsewhere
-const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Arial, sans-serif; background: #f9f9f9; max-width: 650px; margin: auto; padding: 20px; border-radius: 8px; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+export const BALANCE_UPDATE_TEMPLATE = `<div style="font-family: 'Poppins', Arial, sans-serif; background: #f9f9f9; max-width: 650px; margin: auto; padding: 20px; border-radius: 8px; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
   <!-- Header Image with cornered style -->
   <div style="border-radius: 8px 8px 0 0; overflow: hidden; margin-bottom: 20px;">
     <img src="https://i.imgur.com/hGzP8MC.png" alt="FraserPay Banner" style="width: 100%; height: auto; display: block;" />
