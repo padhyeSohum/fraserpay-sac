@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
         
         try {
           console.log('Processing email notifications after funds transaction');
+          // Explicitly trigger email processing after a transaction
           await triggerEmailProcessing();
         } catch (emailError) {
           console.error('Error processing email notifications:', emailError);
@@ -101,8 +103,12 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           setFoundStudent(null);
           setLocalStudentId('');
         }
+        
+        // Close the dialog after successful submission
+        onOpenChange(false);
       } catch (error) {
         console.error('Error submitting transaction:', error);
+        toast.error('Failed to process transaction');
       }
     }
   };

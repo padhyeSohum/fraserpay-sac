@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';

@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { renderTemplate, BALANCE_UPDATE_TEMPLATE } from './emailService';
