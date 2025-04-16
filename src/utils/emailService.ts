@@ -21,7 +21,7 @@ export interface BalanceUpdateEmailData {
   userEmail: string;
   studentNumber: string;
   date: string;
-  addedAmount?: number; // Optional for balance updates
+  addedAmount: number; // Changed from optional to required
 }
 
 export interface TransactionReceiptEmailData {
@@ -82,6 +82,10 @@ export function renderTemplate(template: string, data: Record<string, any>): str
   const variableRegex = /{{([^}]+)}}/g;
   let match;
   
+  // Create a new safe data object with defaults
+  const safeData = { ...data };
+  
+  // Look for variables in the template that might be missing
   while ((match = variableRegex.exec(template)) !== null) {
     const variableName = match[1].trim();
     
@@ -91,21 +95,22 @@ export function renderTemplate(template: string, data: Record<string, any>): str
     }
     
     // Make sure the variable exists in the data object, if not set a safe default
-    if (data[variableName] === undefined) {
+    if (safeData[variableName] === undefined) {
       console.warn(`Template variable ${variableName} is missing in data`, data);
+      
       // Set default safe values based on variable name
       if (variableName === 'addedAmount') {
-        data[variableName] = 0;
+        safeData[variableName] = 0;
       } else if (variableName.includes('price') || variableName.includes('subtotal') || variableName.includes('amount')) {
-        data[variableName] = 0;
+        safeData[variableName] = 0;
       } else {
-        data[variableName] = '';
+        safeData[variableName] = '';
       }
     }
   }
   
   // Replace simple variables
-  Object.entries(data).forEach(([key, value]) => {
+  Object.entries(safeData).forEach(([key, value]) => {
     // Handle currency formatting for monetary values
     if (key.includes('balance') || key.includes('amount') || key.includes('price') || key.includes('subtotal')) {
       if (typeof value === 'number') {
@@ -125,16 +130,16 @@ export function renderTemplate(template: string, data: Record<string, any>): str
   // Handle conditional sections (very basic implementation)
   const conditionalRegex = /{{#if ([^}]+)}}([\s\S]*?){{\/if}}/g;
   renderedTemplate = renderedTemplate.replace(conditionalRegex, (match, condition, content) => {
-    return data[condition] ? content : '';
+    return safeData[condition] ? content : '';
   });
   
   // Handle loop sections (very basic implementation)
   // This is a simplified version that only handles 'each' loops
   const loopRegex = /{{#each ([^}]+)}}([\s\S]*?){{\/each}}/g;
   renderedTemplate = renderedTemplate.replace(loopRegex, (match, arrayName, template) => {
-    if (!data[arrayName] || !Array.isArray(data[arrayName])) return '';
+    if (!safeData[arrayName] || !Array.isArray(safeData[arrayName])) return '';
     
-    return data[arrayName].map((item: any) => {
+    return safeData[arrayName].map((item: any) => {
       let itemContent = template;
       Object.entries(item).forEach(([key, value]) => {
         // Handle currency formatting for monetary values
