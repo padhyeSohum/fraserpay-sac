@@ -113,11 +113,14 @@ export async function processEmailQueue(): Promise<{
         } else if (emailData.templateName === 'transaction_receipt') {
           template = TRANSACTION_RECEIPT_TEMPLATE;
         }
-        // Add other templates as needed...
         
         // Render the template with the provided data
-        const renderedHtml = renderTemplate(template, emailData.data);
-        console.log('Email content would be:', renderedHtml.substring(0, 100) + '...');
+        if (template) {
+          const renderedHtml = renderTemplate(template, emailData.data);
+          console.log('Email content would be:', renderedHtml.substring(0, 100) + '...');
+        } else {
+          console.error(`Unknown template: ${emailData.templateName}`);
+        }
         
         // In a real system, we would call an email API here
         // await emailSendingAPI.send({
@@ -156,8 +159,14 @@ export async function processEmailQueue(): Promise<{
 }
 
 // This would typically be scheduled in a Cloud Function
-// For development/testing, you can export this function to call manually
+// For development/testing, we can export this function to call manually
 export async function scheduleDailyEmailProcessing() {
   console.log('Starting scheduled daily email processing');
+  return processEmailQueue();
+}
+
+// Add a function to manually trigger email processing on demand
+export async function triggerEmailProcessing() {
+  console.log('Manually triggering email processing');
   return processEmailQueue();
 }

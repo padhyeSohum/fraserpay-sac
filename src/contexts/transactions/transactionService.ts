@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 import { sendBalanceUpdateEmail } from '@/utils/emailService';
+import { triggerEmailProcessing } from '@/utils/emailProcessor';
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
@@ -199,17 +200,32 @@ export const addFunds = async (
         id: userId,
         studentNumber: userData.student_number,
         name: userData.name,
-        email: userData.email,
+        email: userData.email || '',
         role: userData.role,
-        balance: newBalance / 100, // Convert to dollars
+        balance: newBalance / 100,
         favoriteProducts: [],
-        booths: userData.booth_access || []
+        booths: userData.booth_access || [],
+        emailNotifications: userData.email_notifications || true
       };
       
       // Only send email if it's a positive balance addition (not a refund)
-      if (amount > 0) {
-        console.log("Sending balance update email to user");
-        await sendBalanceUpdateEmail(user, amount, newBalance / 100);
+      if (amount > 0 && user.email) {
+        console.log("Sending balance update email to user:", user.email);
+        const emailSent = await sendBalanceUpdateEmail(user, amount, newBalance / 100);
+        console.log("Email queued result:", emailSent);
+        
+        // Immediately trigger email processing to send the email
+        try {
+          const result = await triggerEmailProcessing();
+          console.log("Email processing triggered:", result);
+        } catch (processingError) {
+          console.error("Error triggering email processing:", processingError);
+        }
+      } else {
+        console.log("Skipping email notification:", {
+          hasEmail: !!user.email,
+          amount
+        });
       }
     } catch (emailError) {
       console.error("Error sending balance update email:", emailError);
@@ -222,7 +238,7 @@ export const addFunds = async (
     return { 
       success: true, 
       transaction: newTransaction, 
-      updatedBalance: newBalance / 100 // Convert back to dollars for UI
+      updatedBalance: newBalance / 100
     };
   } catch (error) {
     console.error('Error processing funds:', error);
@@ -352,7 +368,7 @@ export const processPurchase = async (
       
       await updateDoc(boothRef, {
         sales: newSales,
-        updated_at: new Date().toISOString() // Add timestamp to trigger updates
+        updated_at: new Date().toISOString()
       });
       
       console.log('Booth sales updated:', {

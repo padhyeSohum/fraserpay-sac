@@ -1,3 +1,4 @@
+
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { User, Transaction } from '@/types';
@@ -139,7 +140,12 @@ export function renderTemplate(template: string, data: Record<string, any>): str
 // Queue an email to be sent
 export async function queueEmail(to: string, subject: string, templateName: string, data: Record<string, any>): Promise<boolean> {
   try {
-    console.log(`Queueing email to: ${to}, subject: ${subject}`);
+    console.log(`Queueing email to: ${to}, subject: ${subject}, data:`, data);
+    
+    if (!to || to.trim() === '') {
+      console.error('Cannot queue email: recipient email is missing');
+      return false;
+    }
     
     // In production, we would send this directly to a cloud function
     // For now, we'll just store it in Firestore and assume a function will process it
@@ -174,6 +180,8 @@ export async function sendBalanceUpdateEmail(
   }
   
   try {
+    console.log('Preparing balance update email for user:', user.name);
+    
     const emailData: BalanceUpdateEmailData = {
       userName: user.name,
       userEmail: user.email,
@@ -183,6 +191,7 @@ export async function sendBalanceUpdateEmail(
       addedAmount: amount
     };
     
+    console.log('Email data prepared:', emailData);
     const subject = `FraserPay: Your Balance Was Updated`;
     
     return await queueEmail(user.email, subject, 'balance_update', emailData);

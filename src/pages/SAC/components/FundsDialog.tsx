@@ -12,7 +12,9 @@ import {
   DialogTitle, 
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useTransaction } from '@/contexts/transactions/hooks/useTransaction';
 
 interface FundsDialogProps {
   isOpen: boolean;
@@ -42,6 +44,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   const [amount, setAmount] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
+  const { findUserByStudentNumber } = useTransaction();
 
   // Sync studentId with local state when it changes
   useEffect(() => {
@@ -63,25 +66,16 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
     setIsSearching(true);
     
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('student_number', studentNumber)
-        .single();
+      // Use the findUserByStudentNumber function from useTransaction hook
+      const user = await findUserByStudentNumber(studentNumber);
       
-      if (error) {
-        console.error('Error finding student:', error);
-        toast.error('Error finding student');
-        return;
-      }
-      
-      if (data) {
-        setLocalStudentId(data.id);
+      if (user) {
+        setLocalStudentId(user.id);
         setFoundStudent({
-          name: data.name,
-          balance: data.tickets / 100
+          name: user.name,
+          balance: user.balance
         });
-        toast.success(`Found student: ${data.name}`);
+        toast.success(`Found student: ${user.name}`);
       } else {
         toast.error('No student found with that student number');
       }
