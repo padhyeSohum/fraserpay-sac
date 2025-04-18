@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
@@ -21,6 +21,12 @@ const auth = getAuth(app);
 const firestore = getFirestore(app);
 const functions = getFunctions(app);
 const storage = getStorage(app);
+
+// Create Google Auth Provider with domain restriction
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  hd: 'pdsb.net' // Restrict to this specific domain
+});
 
 // Enable local emulators for development - using conditional checks to prevent connection errors
 if (import.meta.env.DEV) {

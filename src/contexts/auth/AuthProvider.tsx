@@ -9,6 +9,7 @@ import { AuthContextType } from './types';
 import { fetchUserData } from './authUtils';
 import { 
   loginUser, 
+  loginWithGoogle,
   registerUser, 
   logoutUser, 
   verifySACAccess, 
@@ -106,6 +107,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogleProvider = async () => {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      // Navigation is handled in the auth state change listener
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (studentNumber: string, name: string, email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
@@ -192,6 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle: loginWithGoogleProvider,
         register,
         logout,
         verifySACPin,

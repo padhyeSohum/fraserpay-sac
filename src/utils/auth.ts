@@ -1,7 +1,7 @@
 
 import { toast } from 'sonner';
-import { auth, clearFirebaseAuth } from '@/integrations/firebase/client';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, clearFirebaseAuth, googleProvider } from '@/integrations/firebase/client';
+import { signInWithEmailAndPassword, signInWithPopup, AuthError } from 'firebase/auth';
 
 // Utility to force reset authentication state - useful when stuck
 export const resetAuthState = async () => {
@@ -29,6 +29,51 @@ export const checkSessionExists = async () => {
   } catch (error) {
     console.error("Error checking session:", error);
     return false;
+  }
+};
+
+// Extract student number from email (assumes format: studentnumber@pdsb.net)
+export const extractStudentNumberFromEmail = (email: string): string => {
+  if (!email) return '';
+  
+  // Extract everything before the @ symbol
+  const match = email.match(/^([^@]+)@/);
+  return match ? match[1] : '';
+};
+
+// Validate if email is from pdsb.net domain
+export const isPdsbEmail = (email: string): boolean => {
+  return email.endsWith('@pdsb.net');
+};
+
+// Sign in with Google
+export const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    
+    // Verify email domain after authentication
+    if (!isPdsbEmail(user.email || '')) {
+      await auth.signOut();
+      toast.error("Only @pdsb.net email addresses are allowed");
+      return null;
+    }
+    
+    return user;
+  } catch (error) {
+    const authError = error as AuthError;
+    console.error("Google sign in failed:", authError);
+    
+    // Handle specific error codes
+    if (authError.code === 'auth/popup-closed-by-user') {
+      toast.error("Sign-in cancelled. Please try again.");
+    } else if (authError.code === 'auth/cancelled-popup-request') {
+      // This is normal when multiple popups are attempted, don't show error
+    } else {
+      toast.error("Google sign-in failed. Please try again.");
+    }
+    
+    return null;
   }
 };
 

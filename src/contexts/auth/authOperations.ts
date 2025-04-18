@@ -1,14 +1,17 @@
+
 import { auth, firestore } from '@/integrations/firebase/client';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  UserCredential
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { User } from '@/types';
 import { fetchUserData } from './authUtils';
 import { SAC_PIN } from './types';
+import { signInWithGoogle, extractStudentNumberFromEmail } from '@/utils/auth';
 
 // Maximum retry attempts for network operations
 const MAX_RETRIES = 3;
@@ -28,7 +31,7 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = MAX_RETRIES):
   }
 };
 
-// Login functionality
+// Login functionality with traditional method
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
     // First, find the user by student number
@@ -66,6 +69,95 @@ export const loginUser = async (studentNumber: string, password: string): Promis
       toast.error(error instanceof Error ? error.message : 'Login failed');
     }
     console.error(error);
+    return null;
+  }
+};
+
+// Google Sign-In functionality
+export const loginWithGoogle = async (): Promise<User | null> => {
+  try {
+    // Attempt to sign in with Google
+    const googleUser = await signInWithGoogle();
+    if (!googleUser) {
+      return null; // User cancelled or sign-in failed
+    }
+    
+    const email = googleUser.email;
+    if (!email) {
+      toast.error('Failed to get email from Google account');
+      return null;
+    }
+    
+    // Extract student number from email
+    const studentNumber = extractStudentNumberFromEmail(email);
+    if (!studentNumber) {
+      toast.error('Could not extract student number from email');
+      return null;
+    }
+    
+    // Check if user exists in our database
+    const usersRef = collection(firestore, 'users');
+    
+    // Try to find by Google UID first
+    let userQuery = query(usersRef, where('uid', '==', googleUser.uid));
+    let querySnapshot = await withRetry(async () => {
+      return await getDocs(userQuery);
+    });
+    
+    // Then try by student number if not found by UID
+    if (querySnapshot.empty) {
+      userQuery = query(usersRef, where('student_number', '==', studentNumber));
+      querySnapshot = await withRetry(async () => {
+        return await getDocs(userQuery);
+      });
+    }
+    
+    // User exists in database - update record with Google UID if needed
+    if (!querySnapshot.empty) {
+      const userData = querySnapshot.docs[0].data();
+      const userId = querySnapshot.docs[0].id;
+      
+      // Update user data with Google UID if it's not already set
+      if (userData.uid !== googleUser.uid) {
+        await withRetry(async () => {
+          return await updateDoc(doc(firestore, 'users', userId), {
+            uid: googleUser.uid,
+            email: email // Update email to Google email
+          });
+        });
+      }
+      
+      toast.success('Login successful');
+      
+      // Return user data
+      return await fetchUserData(userId);
+    } else {
+      // New user - create account
+      // Generate QR code for the user
+      const qrCode = `USER:${googleUser.uid}`;
+      
+      // Create user profile in Firestore
+      await withRetry(async () => {
+        return await setDoc(doc(firestore, 'users', googleUser.uid), {
+          name: googleUser.displayName || 'Student',
+          email: email,
+          uid: googleUser.uid,
+          student_number: studentNumber,
+          role: 'student',
+          tickets: 0, // Start with zero balance
+          booth_access: [], // No booth access initially
+          qr_code: qrCode,
+          created_at: new Date().toISOString()
+        });
+      });
+      
+      toast.success('New account created successfully');
+      return await fetchUserData(googleUser.uid);
+    }
+    
+  } catch (error: any) {
+    console.error('Error in Google sign-in:', error);
+    toast.error(error instanceof Error ? error.message : 'Google sign-in failed');
     return null;
   }
 };
@@ -117,6 +209,7 @@ export const registerUser = async (
       return await setDoc(doc(firestore, 'users', userCredential.user.uid), {
         name,
         email,
+        uid: userCredential.user.uid,
         student_number: studentNumber,
         role: 'student',
         tickets: existingTickets, // Transfer existing balance

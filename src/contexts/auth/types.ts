@@ -11,6 +11,7 @@ export interface AuthContextType {
   isLoading: boolean;
   session: FirebaseUser | null; // Changed from Session to FirebaseUser
   login: (studentNumber: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>; // Added Google sign-in method
   register: (studentNumber: string, name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<boolean>;
   verifySACPin: (pin: string) => Promise<boolean>;
