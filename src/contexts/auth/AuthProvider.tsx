@@ -15,7 +15,6 @@ import {
   verifyBoothAccess 
 } from './authOperations';
 
-// Create the context with undefined initial value
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -26,7 +25,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Log auth state for debugging
   useEffect(() => {
     console.log('Auth state:', { 
       isLoading, 
@@ -41,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
-    // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.uid);
       
@@ -59,7 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(userData);
             } else {
               console.warn("No user data found for authenticated user:", firebaseUser.uid);
-              // This could happen with Google sign-in if Firestore write failed but auth succeeded
             }
             
             setIsLoading(false);
@@ -80,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthInitialized(true);
         }
         
-        // Only navigate if we're not already on login or register
         if (location.pathname !== '/login' && location.pathname !== '/register') {
           console.log("User signed out, redirecting to login");
           navigate('/login');
@@ -88,14 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Add timeout to ensure auth always initializes
     authTimeout = setTimeout(() => {
       if (mounted && !authInitialized) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
         setIsLoading(false);
         setAuthInitialized(true);
       }
-    }, 3000); // 3 second timeout
+    }, 3000);
 
     return () => {
       mounted = false;
@@ -108,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const loggedInUser = await loginUser(studentNumber, password);
-      // Navigation is handled in the auth state change listener
     } finally {
       setIsLoading(false);
     }
@@ -120,8 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userData = await loginWithGoogleOperation();
       console.log("loginWithGoogle completed, user data:", userData?.id);
       
-      // If successful login but the auth state listener hasn't picked it up yet,
-      // manually set the user data and return it
       if (userData && !user) {
         console.log("Setting user data from Google login");
         setUser(userData);
@@ -164,7 +155,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const success = await verifySACAccess(pin, user.id);
       if (success) {
-        // Update local user state
         setUser(prev => prev ? { ...prev, role: 'sac' } : null);
         navigate('/sac/dashboard');
       }
@@ -182,7 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await verifyBoothAccess(pin, user.id, user.booths);
       
       if (result.success && result.boothId) {
-        // Update local user state
         setUser(prev => {
           if (!prev) return null;
           const updatedBooths = prev.booths?.includes(result.boothId!) 
