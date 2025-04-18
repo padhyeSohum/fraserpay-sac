@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { firestore } from '@/integrations/firebase/client';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -95,11 +94,22 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
       await deleteDoc(doc(firestore, 'sac_authorized_users', userId));
       
       // Verify the user was actually deleted
-      const userRef = doc(firestore, 'sac_authorized_users', userId);
       const q = query(collection(firestore, 'sac_authorized_users'), where('email', '==', userEmail));
       const verifySnapshot = await getDocs(q);
       
       if (verifySnapshot.empty) {
+        // Find and update the user's role in the users collection
+        const usersRef = collection(firestore, 'users');
+        const userQuery = query(usersRef, where('email', '==', userEmail));
+        const userSnapshot = await getDocs(userQuery);
+        
+        if (!userSnapshot.empty) {
+          const userDoc = userSnapshot.docs[0];
+          await updateDoc(doc(firestore, 'users', userDoc.id), {
+            role: 'student'
+          });
+        }
+
         // User was successfully removed
         toast.success('Access for user has been revoked');
         
