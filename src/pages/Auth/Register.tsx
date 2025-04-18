@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -96,10 +97,10 @@ const Register = () => {
     setIsGoogleLoading(true);
     try {
       console.log("Starting Google sign-in process from Register page");
-      const result = await loginWithGoogle();
-      console.log("Google sign-in completed, result:", !!result);
+      const userData = await loginWithGoogle();
+      console.log("Google sign-in completed, result:", !!userData);
       
-      if (result) {
+      if (userData) {
         console.log("Google sign-in successful, redirecting to dashboard");
         navigate('/dashboard', { replace: true });
       }

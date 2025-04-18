@@ -9,13 +9,12 @@ export const useAuth = (): AuthContextType => {
   if (context === undefined) {
     console.error('Auth context is undefined, Provider may be missing');
     // Instead of immediately throwing, log the error and return a default state
-    // This allows the app to continue rendering even when auth is unavailable
     return {
       user: null,
       isAuthenticated: false,
       isLoading: false,
       login: async () => {},
-      loginWithGoogle: async () => {}, // Add the missing loginWithGoogle function
+      loginWithGoogle: async () => null, // Updated to match the correct return type
       register: async () => false,
       logout: async () => false,
       verifyBoothPin: async () => ({ success: false }),

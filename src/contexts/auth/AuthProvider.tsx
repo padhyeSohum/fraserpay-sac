@@ -8,7 +8,7 @@ import { AuthContextType } from './types';
 import { fetchUserData } from './authUtils';
 import { 
   loginUser, 
-  loginWithGoogle,
+  loginWithGoogle as loginWithGoogleOperation,
   registerUser, 
   logoutUser, 
   verifySACAccess, 
@@ -114,10 +114,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithGoogleProvider = async () => {
+  const loginWithGoogleProvider = async (): Promise<User | null> => {
     setIsLoading(true);
     try {
-      const userData = await loginWithGoogle();
+      const userData = await loginWithGoogleOperation();
       console.log("loginWithGoogle completed, user data:", userData?.id);
       
       // If successful login but the auth state listener hasn't picked it up yet,

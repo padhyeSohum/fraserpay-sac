@@ -76,12 +76,12 @@ const Login = () => {
     setIsGoogleLoading(true);
     try {
       console.log("Starting Google sign-in process from UI");
-      const result = await loginWithGoogle();
-      console.log("Google sign-in completed, result:", !!result);
+      const userData = await loginWithGoogle();
+      console.log("Google sign-in completed, result:", !!userData);
       
       // If we have a result, manually check auth state and redirect if needed
       // This is a fallback in case the auth state listener isn't working
-      if (result) {
+      if (userData) {
         console.log("Google sign-in successful, redirecting to dashboard");
         navigate('/dashboard', { replace: true });
       }
