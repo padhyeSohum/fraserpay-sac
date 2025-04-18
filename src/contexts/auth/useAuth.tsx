@@ -15,6 +15,7 @@ export const useAuth = (): AuthContextType => {
       isAuthenticated: false,
       isLoading: false,
       login: async () => {},
+      loginWithGoogle: async () => {}, // Add the missing loginWithGoogle function
       register: async () => false,
       logout: async () => false,
       verifyBoothPin: async () => ({ success: false }),
