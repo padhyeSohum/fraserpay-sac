@@ -23,7 +23,8 @@ const Settings = () => {
   const {
     user,
     logout,
-    verifySACPin
+    verifySACPin,
+    loginWithGoogle
   } = useAuth();
   const {
     toast
@@ -33,18 +34,20 @@ const Settings = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   
-  const handleSACAccess = () => {
-    // If user is signed in with Google, check authorization directly
-    if (user?.email && SAC_ADMINS.some(admin => admin.username === user.email)) {
-      verifySACPin("123456"); // Use default PIN for authorized Google users
-      return;
-    }
+  const handleSACAccess = async () => {
+    // Directly trigger Google Sign-In for SAC access
+    const googleUser = await loginWithGoogle();
     
-    // Otherwise show login dialog
-    setIsOpen(true);
-    setUsername('');
-    setPassword('');
-    setLoginError('');
+    if (googleUser) {
+      // If Google sign-in is successful, the auth context will handle navigation to SAC dashboard
+      // No need for additional logic here
+    } else {
+      toast({
+        title: "SAC Access",
+        description: "Could not verify SAC access. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleLogin = () => {
