@@ -47,8 +47,8 @@ const Settings = () => {
         if (googleUser.role === 'sac') {
           navigate('/sac/dashboard');
           toast({
-            title: "Success",
-            description: "SAC access granted. Welcome to the SAC dashboard.",
+            title: "SAC Access Granted",
+            description: "SAC access granted",
           });
         } else {
           toast({
