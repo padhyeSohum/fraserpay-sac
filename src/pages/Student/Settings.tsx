@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,13 @@ const Settings = () => {
   const [loginError, setLoginError] = useState('');
   
   const handleSACAccess = () => {
+    // If user is signed in with Google, check authorization directly
+    if (user?.email && SAC_ADMINS.some(admin => admin.username === user.email)) {
+      verifySACPin("123456"); // Use default PIN for authorized Google users
+      return;
+    }
+    
+    // Otherwise show login dialog
     setIsOpen(true);
     setUsername('');
     setPassword('');

@@ -1,4 +1,3 @@
-
 import { auth, firestore } from '@/integrations/firebase/client';
 import { 
   createUserWithEmailAndPassword, 
@@ -13,17 +12,14 @@ import { fetchUserData } from './authUtils';
 import { SAC_PIN } from './types';
 import { signInWithGoogle, extractStudentNumberFromEmail } from '@/utils/auth';
 
-// Maximum retry attempts for network operations
 const MAX_RETRIES = 3;
 
-// Helper function to retry operations on network failure
 const withRetry = async <T>(operation: () => Promise<T>, retries = MAX_RETRIES): Promise<T> => {
   try {
     return await operation();
   } catch (error: any) {
     if (error.code === 'auth/network-request-failed' && retries > 0) {
       console.log(`Network request failed, retrying... (${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`);
-      // Wait for a moment before retrying
       await new Promise(resolve => setTimeout(resolve, 1000));
       return withRetry(operation, retries - 1);
     }
@@ -31,10 +27,12 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = MAX_RETRIES):
   }
 };
 
-// Login functionality with traditional method
+const SAC_AUTHORIZED_EMAILS = [
+  '909957@pdsb.net'
+];
+
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
-    // First, find the user by student number
     const usersRef = collection(firestore, 'users');
     const q = query(usersRef, where('student_number', '==', studentNumber));
     
@@ -48,7 +46,6 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     
     const userData = querySnapshot.docs[0].data();
     
-    // Now sign in with email and password
     const userCredential = await withRetry(async () => {
       return await signInWithEmailAndPassword(auth, userData.email, password);
     });
@@ -59,9 +56,7 @@ export const loginUser = async (studentNumber: string, password: string): Promis
     
     toast.success('Login successful');
     
-    // Fetch and return user data
     return await fetchUserData(userCredential.user.uid);
-    
   } catch (error: any) {
     if (error.code === 'auth/network-request-failed') {
       toast.error('Network connection error. Please check your internet connection and try again.');
@@ -73,15 +68,13 @@ export const loginUser = async (studentNumber: string, password: string): Promis
   }
 };
 
-// Google Sign-In functionality
 export const loginWithGoogle = async (): Promise<User | null> => {
   try {
     console.log('Starting Google sign-in process');
-    // Attempt to sign in with Google
     const googleUser = await signInWithGoogle();
     if (!googleUser) {
       console.log('Google sign-in failed or was cancelled by user');
-      return null; // User cancelled or sign-in failed
+      return null;
     }
     
     const email = googleUser.email;
@@ -92,7 +85,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     console.log('Google sign-in successful, email:', email);
     
-    // Extract student number from email
     const studentNumber = extractStudentNumberFromEmail(email);
     if (!studentNumber) {
       toast.error('Could not extract student number from email');
@@ -101,16 +93,13 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     console.log('Extracted student number:', studentNumber);
     
-    // Check if user exists in our database
     const usersRef = collection(firestore, 'users');
     
-    // Try to find by Google UID first
     let userQuery = query(usersRef, where('uid', '==', googleUser.uid));
     let querySnapshot = await withRetry(async () => {
       return await getDocs(userQuery);
     });
     
-    // Then try by student number if not found by UID
     if (querySnapshot.empty) {
       console.log('User not found by UID, trying student number lookup');
       userQuery = query(usersRef, where('student_number', '==', studentNumber));
@@ -121,34 +110,28 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     let userData: User | null = null;
     
-    // User exists in database - update record with Google UID if needed
     if (!querySnapshot.empty) {
       console.log('Found existing user record');
       const userDoc = querySnapshot.docs[0].data();
       const userId = querySnapshot.docs[0].id;
       
-      // Update user data with Google UID if it's not already set
       if (userDoc.uid !== googleUser.uid) {
         console.log('Updating existing user with Google UID');
         await withRetry(async () => {
           return await updateDoc(doc(firestore, 'users', userId), {
             uid: googleUser.uid,
-            email: email // Update email to Google email
+            email: email
           });
         });
       }
       
       toast.success('Login successful');
       
-      // Return user data
       userData = await fetchUserData(userId);
     } else {
-      // New user - create account
       console.log('Creating new user account');
-      // Generate QR code for the user
       const qrCode = `USER:${googleUser.uid}`;
       
-      // Create user profile in Firestore
       await withRetry(async () => {
         return await setDoc(doc(firestore, 'users', googleUser.uid), {
           name: googleUser.displayName || 'Student',
@@ -156,8 +139,8 @@ export const loginWithGoogle = async (): Promise<User | null> => {
           uid: googleUser.uid,
           student_number: studentNumber,
           role: 'student',
-          tickets: 0, // Start with zero balance
-          booth_access: [], // No booth access initially
+          tickets: 0,
+          booth_access: [],
           qr_code: qrCode,
           created_at: new Date().toISOString()
         });
@@ -169,7 +152,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     console.log('Google auth complete, returning user data:', userData?.id);
     return userData;
-    
   } catch (error: any) {
     console.error('Error in Google sign-in:', error);
     toast.error(error instanceof Error ? error.message : 'Google sign-in failed');
@@ -177,7 +159,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
   }
 };
 
-// Registration functionality
 export const registerUser = async (
   studentNumber: string, 
   name: string, 
@@ -185,7 +166,6 @@ export const registerUser = async (
   password: string
 ): Promise<boolean> => {
   try {
-    // Check if user already exists in Firestore by student number
     const usersRef = collection(firestore, 'users');
     const studentQuery = query(usersRef, where('student_number', '==', studentNumber));
     
@@ -193,7 +173,6 @@ export const registerUser = async (
       return await getDocs(studentQuery);
     });
     
-    // Register user with Firebase Auth
     const userCredential = await withRetry(async () => {
       return await createUserWithEmailAndPassword(auth, email, password);
     });
@@ -202,10 +181,8 @@ export const registerUser = async (
       throw new Error('Failed to create account');
     }
     
-    // Generate QR code for the user
     const qrCode = `USER:${userCredential.user.uid}`;
     
-    // Check if user with this student number already exists in Firestore
     let existingUserData: any = null;
     let existingUserDocId: string | null = null;
     let existingTickets = 0;
@@ -219,7 +196,6 @@ export const registerUser = async (
       console.log(`Found existing user with student number ${studentNumber}, current balance: ${existingTickets}`);
     }
     
-    // Create user profile in Firestore users collection, merging existing data if found
     await withRetry(async () => {
       return await setDoc(doc(firestore, 'users', userCredential.user.uid), {
         name,
@@ -227,14 +203,13 @@ export const registerUser = async (
         uid: userCredential.user.uid,
         student_number: studentNumber,
         role: 'student',
-        tickets: existingTickets, // Transfer existing balance
-        booth_access: existingBoothAccess, // Transfer existing booth access
-        qr_code: qrCode || "", // Ensure qr_code is never null or undefined
+        tickets: existingTickets,
+        booth_access: existingBoothAccess,
+        qr_code: qrCode || "",
         created_at: new Date().toISOString()
       });
     });
     
-    // If an existing user was found, delete the old record
     if (existingUserDocId && existingUserDocId !== userCredential.user.uid) {
       try {
         await withRetry(async () => {
@@ -243,13 +218,11 @@ export const registerUser = async (
         console.log(`Deleted old user record: ${existingUserDocId}`);
       } catch (deleteError) {
         console.error('Error deleting old user record:', deleteError);
-        // Continue despite deletion error - we've already transferred the data
       }
     }
     
     toast.success('Registration successful!');
     return true;
-    
   } catch (error: any) {
     if (error.code === 'auth/network-request-failed') {
       toast.error('Network connection error. Please check your internet connection and try again.');
@@ -259,11 +232,10 @@ export const registerUser = async (
       toast.error(error instanceof Error ? error.message : 'Registration failed');
     }
     console.error(error);
-    throw error; // Re-throw to allow the calling code to handle it
+    throw error;
   }
 };
 
-// Logout functionality
 export const logoutUser = async (): Promise<boolean> => {
   try {
     await signOut(auth);
@@ -275,35 +247,49 @@ export const logoutUser = async (): Promise<boolean> => {
   }
 };
 
-// SAC PIN verification functionality
 export const verifySACAccess = async (pin: string, userId: string): Promise<boolean> => {
-  if (pin === SAC_PIN) {
-    try {
-      // Update user role to SAC in Firestore
-      const userRef = doc(firestore, 'users', userId);
+  try {
+    const userRef = doc(firestore, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      toast.error('User not found');
+      return false;
+    }
+
+    const userData = userDoc.data();
+    
+    if (SAC_AUTHORIZED_EMAILS.includes(userData.email)) {
       await withRetry(async () => {
         return await updateDoc(userRef, { role: 'sac' });
       });
       
       toast.success('SAC access granted');
       return true;
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast.error('Failed to grant SAC access');
-      return false;
     }
+    
+    if (pin === SAC_PIN) {
+      await withRetry(async () => {
+        return await updateDoc(userRef, { role: 'sac' });
+      });
+      
+      toast.success('SAC access granted');
+      return true;
+    }
+    
+    toast.error('Unauthorized access');
+    return false;
+  } catch (error) {
+    console.error('Error verifying SAC access:', error);
+    toast.error('Failed to verify SAC access');
+    return false;
   }
-  
-  toast.error('Invalid PIN');
-  return false;
 };
 
-// Booth PIN verification functionality
 export const verifyBoothAccess = async (pin: string, userId: string, userBooths: string[] = []): Promise<{ success: boolean, boothId?: string }> => {
   try {
     console.log("Verifying booth PIN:", pin);
     
-    // Find booth with matching PIN
     const boothsRef = collection(firestore, 'booths');
     const q = query(boothsRef, where('pin', '==', pin));
     
@@ -322,7 +308,6 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
     
     console.log("Found booth:", boothId);
     
-    // Check if user already has access
     const hasAccess = userBooths.includes(boothId);
     
     if (hasAccess) {
@@ -331,16 +316,13 @@ export const verifyBoothAccess = async (pin: string, userId: string, userBooths:
       return { success: true, boothId: boothId };
     }
     
-    // Add booth to user's booth access
     const updatedBoothAccess = [...(userBooths || []), boothId];
     
-    // Update user's booth access in Firestore
     const userRef = doc(firestore, 'users', userId);
     await withRetry(async () => {
       return await updateDoc(userRef, { booth_access: updatedBoothAccess });
     });
     
-    // Add user to booth members if members array exists
     if (boothData.members !== undefined) {
       const updatedMembers = [...(boothData.members || []), userId];
       
