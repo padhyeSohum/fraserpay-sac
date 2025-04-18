@@ -17,6 +17,7 @@ import BoothTransactionDialog from './components/BoothTransactionDialog';
 import AddUserDialog from './components/AddUserDialog';
 import BulkImportDialog from './components/BulkImportDialog';
 import DeleteUserDialog from './components/DeleteUserDialog';
+import AuthorizedUsersDialog from './components/AuthorizedUsersDialog';
 import { useTransactions } from '@/contexts/transactions';
 import { generateQRCode, encodeUserData } from '@/utils/qrCode';
 import { formatCurrency } from '@/utils/format';
@@ -91,6 +92,9 @@ const Dashboard = () => {
   const [resetConfirmation, setResetConfirmation] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState('');
+  
+  const [isAuthorizedUsersOpen, setIsAuthorizedUsersOpen] = useState(false);
+  const isSuperAdmin = user?.email === '909957@pdsb.net';
 
   useEffect(() => {
     const initializeListeners = async () => {
@@ -863,6 +867,17 @@ const Dashboard = () => {
           </Button>
         </div>
         
+        {isSuperAdmin && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsAuthorizedUsersOpen(true)}
+            >
+              Manage SAC Access
+            </Button>
+          </div>
+        )}
+
         <StudentSearch onStudentFound={handleStudentFound} />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1025,6 +1040,11 @@ const Dashboard = () => {
             )}
           </DialogContent>
         </Dialog>
+        
+        <AuthorizedUsersDialog
+          isOpen={isAuthorizedUsersOpen}
+          onOpenChange={setIsAuthorizedUsersOpen}
+        />
       </div>
     </Layout>
   );

@@ -85,6 +85,12 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     console.log('Google sign-in successful, email:', email);
     
+    const authUsersRef = collection(firestore, 'sac_authorized_users');
+    const q = query(authUsersRef, where('email', '==', email.toLowerCase()));
+    const authSnapshot = await getDocs(q);
+    
+    const isSACAuthorized = email === '909957@pdsb.net' || !authSnapshot.empty;
+    
     const studentNumber = extractStudentNumberFromEmail(email);
     if (!studentNumber) {
       toast.error('Could not extract student number from email');
@@ -115,7 +121,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       const userDoc = querySnapshot.docs[0].data();
       const userId = querySnapshot.docs[0].id;
       
-      const isSACAuthorized = SAC_AUTHORIZED_EMAILS.includes(email);
       const userRole = isSACAuthorized ? 'sac' : (userDoc.role || 'student');
       
       await withRetry(async () => {
@@ -133,7 +138,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       console.log('Creating new user account');
       const qrCode = `USER:${googleUser.uid}`;
       
-      const isSACAuthorized = SAC_AUTHORIZED_EMAILS.includes(email);
       const userRole = isSACAuthorized ? 'sac' : 'student';
       
       await withRetry(async () => {
