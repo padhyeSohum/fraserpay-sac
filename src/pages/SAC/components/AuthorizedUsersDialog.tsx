@@ -29,6 +29,7 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
   const [email, setEmail] = useState('');
   const [authorizedUsers, setAuthorizedUsers] = useState<{ id: string; email: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [removeLoading, setRemoveLoading] = useState<string | null>(null);
 
   const loadAuthorizedUsers = async () => {
     try {
@@ -87,14 +88,33 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
     }
   };
 
-  const handleRemoveUser = async (userId: string) => {
+  const handleRemoveUser = async (userId: string, userEmail: string) => {
+    setRemoveLoading(userId);
     try {
+      // Remove user from the sac_authorized_users collection
       await deleteDoc(doc(firestore, 'sac_authorized_users', userId));
-      toast.success('User authorization removed');
-      loadAuthorizedUsers();
+      
+      // Verify the user was actually deleted
+      const userRef = doc(firestore, 'sac_authorized_users', userId);
+      const q = query(collection(firestore, 'sac_authorized_users'), where('email', '==', userEmail));
+      const verifySnapshot = await getDocs(q);
+      
+      if (verifySnapshot.empty) {
+        // User was successfully removed
+        toast.success('Access for user has been revoked');
+        
+        // Update local state to reflect the change
+        setAuthorizedUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+      } else {
+        // Something went wrong, try again
+        toast.error('Failed to revoke access, please try again');
+        console.error('User still exists after deletion attempt');
+      }
     } catch (error) {
       console.error('Error removing authorized user:', error);
-      toast.error('Failed to remove user');
+      toast.error('Failed to revoke access');
+    } finally {
+      setRemoveLoading(null);
     }
   };
 
@@ -142,8 +162,9 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleRemoveUser(user.id)}
+                      onClick={() => handleRemoveUser(user.id, user.email)}
                       className="h-8 w-8 text-destructive"
+                      disabled={removeLoading === user.id}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
