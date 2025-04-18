@@ -76,9 +76,11 @@ export const loginUser = async (studentNumber: string, password: string): Promis
 // Google Sign-In functionality
 export const loginWithGoogle = async (): Promise<User | null> => {
   try {
+    console.log('Starting Google sign-in process');
     // Attempt to sign in with Google
     const googleUser = await signInWithGoogle();
     if (!googleUser) {
+      console.log('Google sign-in failed or was cancelled by user');
       return null; // User cancelled or sign-in failed
     }
     
@@ -88,12 +90,16 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       return null;
     }
     
+    console.log('Google sign-in successful, email:', email);
+    
     // Extract student number from email
     const studentNumber = extractStudentNumberFromEmail(email);
     if (!studentNumber) {
       toast.error('Could not extract student number from email');
       return null;
     }
+    
+    console.log('Extracted student number:', studentNumber);
     
     // Check if user exists in our database
     const usersRef = collection(firestore, 'users');
@@ -106,19 +112,24 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     // Then try by student number if not found by UID
     if (querySnapshot.empty) {
+      console.log('User not found by UID, trying student number lookup');
       userQuery = query(usersRef, where('student_number', '==', studentNumber));
       querySnapshot = await withRetry(async () => {
         return await getDocs(userQuery);
       });
     }
     
+    let userData: User | null = null;
+    
     // User exists in database - update record with Google UID if needed
     if (!querySnapshot.empty) {
-      const userData = querySnapshot.docs[0].data();
+      console.log('Found existing user record');
+      const userDoc = querySnapshot.docs[0].data();
       const userId = querySnapshot.docs[0].id;
       
       // Update user data with Google UID if it's not already set
-      if (userData.uid !== googleUser.uid) {
+      if (userDoc.uid !== googleUser.uid) {
+        console.log('Updating existing user with Google UID');
         await withRetry(async () => {
           return await updateDoc(doc(firestore, 'users', userId), {
             uid: googleUser.uid,
@@ -130,9 +141,10 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       toast.success('Login successful');
       
       // Return user data
-      return await fetchUserData(userId);
+      userData = await fetchUserData(userId);
     } else {
       // New user - create account
+      console.log('Creating new user account');
       // Generate QR code for the user
       const qrCode = `USER:${googleUser.uid}`;
       
@@ -152,8 +164,11 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       });
       
       toast.success('New account created successfully');
-      return await fetchUserData(googleUser.uid);
+      userData = await fetchUserData(googleUser.uid);
     }
+    
+    console.log('Google auth complete, returning user data:', userData?.id);
+    return userData;
     
   } catch (error: any) {
     console.error('Error in Google sign-in:', error);

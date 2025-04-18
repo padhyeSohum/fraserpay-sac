@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -13,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -26,15 +28,16 @@ const Login = () => {
     user
   } = useAuth();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+  
   useEffect(() => {
     if (!isMobile || isPWA()) return;
     console.log("Login page: Setting up PWA install banner");
     return showInstallBanner(setShowPWAPrompt, 2000);
   }, [isMobile]);
+  
+  // Modified to check auth state and redirect regardless of how the user was authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
@@ -43,6 +46,7 @@ const Login = () => {
       });
     }
   }, [isAuthenticated, user, navigate]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
@@ -67,10 +71,20 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+  
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await loginWithGoogle();
+      console.log("Starting Google sign-in process from UI");
+      const result = await loginWithGoogle();
+      console.log("Google sign-in completed, result:", !!result);
+      
+      // If we have a result, manually check auth state and redirect if needed
+      // This is a fallback in case the auth state listener isn't working
+      if (result) {
+        console.log("Google sign-in successful, redirecting to dashboard");
+        navigate('/dashboard', { replace: true });
+      }
     } catch (error) {
       console.error('Google login error:', error);
       // Error is already handled in the loginWithGoogle function
@@ -78,17 +92,16 @@ const Login = () => {
       setIsGoogleLoading(false);
     }
   };
+  
   const logo = <div className="flex items-center justify-center mb-6">
       <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
     </div>;
+    
   return <Layout hideHeader={true}>
       <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in">
         {logo}
         
         <div className="w-full max-w-md mx-auto space-y-4">
-          
-          
-          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">FraserPay</CardTitle>
@@ -159,4 +172,5 @@ const Login = () => {
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
     </Layout>;
 };
+
 export default Login;

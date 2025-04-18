@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+
 const Register = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [name, setName] = useState('');
@@ -23,12 +24,22 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {
     register,
-    loginWithGoogle
+    loginWithGoogle,
+    isAuthenticated,
+    user
   } = useAuth();
   const navigate = useNavigate();
   const {
     toast
   } = useToast();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log("Register page: User is authenticated, redirecting", user.role);
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNetworkError(false);
@@ -67,7 +78,6 @@ const Register = () => {
       setConfirmPassword('');
     } catch (error: any) {
       console.error(error);
-      // Check for network error specifically
       if (error.code === 'auth/network-request-failed') {
         setNetworkError(true);
       } else {
@@ -81,34 +91,41 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await loginWithGoogle();
-      // The navigation will happen automatically in the auth state change listener
+      console.log("Starting Google sign-in process from Register page");
+      const result = await loginWithGoogle();
+      console.log("Google sign-in completed, result:", !!result);
+      
+      if (result) {
+        console.log("Google sign-in successful, redirecting to dashboard");
+        navigate('/dashboard', { replace: true });
+      }
     } catch (error) {
       console.error('Google login error:', error);
-      // Error toast is already shown in the loginWithGoogle function
     } finally {
       setIsGoogleLoading(false);
     }
   };
+
   const retryConnection = () => {
     setNetworkError(false);
     setTimeout(() => {
       window.location.reload();
     }, 500);
   };
+
   const logo = <div className="flex items-center justify-center mb-6">
       <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
     </div>;
+
   return <Layout showBack title="Create Account">
       <div className="flex flex-col items-center justify-center min-h-[80vh] animate-fade-in">
         {logo}
         
         <div className="w-full max-w-md mx-auto">
-          
-          
           <Card className="border-none shadow-lg glass-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
@@ -146,7 +163,6 @@ const Register = () => {
                     </Button>
                   </div>
                 </div> : <div className="space-y-4">
-                  {/* Google Sign In Button */}
                   <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                     {isGoogleLoading ? "Signing in..." : <>
                         <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" className="h-5 w-5">
@@ -226,4 +242,5 @@ const Register = () => {
       </div>
     </Layout>;
 };
+
 export default Register;

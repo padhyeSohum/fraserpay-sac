@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User } from '@/types';
@@ -33,7 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoading, 
       authUser: authUser?.uid || null, 
       user: user?.id || null, 
-      authInitialized 
+      authInitialized,
+      isGoogleUser: authUser?.providerData?.[0]?.providerId === 'google.com'
     });
   }, [isLoading, authUser, user, authInitialized]);
 
@@ -54,7 +54,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userData = await fetchUserData(firebaseUser.uid);
           
           if (mounted) {
-            setUser(userData);
+            if (userData) {
+              console.log("User data fetched successfully:", userData.id);
+              setUser(userData);
+            } else {
+              console.warn("No user data found for authenticated user:", firebaseUser.uid);
+              // This could happen with Google sign-in if Firestore write failed but auth succeeded
+            }
+            
             setIsLoading(false);
             setAuthInitialized(true);
           }
@@ -110,8 +117,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogleProvider = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-      // Navigation is handled in the auth state change listener
+      const userData = await loginWithGoogle();
+      console.log("loginWithGoogle completed, user data:", userData?.id);
+      
+      // If successful login but the auth state listener hasn't picked it up yet,
+      // manually set the user data and return it
+      if (userData && !user) {
+        console.log("Setting user data from Google login");
+        setUser(userData);
+      }
+      
+      return userData;
     } finally {
       setIsLoading(false);
     }
