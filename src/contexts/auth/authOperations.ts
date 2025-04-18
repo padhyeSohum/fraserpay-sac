@@ -115,15 +115,16 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       const userDoc = querySnapshot.docs[0].data();
       const userId = querySnapshot.docs[0].id;
       
-      if (userDoc.uid !== googleUser.uid) {
-        console.log('Updating existing user with Google UID');
-        await withRetry(async () => {
-          return await updateDoc(doc(firestore, 'users', userId), {
-            uid: googleUser.uid,
-            email: email
-          });
+      const isSACAuthorized = SAC_AUTHORIZED_EMAILS.includes(email);
+      const userRole = isSACAuthorized ? 'sac' : (userDoc.role || 'student');
+      
+      await withRetry(async () => {
+        return await updateDoc(doc(firestore, 'users', userId), {
+          uid: googleUser.uid,
+          email: email,
+          role: userRole
         });
-      }
+      });
       
       toast.success('Login successful');
       
@@ -132,13 +133,16 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       console.log('Creating new user account');
       const qrCode = `USER:${googleUser.uid}`;
       
+      const isSACAuthorized = SAC_AUTHORIZED_EMAILS.includes(email);
+      const userRole = isSACAuthorized ? 'sac' : 'student';
+      
       await withRetry(async () => {
         return await setDoc(doc(firestore, 'users', googleUser.uid), {
           name: googleUser.displayName || 'Student',
           email: email,
           uid: googleUser.uid,
           student_number: studentNumber,
-          role: 'student',
+          role: userRole,
           tickets: 0,
           booth_access: [],
           qr_code: qrCode,

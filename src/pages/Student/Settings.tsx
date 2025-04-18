@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from 'react-router-dom';
 
 // SAC admin credentials
 const SAC_ADMINS = [
@@ -29,22 +31,44 @@ const Settings = () => {
   const {
     toast
   } = useToast();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   
   const handleSACAccess = async () => {
-    // Directly trigger Google Sign-In for SAC access
-    const googleUser = await loginWithGoogle();
-    
-    if (googleUser) {
-      // If Google sign-in is successful, the auth context will handle navigation to SAC dashboard
-      // No need for additional logic here
-    } else {
+    try {
+      // Directly trigger Google Sign-In for SAC access
+      const googleUser = await loginWithGoogle();
+      
+      if (googleUser) {
+        // If the user has the correct role after sign-in, navigate to SAC dashboard
+        if (googleUser.role === 'sac') {
+          navigate('/sac/dashboard');
+          toast({
+            title: "Success",
+            description: "SAC access granted. Welcome to the SAC dashboard.",
+          });
+        } else {
+          toast({
+            title: "Access Denied",
+            description: "Your email is not authorized for SAC access.",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "SAC Access",
+          description: "Could not verify SAC access. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error during SAC access:", error);
       toast({
-        title: "SAC Access",
-        description: "Could not verify SAC access. Please try again.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     }
