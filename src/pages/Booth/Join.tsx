@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { uniqueToast } from '@/utils/toastHelpers';
 import { Info, Loader2 } from 'lucide-react';
-
 const BoothJoin: React.FC = () => {
   const {
     user,
@@ -23,12 +22,10 @@ const BoothJoin: React.FC = () => {
   const [pin, setPin] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPin(e.target.value);
     setError(null);
   };
-
   const handleJoinBooth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pin.trim()) {
@@ -46,10 +43,8 @@ const BoothJoin: React.FC = () => {
       const success = await joinBooth(pin, user.id);
       if (success) {
         console.log('Successfully joined initiative, refreshing data...');
-
         const updatedBooths = await fetchAllBooths();
         const joinedBooth = updatedBooths.find(booth => booth.pin === pin);
-
         if (user) {
           const currentBooths = user.booths || [];
           if (joinedBooth && !currentBooths.includes(joinedBooth.id)) {
@@ -61,7 +56,6 @@ const BoothJoin: React.FC = () => {
             console.log('Updated user data with new initiative access', updatedUserBooths);
           }
         }
-
         const eventData = JSON.stringify({
           timestamp: Date.now(),
           boothPin: pin,
@@ -72,7 +66,6 @@ const BoothJoin: React.FC = () => {
           key: 'boothJoined',
           newValue: eventData
         }));
-
         if (joinedBooth) {
           uniqueToast.success('Successfully joined initiative!');
           navigate(`/booth/${joinedBooth.id}`);
@@ -92,7 +85,6 @@ const BoothJoin: React.FC = () => {
       setIsJoining(false);
     }
   };
-
   return <Layout title="Join an Initiative" subtitle="Enter the initiative PIN code" showBack>
       <div className="max-w-md mx-auto">
         <Card>
@@ -107,16 +99,7 @@ const BoothJoin: React.FC = () => {
                 <label htmlFor="pin" className="text-sm font-medium">
                   Initiative PIN Code
                 </label>
-                <Input 
-                  id="pin" 
-                  type="number" 
-                  value={pin} 
-                  onChange={handlePinChange} 
-                  placeholder="Enter 6-digit PIN" 
-                  maxLength={6} 
-                  className={error ? "border-destructive" : ""} 
-                  disabled={isJoining} 
-                />
+                <Input id="pin" type="number" value={pin} onChange={handlePinChange} placeholder="Enter 6-digit PIN" maxLength={6} className={error ? "border-destructive" : ""} disabled={isJoining} />
                 
                 {error && <div className="text-destructive text-sm flex items-center gap-1.5">
                     <Info className="h-4 w-4" />
@@ -126,7 +109,7 @@ const BoothJoin: React.FC = () => {
               
               <div className="bg-muted/50 rounded-md p-3">
                 <h4 className="text-sm font-medium mb-2">Don't have a PIN?</h4>
-                <p className="text-sm text-muted-foreground">Ask your teacher or club supervisor to provide your initiative pin. If you need help with this, please visit the SAC initiative. </p>
+                <p className="text-sm text-muted-foreground">Ask your teacher or club supervisor to provide your initiative pin. If you need help with this, please visit the SAC table.</p>
               </div>
             </CardContent>
             
@@ -156,5 +139,4 @@ const BoothJoin: React.FC = () => {
       </div>
     </Layout>;
 };
-
 export default BoothJoin;
