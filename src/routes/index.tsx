@@ -1,9 +1,143 @@
 
+// This file was modified to properly export all needed components for AppRoutes
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, WifiOff } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import Login from '@/pages/Auth/Login';
+import Register from '@/pages/Auth/Register';
+import NotFound from '@/pages/NotFound';
+import Index from '@/pages/Index';
+import Dashboard from '@/pages/Student/Dashboard';
+import AddFunds from '@/pages/Student/AddFunds';
+import QRCode from '@/pages/Student/QRCode';
+import Settings from '@/pages/Student/Settings';
+import SACDashboard from '@/pages/SAC/Dashboard';
+import BoothDashboard from '@/pages/Booth/Dashboard';
+import BoothSell from '@/pages/Booth/Sell';
+import BoothTransactions from '@/pages/Booth/Transactions';
+import BoothSettings from '@/pages/Booth/Settings';
+import BoothJoin from '@/pages/Booth/Join';
+import Leaderboard from '@/pages/Leaderboard';
 
+// Route definition type
+export interface RouteConfig {
+  path: string;
+  element: React.ReactNode;
+  protected?: boolean;
+  roles?: string[];
+}
+
+// Define all application routes
+export const routes: RouteConfig[] = [
+  {
+    path: "/login",
+    element: <Login />,
+    protected: false
+  },
+  {
+    path: "/register",
+    element: <Register />,
+    protected: false
+  },
+  {
+    path: "/not-found",
+    element: <NotFound />,
+    protected: false
+  },
+  {
+    path: "/landing",
+    element: <Index />,
+    protected: false
+  },
+  {
+    path: "/dashboard",
+    element: <Dashboard />,
+    protected: true
+  },
+  {
+    path: "/add-funds",
+    element: <AddFunds />,
+    protected: true
+  },
+  {
+    path: "/qrcode",
+    element: <QRCode />,
+    protected: true
+  },
+  {
+    path: "/settings",
+    element: <Settings />,
+    protected: true
+  },
+  {
+    path: "/sac/dashboard",
+    element: <SACDashboard />,
+    protected: true,
+    roles: ["sac"]
+  },
+  {
+    path: "/booth/dashboard",
+    element: <BoothDashboard />,
+    protected: true,
+    roles: ["booth", "sac"]
+  },
+  {
+    path: "/booth/sell",
+    element: <BoothSell />,
+    protected: true,
+    roles: ["booth", "sac"]
+  },
+  {
+    path: "/booth/transactions",
+    element: <BoothTransactions />,
+    protected: true,
+    roles: ["booth", "sac"]
+  },
+  {
+    path: "/booth/settings",
+    element: <BoothSettings />,
+    protected: true,
+    roles: ["booth", "sac"]
+  },
+  {
+    path: "/booth/join",
+    element: <BoothJoin />,
+    protected: true
+  },
+  {
+    path: "/leaderboard",
+    element: <Leaderboard />,
+    protected: false
+  }
+];
+
+// Protected route wrapper component
+export const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+// Role-based protected route
+export const RoleProtectedRoute: React.FC<{children: React.ReactNode, allowedRoles: string[]}> = 
+  ({ children, allowedRoles }) => {
+  const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
+  const userRole = "student"; // This will be replaced by actual role in AppRoutes.tsx
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!allowedRoles.includes(userRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Export the LoadingScreen component
 interface LoadingScreenProps {
   timeout?: boolean;
   customMessage?: string;
