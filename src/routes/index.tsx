@@ -151,18 +151,27 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     window.location.reload();
   };
 
+  const headerText = customMessage ? 
+    (customMessage === "Signing in with Google" ? "Signing in with Google" : "Taking longer than expected") 
+    : "Taking longer than expected";
+
+  const descriptionText = customMessage === "Signing in with Google" 
+    ? "PDSB WiFi slows down speeds during high-traffic. This page may take a minute to load." 
+    : "The application is taking longer to load. This might be due to network issues.";
+
+  const warningText = customMessage === "Signing in with Google" 
+    ? "FraserPay does not work on the PDSB Media Network" 
+    : "Slow PDSB WiFi detected. Try refreshing or connecting to a different network.";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">
-            {timeout ? 'Taking longer than expected' : 'Loading'}
+            {headerText}
           </CardTitle>
           <CardDescription>
-            {customMessage || (timeout 
-              ? 'The application is taking longer to load. This might be due to network issues.' 
-              : 'Please wait while we prepare everything...'
-            )}
+            {descriptionText}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -170,7 +179,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
             <div className="flex items-center space-x-2 bg-yellow-50 p-3 rounded-md border border-yellow-200">
               <WifiOff className="h-5 w-5 text-yellow-600" />
               <span className="text-sm text-yellow-800">
-                Slow PDSB WiFi detected. Try refreshing or connecting to a different network.
+                {warningText}
               </span>
             </div>
           )}
@@ -190,3 +199,4 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     </div>
   );
 };
+
