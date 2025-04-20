@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -14,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { LoadingScreen } from '@/routes/index';
 
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
@@ -25,7 +25,8 @@ const Login = () => {
     login,
     loginWithGoogle,
     isAuthenticated,
-    user
+    user,
+    isLoading: authLoading
   } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,7 +38,6 @@ const Login = () => {
     return showInstallBanner(setShowPWAPrompt, 2000);
   }, [isMobile]);
   
-  // Modified to check auth state and redirect regardless of how the user was authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
@@ -79,15 +79,12 @@ const Login = () => {
       const userData = await loginWithGoogle();
       console.log("Google sign-in completed, result:", !!userData);
       
-      // If we have a result, manually check auth state and redirect if needed
-      // This is a fallback in case the auth state listener isn't working
       if (userData) {
         console.log("Google sign-in successful, redirecting to dashboard");
         navigate('/dashboard', { replace: true });
       }
     } catch (error) {
       console.error('Google login error:', error);
-      // Error is already handled in the loginWithGoogle function
     } finally {
       setIsGoogleLoading(false);
     }
@@ -97,6 +94,10 @@ const Login = () => {
       <img src="/lovable-uploads/ed1f3f9a-22a0-42de-a8cb-354fb8c82dae.png" alt="Fraser Pay" className="w-48 h-auto" />
     </div>;
     
+  if (isGoogleLoading || (authLoading && isGoogleLoading)) {
+    return <LoadingScreen customMessage="Signing in with Google..." />;
+  }
+  
   return <Layout hideHeader={true}>
       <div className="flex flex-col items-center justify-center min-h-screen animate-fade-in">
         {logo}
@@ -111,7 +112,6 @@ const Login = () => {
             </CardHeader>
             
             <CardContent className="space-y-4">
-              {/* Google Sign In Button */}
               <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                 {isGoogleLoading ? "Signing in..." : <>
                     <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" className="h-5 w-5">
