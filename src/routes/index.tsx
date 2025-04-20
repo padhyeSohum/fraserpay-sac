@@ -1,6 +1,3 @@
-
-// This file was modified to properly export all needed components for AppRoutes
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +19,6 @@ import BoothSettings from '@/pages/Booth/Settings';
 import BoothJoin from '@/pages/Booth/Join';
 import Leaderboard from '@/pages/Leaderboard';
 
-// Route definition type
 export interface RouteConfig {
   path: string;
   element: React.ReactNode;
@@ -30,7 +26,6 @@ export interface RouteConfig {
   roles?: string[];
 }
 
-// Define all application routes
 export const routes: RouteConfig[] = [
   {
     path: "/login",
@@ -114,13 +109,11 @@ export const routes: RouteConfig[] = [
   }
 ];
 
-// Protected route wrapper component
 export const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-// Role-based protected route
 export const RoleProtectedRoute: React.FC<{children: React.ReactNode, allowedRoles: string[]}> = 
   ({ children, allowedRoles }) => {
   const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
@@ -137,7 +130,6 @@ export const RoleProtectedRoute: React.FC<{children: React.ReactNode, allowedRol
   return <>{children}</>;
 };
 
-// Export the LoadingScreen component
 interface LoadingScreenProps {
   timeout?: boolean;
   customMessage?: string;
@@ -151,13 +143,15 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     window.location.reload();
   };
 
-  const headerText = customMessage ? 
-    (customMessage === "Signing in with Google" ? "Signing in with Google" : "Taking longer than expected") 
-    : "Taking longer than expected";
+  const headerText = customMessage === "Signing in with Google" 
+    ? "Signing in with Google" 
+    : (timeout ? "Taking longer than expected" : "Loading");
 
   const descriptionText = customMessage === "Signing in with Google" 
-    ? "PDSB WiFi slows down speeds during high-traffic. This page may take a minute to load." 
-    : "The application is taking longer to load. This might be due to network issues.";
+    ? "This may take a moment." 
+    : (timeout 
+      ? "The application is taking longer to load. This might be due to network issues." 
+      : "Please wait while we prepare everything...");
 
   const warningText = customMessage === "Signing in with Google" 
     ? "FraserPay does not work on the PDSB Media Network" 
@@ -199,4 +193,3 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     </div>
   );
 };
-
