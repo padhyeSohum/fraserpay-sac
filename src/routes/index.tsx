@@ -1,195 +1,176 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, WifiOff } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import Login from '@/pages/Auth/Login';
-import Register from '@/pages/Auth/Register';
-import NotFound from '@/pages/NotFound';
-import Index from '@/pages/Index';
-import Dashboard from '@/pages/Student/Dashboard';
-import AddFunds from '@/pages/Student/AddFunds';
-import QRCode from '@/pages/Student/QRCode';
-import Settings from '@/pages/Student/Settings';
-import SACDashboard from '@/pages/SAC/Dashboard';
-import BoothDashboard from '@/pages/Booth/Dashboard';
-import BoothSell from '@/pages/Booth/Sell';
-import BoothTransactions from '@/pages/Booth/Transactions';
-import BoothSettings from '@/pages/Booth/Settings';
-import BoothJoin from '@/pages/Booth/Join';
-import Leaderboard from '@/pages/Leaderboard';
 
-export interface RouteConfig {
-  path: string;
-  element: React.ReactNode;
-  protected?: boolean;
-  roles?: string[];
-}
+import { useAuth } from '@/contexts/auth';
+import { Navigate, useLocation } from "react-router-dom";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
-export const routes: RouteConfig[] = [
-  {
-    path: "/login",
-    element: <Login />,
-    protected: false
-  },
-  {
-    path: "/register",
-    element: <Register />,
-    protected: false
-  },
-  {
-    path: "/not-found",
-    element: <NotFound />,
-    protected: false
-  },
-  {
-    path: "/landing",
-    element: <Index />,
-    protected: false
-  },
-  {
-    path: "/dashboard",
+// Auth Pages
+import Login from "@/pages/Auth/Login";
+import Register from "@/pages/Auth/Register";
+
+// Student Pages
+import Dashboard from "@/pages/Student/Dashboard";
+import QRCode from "@/pages/Student/QRCode";
+import Settings from "@/pages/Student/Settings";
+
+// Initiative Pages
+import BoothJoin from "@/pages/Booth/Join";
+import BoothDashboard from "@/pages/Booth/Dashboard";
+import BoothSell from "@/pages/Booth/Sell";
+import BoothTransactions from "@/pages/Booth/Transactions";
+import BoothSettings from "@/pages/Booth/Settings";
+
+// SAC Pages
+import SACDashboard from "@/pages/SAC/Dashboard";
+
+// Shared Pages
+import Leaderboard from "@/pages/Leaderboard";
+import NotFound from "@/pages/NotFound";
+
+// Route configuration for the application
+export const routes = [
+  // Auth Routes
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+  
+  // All authenticated users can access these routes
+  { 
+    path: "/dashboard", 
     element: <Dashboard />,
-    protected: true
+    protected: true 
   },
-  {
-    path: "/add-funds",
-    element: <AddFunds />,
-    protected: true
-  },
-  {
-    path: "/qrcode",
+  { 
+    path: "/qr-code", 
     element: <QRCode />,
-    protected: true
+    protected: true 
   },
-  {
-    path: "/settings",
+  { 
+    path: "/settings", 
     element: <Settings />,
-    protected: true
+    protected: true 
   },
-  {
-    path: "/sac/dashboard",
-    element: <SACDashboard />,
-    protected: true,
-    roles: ["sac"]
-  },
-  {
-    path: "/booth/dashboard",
-    element: <BoothDashboard />,
-    protected: true,
-    roles: ["booth", "sac"]
-  },
-  {
-    path: "/booth/sell",
-    element: <BoothSell />,
-    protected: true,
-    roles: ["booth", "sac"]
-  },
-  {
-    path: "/booth/transactions",
-    element: <BoothTransactions />,
-    protected: true,
-    roles: ["booth", "sac"]
-  },
-  {
-    path: "/booth/settings",
-    element: <BoothSettings />,
-    protected: true,
-    roles: ["booth", "sac"]
-  },
-  {
-    path: "/booth/join",
+  
+  // Initiative Routes - no role restrictions
+  { 
+    path: "/booth/join", 
     element: <BoothJoin />,
     protected: true
   },
-  {
-    path: "/leaderboard",
+  { 
+    path: "/booth/:boothId", 
+    element: <BoothDashboard />,
+    protected: true 
+  },
+  { 
+    path: "/booth/:boothId/sell", 
+    element: <BoothSell />,
+    protected: true 
+  },
+  { 
+    path: "/booth/:boothId/transactions", 
+    element: <BoothTransactions />,
+    protected: true 
+  },
+  { 
+    path: "/booth/:boothId/settings", 
+    element: <BoothSettings />,
+    protected: true 
+  },
+  
+  // SAC Dashboard - no role restrictions anymore
+  { 
+    path: "/sac/dashboard", 
+    element: <SACDashboard />,
+    protected: true
+  },
+  
+  // Shared Routes
+  { 
+    path: "/leaderboard", 
     element: <Leaderboard />,
-    protected: false
-  }
+    protected: true 
+  },
+  { 
+    path: "/transactions", 
+    element: <Navigate to="/dashboard" replace />,
+    protected: true 
+  },
+  
+  // Explicit 404 route
+  { path: "/not-found", element: <NotFound /> },
 ];
 
-export const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
-};
+// Enhanced Loading screen with timeout detection and more detailed feedback
+export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
+  <div className="flex flex-col items-center justify-center h-screen p-4">
+    <p className="text-sm mb-2">Loading Fraser Pay...</p>
+    <p className="text-xs text-muted-foreground">This should only take a moment</p>
+    
+    <Alert variant="destructive" className="mb-4 mt-4 max-w-md">
+      <AlertCircle className="h-4 w-4 mr-2" />
+      <AlertDescription>FraserPay does not work on the PDSB Media WiFi Network. Please Switch to PDSB WiFi or use mobile data where possible.</AlertDescription>
+    </Alert>
+    
+    {timeout && (
+      <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3 max-w-md">
+        <p className="text-sm text-yellow-700">
+          Loading is taking longer than expected. The app will continue loading shortly.
+        </p>
+        <ul className="list-disc text-xs text-yellow-600 pl-5 mt-1">
+          <li className="mt-1">Check your internet connection</li>
+          <li className="mt-1">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="text-blue-500 underline"
+            >
+              Refresh the page
+            </button>
+          </li>
+          <li className="mt-1">
+            <button 
+              onClick={() => {
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.href = '/login';
+              }} 
+              className="text-blue-500 underline"
+            >
+              Clear cache and restart
+            </button>
+          </li>
+        </ul>
+      </div>
+    )}
+  </div>
+);
 
-export const RoleProtectedRoute: React.FC<{children: React.ReactNode, allowedRoles: string[]}> = 
-  ({ children, allowedRoles }) => {
-  const isAuthenticated = true; // This will be replaced by actual auth logic in AppRoutes.tsx
-  const userRole = "student"; // This will be replaced by actual role in AppRoutes.tsx
+// Simplified Protected Route - no role checks
+export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (!allowedRoles.includes(userRole)) {
-    return <Navigate to="/dashboard" replace />;
+    console.log("User not authenticated, redirecting to login");
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
 };
 
-interface LoadingScreenProps {
-  timeout?: boolean;
-  customMessage?: string;
-}
-
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
-  timeout = false, 
-  customMessage 
+// Simple wrapper for backward compatibility - no longer does role checking
+export const RoleProtectedRoute = ({ 
+  children
+}: { 
+  children: React.ReactNode; 
+  allowedRoles?: string[] 
 }) => {
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
-  const headerText = customMessage === "Signing in with Google" 
-    ? "Signing in with Google" 
-    : (timeout ? "Taking longer than expected" : "Loading");
-
-  const descriptionText = customMessage === "Signing in with Google" 
-    ? "This may take a moment." 
-    : (timeout 
-      ? "The application is taking longer to load. This might be due to network issues." 
-      : "Please wait while we prepare everything...");
-
-  const warningText = customMessage === "Signing in with Google" 
-    ? "FraserPay does not work on the PDSB Media Network" 
-    : "Slow PDSB WiFi detected. Try refreshing or connecting to a different network.";
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">
-            {headerText}
-          </CardTitle>
-          <CardDescription>
-            {descriptionText}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {timeout && (
-            <div className="flex items-center space-x-2 bg-yellow-50 p-3 rounded-md border border-yellow-200">
-              <WifiOff className="h-5 w-5 text-yellow-600" />
-              <span className="text-sm text-yellow-800">
-                {warningText}
-              </span>
-            </div>
-          )}
-          
-          {timeout && (
-            <Button 
-              onClick={handleRefresh} 
-              variant="outline" 
-              className="w-full"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh Page
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  
+  if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
 };
