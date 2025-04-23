@@ -1,4 +1,3 @@
-
 export type UserRole = 'student' | 'booth' | 'sac';
 
 export interface User {
@@ -21,7 +20,8 @@ export interface Booth {
   managers: string[]; // User IDs of managers
   totalEarnings: number;
   transactions?: Transaction[];
-  createdAt?: string; // Adding the optional createdAt property to match the database
+  createdAt?: string;
+  pwycEnabled?: boolean; // <--- ADDED this property (default: false)
 }
 
 export interface Product {

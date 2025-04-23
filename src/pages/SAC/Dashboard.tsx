@@ -28,6 +28,7 @@ import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storag
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { setBoothPWYC } from '@/contexts/transactions/boothService';
 
 export interface StatsData {
   totalUsers: number;
@@ -820,6 +821,19 @@ const Dashboard = () => {
     }
   };
 
+  const handleTogglePWYC = async (boothId: string, current: boolean) => {
+    setIsBoothLoading(true);
+    try {
+      await setBoothPWYC(boothId, !current);
+      await loadBoothLeaderboard();
+      toast.success(`PWYC mode ${!current ? 'enabled' : 'disabled'} for this booth.`);
+    } catch (error) {
+      toast.error('Failed to update PWYC mode.');
+    } finally {
+      setIsBoothLoading(false);
+    }
+  };
+
   return (
     <Layout 
       title="SAC Dashboard" 
@@ -894,6 +908,7 @@ const Dashboard = () => {
             <BoothsList
               booths={booths}
               isLoading={isBoothLoading}
+              onTogglePWYC={handleTogglePWYC}
             />
           </div>
           
