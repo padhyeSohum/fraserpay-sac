@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatCurrency } from '@/utils/format';
 
 interface BoothLeaderboardProps {
   leaderboard: any[];
@@ -42,7 +43,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
                 <TableRow key={booth.id}>
                   <TableCell className="font-medium">{booth.name}</TableCell>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell className="text-right">${booth.totalEarnings ? (booth.totalEarnings / 100).toFixed(2) : '0.00'}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(booth.totalEarnings)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -58,3 +59,4 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
 };
 
 export default BoothLeaderboard;
+
