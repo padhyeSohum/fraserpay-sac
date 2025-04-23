@@ -16,16 +16,19 @@ import {
 import { Booth, Product } from '@/types';
 import { toast } from 'sonner';
 
+// Add the deleteBooth function
 export const deleteBooth = async (boothId: string): Promise<boolean> => {
   try {
     const boothRef = doc(firestore, 'booths', boothId);
     
+    // Get the booth data to check if it exists
     const boothSnap = await getDoc(boothRef);
     if (!boothSnap.exists()) {
       console.error('Booth not found:', boothId);
       return false;
     }
     
+    // Delete the booth document
     await deleteDoc(boothRef);
     console.log('Booth deleted successfully:', boothId);
     
@@ -36,37 +39,25 @@ export const deleteBooth = async (boothId: string): Promise<boolean> => {
   }
 };
 
+// Add the deleteUser function
 export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
     const userRef = doc(firestore, 'users', userId);
     
+    // Get the user data to check if it exists
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
       console.error('User not found:', userId);
       return false;
     }
     
+    // Delete the user document
     await deleteDoc(userRef);
     console.log('User deleted successfully:', userId);
     
     return true;
   } catch (error) {
     console.error('Error deleting user:', error);
-    return false;
-  }
-};
-
-export const setBoothPWYC = async (boothId: string, enabled: boolean): Promise<boolean> => {
-  try {
-    const boothRef = doc(firestore, 'booths', boothId);
-    await updateDoc(boothRef, {
-      pwycEnabled: enabled
-    });
-    toast.success(enabled ? 'PWYC enabled for this booth!' : 'PWYC disabled for this booth.');
-    return true;
-  } catch (error) {
-    console.error('Error updating booth PWYC:', error);
-    toast.error('Failed to update PWYC setting');
     return false;
   }
 };
@@ -80,6 +71,7 @@ export const createBooth = async (
   try {
     const boothsRef = collection(firestore, 'booths');
     
+    // Check if a booth with the same name already exists
     const existingBoothQuery = query(boothsRef, where('name', '==', name));
     const existingBoothSnapshot = await getDocs(existingBoothQuery);
     
@@ -95,12 +87,12 @@ export const createBooth = async (
       products: [],
       totalEarnings: 0,
       pin: pin,
-      created_at: serverTimestamp(),
-      pwycEnabled: false
+      created_at: serverTimestamp()
     };
     
     const docRef = await addDoc(boothsRef, boothData);
     
+    // Update the user document to include the booth ID in the booth_access array
     const userRef = doc(firestore, 'users', managerId);
     await updateDoc(userRef, {
       booth_access: arrayUnion(docRef.id)
@@ -122,6 +114,7 @@ export const addProductToBooth = async (
   try {
     const boothRef = doc(firestore, 'booths', boothId);
     
+    // Check if a product with the same name already exists in the booth
     const boothSnap = await getDoc(boothRef);
     if (!boothSnap.exists()) {
       console.error('Booth not found:', boothId);
@@ -161,6 +154,7 @@ export const removeProductFromBooth = async (boothId: string, productId: string)
   try {
     const boothRef = doc(firestore, 'booths', boothId);
     
+    // Get the booth data to check if the product exists
     const boothSnap = await getDoc(boothRef);
     if (!boothSnap.exists()) {
       console.error('Booth not found:', boothId);
