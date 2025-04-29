@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Layout from '@/components/Layout';
 import ProductItem from '@/components/ProductItem';
 import { CartItem, Product } from '@/types';
-import { Scan, X, Check, User, Search, RefreshCw } from 'lucide-react';
+import { Scan, X, Check, User, Search, RefreshCw, Loader } from 'lucide-react';
 import { validateQRCode, getUserFromQRData, findUserByStudentNumber } from '@/utils/qrCode';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ const BoothSell = () => {
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   const [isProcessingQR, setIsProcessingQR] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
 
   const refreshBoothData = async () => {
     if (!boothId) return;
@@ -190,6 +191,8 @@ const BoothSell = () => {
   };
 
   const handleConfirmPurchase = async () => {
+    if (isProcessingTransaction) return;
+    
     if (!customer || !booth || !user) {
       toast.error('Missing customer or booth information');
       return;
@@ -206,6 +209,8 @@ const BoothSell = () => {
       toast.error('Customer has insufficient balance');
       return;
     }
+    
+    setIsProcessingTransaction(true);
     
     try {
       const success = await processPurchase(
@@ -239,6 +244,8 @@ const BoothSell = () => {
     } catch (error) {
       console.error(error);
       toast.error('Failed to process purchase');
+    } finally {
+      setIsProcessingTransaction(false);
     }
   };
 
@@ -463,11 +470,20 @@ const BoothSell = () => {
                   
                   <Button
                     onClick={handleConfirmPurchase}
-                    disabled={cart.length === 0}
+                    disabled={cart.length === 0 || isProcessingTransaction}
                     className="w-full max-w-md mx-auto bg-green-500 hover:bg-green-600 text-white"
                   >
-                    <Check className="h-5 w-5 mr-2" />
-                    Confirm Purchase
+                    {isProcessingTransaction ? (
+                      <>
+                        <Loader className="h-5 w-5 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-5 w-5 mr-2" />
+                        Confirm Purchase
+                      </>
+                    )}
                   </Button>
                 </div>
               </>
