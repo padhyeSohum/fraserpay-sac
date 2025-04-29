@@ -33,8 +33,36 @@ const SAC_AUTHORIZED_EMAILS = [
 
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
+    // Normalize the student number for case-insensitive 'P' handling
+    let normalizedStudentNumber = studentNumber;
+    
+    // If the student number starts with either 'P' or 'p', we need to check both variants
+    if (studentNumber.toLowerCase().startsWith('p')) {
+      const withUpperP = 'P' + studentNumber.substring(1);
+      const withLowerP = 'p' + studentNumber.substring(1);
+      
+      // First try with uppercase P
+      const usersRefUpperP = collection(firestore, 'users');
+      const qUpperP = query(usersRefUpperP, where('student_number', '==', withUpperP));
+      const querySnapshotUpperP = await withRetry(async () => await getDocs(qUpperP));
+      
+      if (!querySnapshotUpperP.empty) {
+        normalizedStudentNumber = withUpperP;
+      } else {
+        // If not found with uppercase P, try with lowercase p
+        const usersRefLowerP = collection(firestore, 'users');
+        const qLowerP = query(usersRefLowerP, where('student_number', '==', withLowerP));
+        const querySnapshotLowerP = await withRetry(async () => await getDocs(qLowerP));
+        
+        if (!querySnapshotLowerP.empty) {
+          normalizedStudentNumber = withLowerP;
+        }
+      }
+    }
+    
+    // Use the normalized student number for the actual query
     const usersRef = collection(firestore, 'users');
-    const q = query(usersRef, where('student_number', '==', studentNumber));
+    const q = query(usersRef, where('student_number', '==', normalizedStudentNumber));
     
     const querySnapshot = await withRetry(async () => {
       return await getDocs(q);
