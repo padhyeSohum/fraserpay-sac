@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -13,7 +12,6 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isPWA, showInstallBanner } from '@/utils/pwa';
 import { Separator } from '@/components/ui/separator';
-
 const Login = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -27,15 +25,15 @@ const Login = () => {
     user
   } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const isMobile = useIsMobile();
-  
   useEffect(() => {
     if (!isMobile || isPWA()) return;
     console.log("Login page: Setting up PWA install banner");
     return showInstallBanner(setShowPWAPrompt, 2000);
   }, [isMobile]);
-  
   useEffect(() => {
     if (isAuthenticated && user) {
       console.log("Login page: User is authenticated, redirecting", user.role);
@@ -44,7 +42,6 @@ const Login = () => {
       });
     }
   }, [isAuthenticated, user, navigate]);
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
@@ -69,17 +66,17 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-  
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
       console.log("Starting Google sign-in process from UI");
       const userData = await loginWithGoogle();
       console.log("Google sign-in completed, result:", !!userData);
-      
       if (userData) {
         console.log("Google sign-in successful, redirecting to dashboard");
-        navigate('/dashboard', { replace: true });
+        navigate('/dashboard', {
+          replace: true
+        });
       }
     } catch (error) {
       console.error('Google login error:', error);
@@ -87,7 +84,6 @@ const Login = () => {
       setIsGoogleLoading(false);
     }
   };
-  
   return <Layout hideHeader={true}>
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/30 animate-fade-in">
         <div className="mb-8">
@@ -96,7 +92,7 @@ const Login = () => {
         
         <Card className="w-full max-w-md shadow-lg border-opacity-50">
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
             <CardDescription>
               Sign in to access your FraserPay account
             </CardDescription>
@@ -104,13 +100,7 @@ const Login = () => {
           
           <CardContent className="space-y-4">
             {/* Google Sign In Button */}
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full flex items-center justify-center gap-2 h-11" 
-              onClick={handleGoogleSignIn} 
-              disabled={isGoogleLoading}
-            >
+            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
               {isGoogleLoading ? "Signing in..." : <>
                   <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" className="h-5 w-5">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -138,16 +128,7 @@ const Login = () => {
                 <Label htmlFor="studentNumber" className="text-sm font-medium">Student Number</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="studentNumber" 
-                    type="text" 
-                    placeholder="Enter your student number" 
-                    value={studentNumber} 
-                    onChange={e => setStudentNumber(e.target.value)} 
-                    disabled={isLoading} 
-                    required 
-                    className="pl-10"
-                  />
+                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="pl-10" />
                 </div>
               </div>
               
@@ -155,16 +136,7 @@ const Login = () => {
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    disabled={isLoading} 
-                    required 
-                    className="pl-10"
-                  />
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="pl-10" />
                 </div>
               </div>
               
@@ -193,5 +165,4 @@ const Login = () => {
       {showPWAPrompt && <PWAInstallPrompt onClose={() => setShowPWAPrompt(false)} />}
     </Layout>;
 };
-
 export default Login;
