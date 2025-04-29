@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader } from 'lucide-react';
 
 interface FundsDialogProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   const [studentNumber, setStudentNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
 
   // Sync studentId with local state when it changes
@@ -51,6 +53,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
       setStudentNumber('');
       setAmount('');
       setFoundStudent(null);
+      setIsProcessing(false);
     }
   }, [studentId, isOpen]);
 
@@ -94,8 +97,9 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (localStudentId && amount) {
+    if (localStudentId && amount && !isProcessing) {
       try {
+        setIsProcessing(true);
         await onSubmit(localStudentId, parseFloat(amount));
         
         // Clear form fields after successful submission
@@ -110,6 +114,8 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
         
       } catch (error) {
         console.error('Error submitting transaction:', error);
+      } finally {
+        setIsProcessing(false);
       }
     }
   };
@@ -195,9 +201,16 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
           <Button 
             variant={confirmVariant} 
             onClick={handleSubmit}
-            disabled={!localStudentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
+            disabled={!localStudentId || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || isProcessing}
           >
-            {confirmLabel}
+            {isProcessing ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
