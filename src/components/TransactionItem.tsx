@@ -25,9 +25,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const formattedTime = formatDistance(new Date(validTimestamp), new Date(), { addSuffix: true });
   const formattedDate = new Date(validTimestamp).toLocaleString();
   
-  // Use the formatCurrency utility consistently for all transaction types
-  // This ensures proper formatting regardless of source
-  const displayAmount = formatCurrency(amount);
+  // The issue is here - we need to ensure the amount is properly formatted as dollars
+  // Check if the value is likely in cents (over 100) and divide appropriately
+  const displayAmount = amount > 100 ? formatCurrency(amount / 100) : formatCurrency(amount);
   
   const renderProductList = () => {
     if (!products || products.length === 0) return null;
