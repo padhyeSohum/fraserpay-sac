@@ -63,6 +63,7 @@ export interface TransactionContextProps {
   
   recordTransaction: (buyerId: string, buyerName: string, products: { productId: string; productName: string; quantity: number; price: number; }[], amount: number, paymentMethod: PaymentMethod, boothId?: string, boothName?: string) => Promise<boolean>;
   addFunds: (studentId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean; message: string }>;
+  addPoints: (studentId: string, amount: number, sacMemberId: string, reason: string) => Promise<{ success: boolean, message: string }>;
   getTransactionsByDate: (dateRange: {startDate?: Date; endDate?: Date}, boothId?: string) => Promise<Transaction[]>;
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
@@ -104,6 +105,7 @@ const defaultContext: TransactionContextProps = {
   
   recordTransaction: async () => false,
   addFunds: async () => ({ success: false, message: "" }),
+  addPoints: async () => ({ success: false, message: "" }),
   getTransactionsByDate: async () => [],
   getTransactionsByBooth: async () => [],
   getStudentTransactions: async () => [],
@@ -297,15 +299,19 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       if (userSnap.exists()) {
         const userData = userSnap.data();
         const currentTickets = userData.tickets || 0;
+        const currentPoints = userData.points || 0;
         const amountInTickets = Math.round(totalAmount * 100);
+        const pointsToEarn = Math.round(amountInTickets/10);
         
         if (currentTickets < amountInTickets) {
           toast.error('User has insufficient balance');
           return false;
         }
         
+        // paying with balance
         await updateDoc(userRef, {
           tickets: currentTickets - amountInTickets,
+          points: currentPoints + pointsToEarn,
           updated_at: serverTimestamp()
         });
         
@@ -463,6 +469,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     
     recordTransaction: transactionHook.recordTransaction,
     addFunds: transactionHook.addFunds,
+    addPoints: transactionHook.addPoints,
     getTransactionsByDate: transactionHook.getTransactionsByDate,
     getTransactionsByBooth: transactionHook.getTransactionsByBooth,
     getStudentTransactions: transactionHook.getStudentTransactions,

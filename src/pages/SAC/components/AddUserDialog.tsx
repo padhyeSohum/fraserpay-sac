@@ -86,6 +86,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
           student_number: values.studentNumber,
           role: 'student',
           tickets: 0,
+          points: 0,
           qr_code: `USER:${authData.user.id}`
         });
       

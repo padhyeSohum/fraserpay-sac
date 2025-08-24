@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
-import { QrCode, ListOrdered, Settings, Plus } from 'lucide-react';
+import { QrCode, ListOrdered, Settings, Plus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const [lastBoothJoinedTime, setLastBoothJoinedTime] = useState<number>(0);
+  const [displayPointsModal, setDisplayPointsModal] = useState(false);
   const MAX_RETRIES = 3;
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
@@ -287,6 +288,43 @@ const Dashboard = () => {
           <div className="flex flex-col">
             <span className="text-white/80 mb-1">Your Balance</span>
             <span className="text-3xl font-bold">${user.balance.toFixed(2)}</span>
+            <span className="text-xl font-normal flex flex-row place-items-center gap-4">
+                {user.points} points 
+                <button className="bg-[#885dd1] hover:bg-[#9e7bdb] rounded-full text-sm transition-all w-5 h-5 duration-200" onClick={() => setDisplayPointsModal(true)}>
+                    ?
+                </button>
+            </span>
+            <div
+                className={`fixed z-10 inset-0 flex justify-center items-center p-2 ${displayPointsModal ? "pointer-events-auto" : "pointer-events-none"}`}
+            >
+                <div
+                    className={`absolute inset-0 bg-black/80 transition-opacity duration-500 ease-in-out ${displayPointsModal ? "opacity-100" : "opacity-0"}`}
+                />
+                <div
+                    className={`relative bg-white rounded-xl text-black p-4 w-full max-w-md transition-all duration-500 ease-in-out
+                                ${displayPointsModal
+                                ? "opacity-100 scale-100 translate-y-0"
+                                : "opacity-0 scale-95 translate-y-4"}`}
+                >
+                    <div className="flex justify-between items-center">
+                        <div className="font-semibold">What are FraserPoints?</div>
+                        <button
+                            className="hover:text-red-500 transition-all duration-200"
+                            onClick={() => setDisplayPointsModal(false)}
+                        >
+                            <X />
+                        </button>
+                    </div>
+                    <div className="text-sm mt-2">
+                        Any time you get involved with SAC, you get FraserPoints. Volunteering, participating in Spirit Week, 
+                        and making purchases at events all help you earn more points!
+                    </div>
+                    <div className="text-sm"></div>
+                    <div className="text-sm">
+                        You can redeem these points at SAC events for awesome prizes!
+                    </div>
+                </div>
+                </div>
             
             <p className="mt-4 text-sm text-white/80">Visit the SAC table to add funds to your account</p>
           </div>

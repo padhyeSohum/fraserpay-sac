@@ -20,6 +20,7 @@ interface User {
   student_number: string;
   role: string;
   tickets: number;
+  points: number;
   qr_code?: string;
 }
 
@@ -78,6 +79,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <TableHead>Student ID</TableHead>
             <TableHead>Role</TableHead>
             <TableHead className="text-right">Balance</TableHead>
+            <TableHead className="text-right">Points</TableHead>
             {onUserDelete && <TableHead className="w-[80px]">Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -109,6 +111,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 <TableCell className="capitalize">{user.role || 'student'}</TableCell>
                 <TableCell className="text-right">
                   ${(user.tickets / 100).toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right">
+                    {user.points || 0}
                 </TableCell>
                 {onUserDelete && (
                   <TableCell>

@@ -22,11 +22,14 @@ export interface StudentDetailDialogProps {
     studentNumber?: string;
     email?: string;
     balance: number;
+    points: number;
     qrCode?: string;
   } | null;
   qrCodeUrl: string;
   onAddFunds: (studentId: string) => void;
   onRefund: (studentId: string) => void;
+  onAddPoints: (studentId: string) => void;
+  onRedeemPoints: (studentId: string) => void;
   onPrintQRCode?: () => void;
 }
 
@@ -37,6 +40,8 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
   qrCodeUrl,
   onAddFunds,
   onRefund,
+  onAddPoints,
+  onRedeemPoints,
   onPrintQRCode = () => toast.info("Print QR code functionality not implemented")
 }) => {
   if (!student) {
@@ -116,6 +121,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             <h1>${studentInfo}</h1>
             ${studentId ? `<p>Student ID: ${studentId}</p>` : ''}
             <p>Balance: $${typeof student.balance === 'number' ? student.balance.toFixed(2) : '0.00'}</p>
+            <p>Points: ${typeof student.points === 'number' ? student.points : '0'}</p>
           </div>
           <div class="qr-code">
             ${qrCodeValue ? 
@@ -166,7 +172,12 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 {student.email || 'No email'}
               </div>
               <div className="mt-2 text-lg font-medium">
-                Balance: ${typeof student.balance === 'number' ? student.balance.toFixed(2) : '0.00'}
+                <div>
+                    Balance: ${typeof student.balance === 'number' ? student.balance.toFixed(2) : '0.00'}
+                </div>
+                <div>
+                    Points: {typeof student.points === 'number' ? student.points : 0}
+                </div>
               </div>
             </div>
             
@@ -210,6 +221,21 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
               >
                 <Minus className="h-4 w-4 mr-2" />
                 Refund
+              </Button>
+            </div>
+            <div className="flex gap-2 justify-center mt-4">
+              <Button 
+                onClick={() => student.id && onAddPoints(student.id)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Points
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => student.id && onRedeemPoints(student.id)}
+              >
+                <Minus className="h-4 w-4 mr-2" />
+                Redeem Points
               </Button>
             </div>
           </div>

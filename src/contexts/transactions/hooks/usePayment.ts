@@ -36,6 +36,8 @@ export const usePayment = () => {
       const userData = userSnap.data();
       const currentBalance = userData.tickets || 0;
       const amountInCents = Math.round(amount * 100);
+      const newBalance = currentBalance - amountInCents;
+      const newPoints = (userData.points || 0) + Math.round(amountInCents);
       
       // Check if user has enough balance
       if (currentBalance < amountInCents) {
@@ -43,9 +45,10 @@ export const usePayment = () => {
         return false;
       }
       
-      // Update user balance
+      // Update user balance and points
       await updateDoc(userRef, {
-        tickets: currentBalance - amountInCents,
+        tickets: newBalance,
+        points: newPoints,
         updated_at: serverTimestamp()
       });
       

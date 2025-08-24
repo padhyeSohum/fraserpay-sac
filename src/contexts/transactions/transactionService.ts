@@ -207,6 +207,103 @@ export const addFunds = async (
   }
 };
 
+export const addPoints = async (
+    userId: string,
+    amount: number,
+    sacMemberId: string,
+    reason: string
+): Promise<{ success: boolean, transaction?: Transaction, updatedPoints?: number }> => {
+    try {
+        console.log("Starting addPoints process:", { amount, userId, sacMemberId, reason});
+
+        // Fetch the current user data to get their existing points
+        const userRef = doc(firestore, 'users', userId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            console.error("User not found with ID:", userId);
+            toast.error("User not found");
+            return { success: false }
+        }
+
+        const userData = userSnap.data();
+        console.log("User data fetched:", userData);
+
+        // Calculate new points
+        const currentPoints = userData.points || 0;
+        const newPoints = currentPoints + amount;
+        console.log("Points calculation:", {
+            currentPoints,
+            amountToAdd: amount,
+            newPoints,
+            studentNumber: userData.student_number
+        });
+
+        // Update hte user's points
+        await updateDoc(userRef, {
+            points: newPoints
+        });
+
+        console.log("User points updated to:", newPoints);
+
+        // Create transaction record
+        const transactionsRef = collection(firestore, 'transactions');
+        const transactionData = {
+            student_id: userId,
+            student_name: userData.name,
+            amount: amount,
+            type: amount >= 0 ? 'add': 'redeem',
+            sac_member: sacMemberId,
+            reason: reason,
+            created_ad: new Date().toISOString()
+        };
+
+        const transactionRef = await addDoc(transactionsRef, transactionData);
+
+        console.log("Transaction record created with ID:", transactionRef.id);
+
+        // Verify the update was successful by fetching the user again
+        const updatedUserSnap = await getDoc(userRef);
+        const updatedUserData = updatedUserSnap.data();
+
+        if (updatedUserData.tickets !== newPoints) {
+            console.error("Points mismatch after update!", {
+                expected: newPoints,
+                actual: updatedUserData.points
+            });
+
+            // Try one more time to update points
+            await updateDoc(userRef, {
+                points: newPoints
+            });
+        }
+
+        // Add the new points transaction to the local state
+        const newPointsTransaction: Transaction = {
+            id: transactionRef.id,
+            timestamp: new Date().getTime(),
+            buyerId: userId,
+            buyerName: userData.name,
+            amount: amount,
+            type: amount >= 0 ? 'addPoints' : 'redeemPoints',
+            sacMemberId,
+        };
+
+        toast.success(`${amount >= 0 ? 'Added' : 'Redeemed'} ${amount} points ${amount >= 0 ? 'to' : 'from'} ${userData.name}'s account`);
+        console.log("Points processed successfully:", newPointsTransaction);
+
+        return {
+            success: true,
+            transaction: newPointsTransaction,
+            updatedPoints: newPoints
+        };
+    } catch (error) {
+        console.error('Error processing points:', error);
+        toast.error('Failed to process points: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        return { success: false };
+    }
+};
+
 export const processPurchase = async (
   boothId: string,
   buyerId: string,
@@ -261,14 +358,18 @@ export const processPurchase = async (
     }
     
     const newBalance = (userData.tickets || 0) - totalAmountInCents;
+    const newPoints = (userData.points || 0) + totalAmountInCents/10;
     console.log('Calculated new balance:', newBalance / 100);
+    console.log('Added points to account:', newPoints);
     
     // Update the user's balance
     await updateDoc(userRef, {
-      tickets: newBalance
+      tickets: newBalance,
+      points: newPoints
     });
     
     console.log('User balance updated to:', newBalance / 100);
+    console.log('User points updated to:', newPoints);
     
     // Verify the user balance was updated correctly
     const updatedUserSnap = await getDoc(userRef);
@@ -286,6 +387,19 @@ export const processPurchase = async (
         tickets: newBalance
       });
     }
+
+    if (updatedUserData.points !== newPoints) {
+        console.error('Points verification failed:', {
+            expected: newPoints,
+            actual: updatedUserData.points
+        })
+
+        // try to update points one more time
+        console.log('Trying one more time to update balance');
+        await updateDoc(userRef, {
+            points: newPoints
+        });
+    }
     
     // Now create the transaction record
     const transactionsRef = collection(firestore, 'transactions');
@@ -295,6 +409,7 @@ export const processPurchase = async (
       booth_id: boothId,
       booth_name: boothName,
       amount: totalAmountInCents,
+      points_earned: totalAmountInCents/10,
       type: 'purchase',
       created_at: new Date().toISOString()
     };

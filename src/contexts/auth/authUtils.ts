@@ -12,6 +12,7 @@ interface FirestoreUserData {
   student_number?: string;
   role?: UserRole;
   tickets?: number;
+  points?: number;
   booth_access?: string[];
   qr_code?: string;
   created_at?: string;
@@ -37,6 +38,7 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
     // Ensure all required fields have valid values
     if (!userData.booth_access) userData.booth_access = [];
     if (userData.tickets === undefined || userData.tickets === null) userData.tickets = 0;
+    if (userData.points === undefined || userData.points === null) userData.points = 0;
     
     return transformFirebaseUser(userData);
   } catch (error) {

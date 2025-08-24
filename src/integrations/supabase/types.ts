@@ -174,6 +174,7 @@ export type Database = {
           role: string
           student_number: string
           tickets: number
+          points: number
         }
         Insert: {
           booth_access?: string[] | null
@@ -185,6 +186,7 @@ export type Database = {
           role?: string
           student_number: string
           tickets?: number
+          points?: number
         }
         Update: {
           booth_access?: string[] | null
@@ -196,6 +198,7 @@ export type Database = {
           role?: string
           student_number?: string
           tickets?: number
+          points?: number
         }
         Relationships: []
       }

@@ -45,6 +45,7 @@ export const transformDatabaseUser = (dbUser: any): User => {
     email: dbUser.email || '',
     role: dbUser.role || 'student',
     balance: typeof dbUser.tickets === 'number' ? dbUser.tickets / 100 : 0,
+    points: typeof dbUser.points === 'number' ? dbUser.points : 0,
     favoriteProducts: dbUser.favorite_products || [],
     booths: dbUser.booth_access || []
   };

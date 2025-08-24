@@ -1,7 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, setDoc, doc, getDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
@@ -21,6 +21,22 @@ const auth = getAuth(app);
 const firestore = getFirestore(app);
 const functions = getFunctions(app);
 const storage = getStorage(app);
+
+const q = query(collection(firestore, 'users'), where('email', '==', '795804@pdsb.net'));
+const querySnapshot = await getDocs(q);
+
+querySnapshot.forEach(async (d) => {
+    // const userRef = doc(firestore, 'users', d.id);
+
+    // await setDoc(doc(firestore, 'users', userRef.id), {
+    //     tickets: 3000,
+    // }, { merge: true })
+
+    console.log('HERE')
+    console.log(d.id, "=>", d.data())
+
+})
+
 
 // Create Google Auth Provider with domain restriction
 export const googleProvider = new GoogleAuthProvider();

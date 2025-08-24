@@ -137,6 +137,7 @@ const MassUserImport = () => {
               email: row.email,
               role: row.role || 'student',
               tickets: parseInt(row.tickets || '0') || 0,
+              points: 0,
               created_at: new Date().toISOString(),
               created_by: user.id
             };

@@ -176,6 +176,7 @@ export const loginWithGoogle = async (): Promise<User | null> => {
           student_number: studentNumber,
           role: userRole,
           tickets: 0,
+          points: 0,
           booth_access: [],
           qr_code: qrCode,
           created_at: new Date().toISOString()
@@ -222,14 +223,16 @@ export const registerUser = async (
     let existingUserData: any = null;
     let existingUserDocId: string | null = null;
     let existingTickets = 0;
+    let existingPoints = 0;
     let existingBoothAccess: string[] = [];
     
     if (!studentSnapshot.empty) {
       existingUserDocId = studentSnapshot.docs[0].id;
       existingUserData = studentSnapshot.docs[0].data();
       existingTickets = existingUserData.tickets || 0;
+      existingPoints = existingUserData.points || 0;
       existingBoothAccess = existingUserData.booth_access || [];
-      console.log(`Found existing user with student number ${studentNumber}, current balance: ${existingTickets}`);
+      console.log(`Found existing user with student number ${studentNumber}, current balance: ${existingTickets}, current points: ${existingPoints}`);
     }
     
     await withRetry(async () => {
@@ -240,6 +243,7 @@ export const registerUser = async (
         student_number: studentNumber,
         role: 'student',
         tickets: existingTickets,
+        points: existingPoints,
         booth_access: existingBoothAccess,
         qr_code: qrCode || "",
         created_at: new Date().toISOString()

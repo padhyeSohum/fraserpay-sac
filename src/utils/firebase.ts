@@ -11,6 +11,7 @@ export const transformFirebaseUser = (dbUser: DocumentData): User => {
     email: dbUser.email,
     role: dbUser.role,
     balance: (dbUser.tickets || 0) / 100, // Database stores in cents
+    points: dbUser.points || 0,
     favoriteProducts: [],
     booths: dbUser.booth_access || []
   };
@@ -25,6 +26,7 @@ export const transformUserToFirebase = (user: User): DocumentData => {
     email: user.email,
     role: user.role,
     tickets: Math.round(user.balance * 100), // Store in cents
+    points: user.points || 0,
     booth_access: user.booths || []
   };
 };

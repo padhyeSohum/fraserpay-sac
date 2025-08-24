@@ -13,6 +13,7 @@ import BoothsList from './components/BoothsList';
 import CreateBoothDialog from './components/CreateBoothDialog';
 import StudentDetailDialog from './components/StudentDetailDialog';
 import FundsDialog from './components/FundsDialog';
+import PointsDialog from './components/PointsDialog';
 import BoothTransactionDialog from './components/BoothTransactionDialog';
 import AddUserDialog from './components/AddUserDialog';
 import BulkImportDialog from './components/BulkImportDialog';
@@ -41,6 +42,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { 
     addFunds, 
+    addPoints,
     booths, 
     fetchAllBooths, 
     getBoothById, 
@@ -83,6 +85,9 @@ const Dashboard = () => {
   
   const [isFundsDialogOpen, setIsFundsDialogOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isAddPointsDialogOpen, setIsAddPointsDialogOpen] = useState(false);
+  const [isRedeemPointsDialogOpen, setIsRedeemPointsDialogOpen] = useState(false);
+  const [pointsTransactionReason, setPointsTransactionReason] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState('');
   
   const [isBoothTransactionOpen, setIsBoothTransactionOpen] = useState(false);
@@ -389,7 +394,8 @@ const Dashboard = () => {
         const userData = userSnap.data();
         setFoundStudent({
           ...student,
-          balance: (userData.tickets || 0) / 100
+          balance: (userData.tickets || 0) / 100,
+          points: userData.points || 0
         });
       } else {
         setFoundStudent(student);
@@ -422,6 +428,7 @@ const Dashboard = () => {
       studentNumber: user.student_number,
       email: user.email,
       balance: (user.tickets || 0) / 100,
+      points: user.points || 0,
       qrCode: user.qr_code
     };
     
@@ -508,6 +515,16 @@ const Dashboard = () => {
     setSelectedStudentId(studentId);
     setIsRefundDialogOpen(true);
   };
+
+  const handleAddPoints = (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setIsAddPointsDialogOpen(true);
+  }
+
+  const handleRedeemPoints = (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setIsRedeemPointsDialogOpen(true);
+  }
   
   const handleProcessAddFunds = async (studentId: string, amount: number) => {
     if (!user) {
@@ -534,7 +551,7 @@ const Dashboard = () => {
           const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: (userData.tickets || 0) / 100
+            balance: (userData.tickets || 0) / 100,
           });
         }
         
@@ -578,7 +595,7 @@ const Dashboard = () => {
           const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: (userData.tickets || 0) / 100
+            balance: (userData.tickets || 0) / 100,
           });
         }
         
@@ -599,6 +616,95 @@ const Dashboard = () => {
       setIsRefundDialogOpen(false);
     }
   };
+
+  const handleProcessAddPoints = async (studentId: string, amount: number) => {
+    if (!user) {
+        toast.error('You must be logged in to add points');
+        return;
+    }
+    
+    if (user.id === studentId) {
+      toast.error('You cannot add points to your own account');
+      setIsAddPointsDialogOpen(false);
+      return;
+    }
+    
+    try {
+      const result = await addPoints(studentId, amount, user.id, pointsTransactionReason);
+      
+      if (result.success) {
+        toast.success(`Successfully added ${amount} points to account`);
+        
+        const userRef = doc(firestore, 'users', studentId);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists() && foundStudent) {
+          const userData = userSnap.data();
+          setFoundStudent({
+            ...foundStudent,
+            points: userData.points || 0
+          });
+        }
+        
+        await loadUsers();
+        await loadTransactions();
+      } else {
+        toast.error('Failed to add points');
+      }
+    } catch (error) {
+      console.error('Error adding points:', error);
+      toast.error('Failed to add points');
+    } finally {
+      setIsFundsDialogOpen(false);
+    }
+
+  }
+
+  const handleProcessRedeemPoints = async (studentId: string, amount: number) => {
+    if (!user) {
+        toast.error('You must be logged in to add points');
+        return;
+    }
+    
+    if (user.id === studentId) {
+      toast.error('You cannot redeem points for your own account');
+      setIsAddPointsDialogOpen(false);
+      return;
+    }
+    
+    try {
+      amount = -amount;
+
+      const result = await addPoints(studentId, amount, user.id, pointsTransactionReason);
+      
+      if (result.success) {
+        toast.success(`Successfully redeemed ${amount} points`);
+        
+        const userRef = doc(firestore, 'users', studentId);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists() && foundStudent) {
+          const userData = userSnap.data();
+          setFoundStudent({
+            ...foundStudent,
+            points: userData.points || 0
+          });
+        }
+        
+        await loadUsers();
+        await loadTransactions();
+      } else {
+        toast.error('Failed to redeem points');
+      }
+    } catch (error) {
+      console.error('Error redeeming points:', error);
+      toast.error('Failed to redeem points');
+    } finally {
+      setIsFundsDialogOpen(false);
+    }
+
+  }
+
   
   const handlePrintQRCode = () => {
     if (!foundStudent || !foundStudent.qrCode) {
@@ -939,6 +1045,8 @@ const Dashboard = () => {
             onOpenChange={setIsStudentDetailOpen}
             onAddFunds={handleAddFunds}
             onRefund={handleRefund}
+            onAddPoints={handleAddPoints}
+            onRedeemPoints={handleRedeemPoints}
             onPrintQRCode={handlePrintQRCode}
           />
         )}
@@ -964,6 +1072,31 @@ const Dashboard = () => {
           studentId={selectedStudentId}
           onSubmit={handleProcessRefund}
           readOnlyId={true}
+        />
+
+        <PointsDialog
+            isOpen={isAddPointsDialogOpen}
+            onOpenChange={setIsAddPointsDialogOpen}
+            title="Add Points"
+            description="Add points to student account"
+            confirmLabel="Add Points"
+            studentId={selectedStudentId}
+            onSubmit={handleProcessAddPoints}
+            onReasonChange={(r: string) => setPointsTransactionReason(r)}
+            readOnlyId={true}
+        />
+
+        <PointsDialog 
+            isOpen={isRedeemPointsDialogOpen}
+            onOpenChange={setIsRedeemPointsDialogOpen}
+            title="Process Points Redemption"
+            description="Redeem points from a student account"
+            confirmLabel="Redeem Points"
+            confirmVariant="destructive"
+            studentId={selectedStudentId}
+            onSubmit={handleProcessRedeemPoints}
+            onReasonChange={(r: string) => setPointsTransactionReason(r)}
+            readOnlyId={true}
         />
         
         <BoothTransactionDialog

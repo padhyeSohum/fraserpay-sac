@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Transaction, User, Product, PaymentMethod } from '@/types';
 import { toast } from 'sonner';
 import { addFunds as addFundsService } from '../transactionService';
+import { addPoints as addPointsService } from '../transactionService';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -21,6 +22,7 @@ export interface UseTransactionReturn {
     boothName?: string
   ) => Promise<boolean>;
   addFunds: (studentId: string, amount: number, sacMemberId: string) => Promise<{ success: boolean; message: string }>;
+  addPoints: (studentId: string, amount: number, sacMemberId: string, reason: string) => Promise<{ success: boolean; message: string }>;
   getTransactionsByDate: (dateRange: {startDate?: Date; endDate?: Date}, boothId?: string) => Promise<Transaction[]>;
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
@@ -96,6 +98,35 @@ export const useTransaction = (): UseTransactionReturn => {
     }
   };
 
+  const addPoints = async (
+    studentId: string,
+    amount: number,
+    sacMemberId: string,
+    reason: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+        const result = await addPointsService(studentId, amount, sacMemberId, reason);
+
+        if (result.success) {
+            return {
+                success: true,
+                message: `Successfully added ${amount} points to account`
+            };
+        } else {
+            return {
+                success: false,
+                message: 'Failed to add points'
+            };
+        }
+    } catch (error) {
+        console.error('Error adding points:', error);
+        return {
+            success: false,
+            message: 'An error occurred while adding points'
+        };
+    }
+  };
+
   // Get transactions by date range
   const getTransactionsByDate = async (
     dateRange: {startDate?: Date; endDate?: Date},
@@ -154,6 +185,7 @@ export const useTransaction = (): UseTransactionReturn => {
         studentNumber: userData.student_number,
         role: userData.role,
         balance: (userData.tickets || 0) / 100, // Convert to dollars
+        points: (userData.points || 0),
         booths: userData.booth_access || []
       };
     } catch (error) {
@@ -177,6 +209,7 @@ export const useTransaction = (): UseTransactionReturn => {
   return {
     recordTransaction,
     addFunds,
+    addPoints,
     getTransactionsByDate,
     getTransactionsByBooth,
     getStudentTransactions,

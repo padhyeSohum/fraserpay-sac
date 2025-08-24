@@ -8,6 +8,7 @@ export interface User {
   email: string;
   role: UserRole;
   balance: number;
+  points: number;
   favoriteProducts?: string[];
   booths?: string[];
 }
@@ -52,7 +53,7 @@ export interface Transaction {
     price: number;
   }[];
   amount: number;
-  type: 'purchase' | 'fund' | 'refund';
+  type: 'purchase' | 'fund' | 'refund' | 'addPoints' | 'redeemPoints';
   paymentMethod?: PaymentMethod;
   sacMemberId?: string;
   sacMemberName?: string;
