@@ -73,28 +73,28 @@ const Dashboard = () => {
         }
         return;
       }
-      const {
-        data: freshUserData,
-        error: userError
-      } = await supabase.from('users').select('tickets, booth_access').eq('id', user.id).single();
-      if (userError) {
-        console.error("Error refreshing user data:", userError);
-        return;
-      }
-      if (freshUserData && user) {
-        console.log("Dashboard - refreshed user data:", freshUserData);
-        const newBalance = freshUserData.tickets / 100;
-        const newBooths = freshUserData.booth_access || [];
-        if (newBalance !== user.balance || JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
-          console.log("Updating user data with new booths:", newBooths);
-          updateUserData({
-            ...user,
-            balance: newBalance,
-            booths: newBooths
-          });
-        }
-        setVersionedStorageItem('lastUserDataFetch', now);
-      }
+    //   const {
+    //     data: freshUserData,
+    //     error: userError
+    //   } = await supabase.from('users').select('tickets, booth_access').eq('id', user.id).single();
+    //   if (userError) {
+    //     console.error("Error refreshing user data:", userError);
+    //     return;
+    //   }
+    //   if (freshUserData && user) {
+    //     console.log("Dashboard - refreshed user data:", freshUserData);
+    //     const newBalance = freshUserData.tickets / 100;
+    //     const newBooths = freshUserData.booth_access || [];
+    //     if (newBalance !== user.balance || JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
+    //       console.log("Updating user data with new booths:", newBooths);
+    //       updateUserData({
+    //         ...user,
+    //         balance: newBalance,
+    //         booths: newBooths
+    //       });
+    //     }
+    //     setVersionedStorageItem('lastUserDataFetch', now);
+    //   }
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }
@@ -102,10 +102,10 @@ const Dashboard = () => {
   const refreshUserBooths = useCallback(async () => {
     if (!user) return;
     try {
-      console.log("Dashboard: Refreshing user booths for user", user.id);
+    //   console.log("Dashboard: Refreshing user booths for user", user.id);
       const booths = await fetchAllBooths();
       const userInitiatives = booths.filter(booth => booth.managers.includes(user.id) || user.booths && user.booths.includes(booth.id));
-      console.log("Dashboard: Refreshed user booths, found", userInitiatives.length, "initiatives for user", user.id);
+    //   console.log("Dashboard: Refreshed user booths, found", userInitiatives.length, "initiatives for user", user.id);
       setUserBooths(userInitiatives);
     } catch (error) {
       console.error("Error refreshing user booths:", error);

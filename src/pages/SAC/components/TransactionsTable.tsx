@@ -23,6 +23,14 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const pageSize = 10; // Number of transactions per page
 
+  const normalizeDate = (value: any) : Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (value.toDate) return value.toDate();
+    if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+    return null;
+  }
+
   // Filter transactions based on search term and selected type
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = (transaction.student_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (transaction.booth_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (transaction.type?.toLowerCase() || '').includes(searchTerm.toLowerCase());
@@ -32,8 +40,8 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
 
   // Sort transactions by date
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
+    const dateA = normalizeDate(a.created_at)?.getTime() || 0;
+    const dateB = normalizeDate(b.created_at)?.getTime() || 0;
     return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
@@ -42,16 +50,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   const paginatedTransactions = sortedTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Format date helper that handles strings or Date objects
-  const formatDate = (dateValue: string | Date | null | undefined) => {
-    if (!dateValue) return 'N/A';
+  const formatDate = (dateValue: any) => {
     try {
-      // If it's a string date, convert to Date object
-      const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+      const date = normalizeDate(dateValue);
 
-      // Verify it's a valid date before formatting
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
+      if (!date || isNaN(date.getTime())) return 'Invalid date';
       return format(date, 'MMM d, yyyy h:mm a');
     } catch (error) {
       console.error('Error formatting date:', error);

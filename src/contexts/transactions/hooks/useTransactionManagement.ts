@@ -38,7 +38,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
         const cacheTime = 30 * 1000; // Reduced to 30 seconds for more responsive updates
         
         if (cachedTransactions.length > 0 && now - lastFetchTime < cacheTime) {
-          console.log('Using cached transactions:', cachedTransactions.length);
+        //   console.log('Using cached transactions:', cachedTransactions.length);
           setTransactions(cachedTransactions);
           
           if (user && cachedTransactions.length > 0) {
@@ -58,7 +58,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
         
         if (user && allTransactions.length > 0) {
           const userTxs = allTransactions.filter(t => t.buyerId === user.id);
-          console.log('User transactions:', userTxs.length);
+        //   console.log('User transactions:', userTxs.length);
           setRecentTransactions(userTxs.slice(0, 5));
         }
       } catch (error) {

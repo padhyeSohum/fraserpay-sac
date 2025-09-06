@@ -7,7 +7,7 @@ import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storag
 
 export const fetchAllTransactions = async (): Promise<Transaction[]> => {
   try {
-    console.log('Fetching all transactions from Firebase');
+    // console.log('Fetching all transactions from Firebase');
     
     // Check if we have cached data first
     const cachedTransactions = getVersionedStorageItem<Transaction[]>('allTransactions', []);
@@ -17,7 +17,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     
     // Use cache if it's fresh enough
     if (cachedTransactions.length > 0 && now - lastFetchTime < cacheStaleTime) {
-      console.log('Using cached transactions:', cachedTransactions.length, 'records');
+    //   console.log('Using cached transactions:', cachedTransactions.length, 'records');
       return cachedTransactions;
     }
     
@@ -91,7 +91,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     setVersionedStorageItem('allTransactions', transactions, cacheStaleTime);
     setVersionedStorageItem('lastTransactionsFetch', now);
     
-    console.log('Transactions data received:', transactions.length, 'records');
+    // console.log('Transactions data received:', transactions.length, 'records');
     return transactions;
   } catch (error) {
     console.error('Error fetching transactions:', error);

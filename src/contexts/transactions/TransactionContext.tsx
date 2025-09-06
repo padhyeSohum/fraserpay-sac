@@ -175,7 +175,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
           setBooths(cachedBooths);
         } else {
           const fetchedBooths = await boothManagement.fetchAllBooths();
-          console.log("Loaded booths:", fetchedBooths.length);
+        //   console.log("Loaded booths:", fetchedBooths.length);
           setBooths(fetchedBooths);
           
           // Cache the result
@@ -189,11 +189,11 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         
         // Use cache if fresh (less than 1 minute old) - reduced from 2 minutes for faster updates
         if (cachedTransactions.length > 0 && now - lastTransactionsFetch < 1 * 60 * 1000) {
-          console.log("Using cached transactions:", cachedTransactions.length);
+        //   console.log("Using cached transactions:", cachedTransactions.length);
           setRecentTransactions(cachedTransactions);
         } else {
           const allTransactions = await fetchAllTransactions();
-          console.log("Loaded transactions:", allTransactions.length);
+        //   console.log("Loaded transactions:", allTransactions.length);
           setRecentTransactions(allTransactions);
           
           // Cache the result

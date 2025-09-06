@@ -859,7 +859,7 @@ const Dashboard = () => {
   };
 
   const handleCheckPassword = () => {
-    if (resetPassword === "akshatmygoat") {
+    if (resetPassword === import.meta.env.VITE_FRASERPAY_RESET_PASSWORD) {
       setResetConfirmation(true);
       setResetError('');
     } else {

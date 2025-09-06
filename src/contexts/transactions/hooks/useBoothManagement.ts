@@ -40,7 +40,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
   
   // Load all initiatives
   const loadBooths = useCallback(async () => {
-    console.log('Loading all initiatives');
+    // console.log('Loading all initiatives');
     setIsLoading(true);
     
     try {
@@ -79,7 +79,7 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         });
       }
       
-      console.log('Loaded initiatives:', boothsData.length);
+    //   console.log('Loaded initiatives:', boothsData.length);
       return boothsData;
     } catch (error) {
       console.error('Error loading initiatives:', error);

@@ -41,14 +41,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.uid);
-      
       if (!mounted) return;
       
       if (firebaseUser) {
         setAuthUser(firebaseUser);
         
         try {
-          const userData = await fetchUserData(firebaseUser.uid);
+          const userData = await fetchUserData(user!.id);
           
           if (mounted) {
             if (userData) {

@@ -12,15 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 
-// SAC admin credentials
-const SAC_ADMINS = [
-  { username: "sacadmin", password: "codyisabum" },
-  { username: "Akshat", password: "Password" },
-  { username: "teacher", password: "SAC1234" },
-  { username: "JFSS_Admin", password: "JFSS2025" },
-  { username: "sac", password: "sac2025" }
-];
-
 const Settings = () => {
   const {
     user,
@@ -32,7 +23,6 @@ const Settings = () => {
     toast
   } = useToast();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -73,30 +63,7 @@ const Settings = () => {
       });
     }
   };
-  
-  const handleLogin = () => {
-    // Check if username/password match any of the allowed admin credentials
-    const isValidAdmin = SAC_ADMINS.some(
-      admin => admin.username === username && admin.password === password
-    );
     
-    if (isValidAdmin) {
-      // Use the existing verifySACPin function with the hardcoded PIN
-      // This maintains the existing functionality while changing the UI
-      const result = verifySACPin("123456");
-      if (!result) {
-        toast({
-          title: "Authentication Error",
-          description: "Could not authenticate with SAC admin credentials",
-          variant: "destructive"
-        });
-      }
-      setIsOpen(false);
-    } else {
-      setLoginError("Invalid username or password. Please contact SAC if you need assistance.");
-    }
-  };
-  
   return <Layout title="Account Settings" showBack>
       <div className="space-y-6 animate-fade-in">
         <Card>
@@ -180,32 +147,6 @@ const Settings = () => {
           </CardFooter>
         </Card>
       </div>
-
-      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>SAC Admin Login</AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter your SAC admin credentials to access the SAC dashboard.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" />
-            </div>
-            {loginError && <p className="text-sm text-destructive">{loginError}</p>}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogin}>Login</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Layout>;
 };
 

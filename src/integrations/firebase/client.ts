@@ -1,19 +1,19 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, setDoc, doc, getDoc, query, collection, where, getDocs } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, setDoc, doc, getDoc, query, collection, where, getDocs, addDoc } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
-// Firebase configuration with your actual credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyCfUi-2emJm69P27RxWsKgm9Cipm-XHi74",
-  authDomain: "fraserpay-sac.firebaseapp.com",
-  projectId: "fraserpay-sac",
-  storageBucket: "fraserpay-sac.appspot.com",
-  messagingSenderId: "1076398745844",
-  appId: "1:1076398745844:web:7aa0f09d05611d96a496a1"
-};
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY2,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN2,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID2,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET2,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID2,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID2
+}
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -21,22 +21,6 @@ const auth = getAuth(app);
 const firestore = getFirestore(app);
 const functions = getFunctions(app);
 const storage = getStorage(app);
-
-const q = query(collection(firestore, 'users'), where('email', '==', '795804@pdsb.net'));
-const querySnapshot = await getDocs(q);
-
-querySnapshot.forEach(async (d) => {
-    // const userRef = doc(firestore, 'users', d.id);
-
-    // await setDoc(doc(firestore, 'users', userRef.id), {
-    //     tickets: 3000,
-    // }, { merge: true })
-
-    console.log('HERE')
-    console.log(d.id, "=>", d.data())
-
-})
-
 
 // Create Google Auth Provider with domain restriction
 export const googleProvider = new GoogleAuthProvider();
