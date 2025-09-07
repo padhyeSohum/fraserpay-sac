@@ -70,7 +70,7 @@ const ProductItem: React.FC<ProductItemProps> = ({
           <div>
             <h3 className="font-medium">{product.name}</h3>
             {!isEditing ? (
-              <p className="text-muted-foreground">${product.price.toFixed(2)}</p>
+              <p className="text-muted-foreground">${(product.price/100).toFixed(2)}</p>
             ) : (
               <div className="flex items-center mt-1">
                 <span className="mr-1">$</span>

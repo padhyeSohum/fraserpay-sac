@@ -63,7 +63,7 @@ export const useProductManagement = (): UseProductManagementReturn => {
       const newProduct = {
         id: productId,
         name: product.name,
-        price: product.price,
+        price: product.price*100,
         boothId: boothId,
         salesCount: 0,
         description: product.description || '',

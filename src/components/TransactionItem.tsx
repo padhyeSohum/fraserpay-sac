@@ -27,7 +27,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   
   // The issue is here - we need to ensure the amount is properly formatted as dollars
   // Check if the value is likely in cents (over 100) and divide appropriately
-  const displayAmount = amount > 100 ? formatCurrency(amount / 100) : formatCurrency(amount);
+  const displayAmount = formatCurrency(amount/100);
   
   const renderProductList = () => {
     if (!products || products.length === 0) return null;

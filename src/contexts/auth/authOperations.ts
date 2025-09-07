@@ -187,7 +187,7 @@ export const loginWithGoogle = async (): Promise<User | null> => {
       userData = await fetchUserData(googleUser.uid);
     }
     
-    console.log('Google auth complete, returning user data:', userData?.id);
+    // console.log('Google auth complete, returning user data:', userData?.id);
     return userData;
   } catch (error: any) {
     console.error('Error in Google sign-in:', error);

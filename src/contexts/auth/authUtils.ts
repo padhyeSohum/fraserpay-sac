@@ -25,7 +25,7 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
     const userRef = doc(firestore, 'users', userId);
     const userSnap = await getDoc(userRef);
 
-    console.log(userSnap);
+    // console.log(userSnap);
     
     if (!userSnap.exists()) {
       console.error('No user data found for ID:', userId);

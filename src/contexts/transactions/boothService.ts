@@ -132,7 +132,7 @@ export const addProductToBooth = async (
       id: `prod_${Date.now()}`,
       boothId: boothId,
       name: product.name,
-      price: product.price,
+      price: product.price*100,
       image: product.image,
       salesCount: 0
     };

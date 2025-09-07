@@ -25,22 +25,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    console.log('Auth state:', { 
-      isLoading, 
-      authUser: authUser?.uid || null, 
-      user: user?.id || null, 
-      authInitialized,
-      isGoogleUser: authUser?.providerData?.[0]?.providerId === 'google.com'
-    });
-  }, [isLoading, authUser, user, authInitialized]);
+//   useEffect(() => {
+//     console.log('Auth state:', { 
+//       isLoading, 
+//       authUser: authUser?.uid || null, 
+//       user: user?.id || null, 
+//       authInitialized,
+//       isGoogleUser: authUser?.providerData?.[0]?.providerId === 'google.com'
+//     });
+//   }, [isLoading, authUser, user, authInitialized]);
 
   useEffect(() => {
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth state changed:", firebaseUser?.uid);
+    //   console.log("Auth state changed:", firebaseUser?.uid);
       if (!mounted) return;
       
       if (firebaseUser) {
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (mounted) {
             if (userData) {
-              console.log("User data fetched successfully:", userData.id);
+            //   console.log("User data fetched successfully:", userData.id);
               setUser(userData);
             } else {
               console.warn("No user data found for authenticated user:", firebaseUser.uid);

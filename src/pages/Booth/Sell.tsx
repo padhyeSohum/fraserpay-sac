@@ -42,7 +42,7 @@ const BoothSell = () => {
       await fetchAllBooths();
       
       const updatedBooth = getBoothById(boothId);
-      console.log('Refreshed initiative data for sell page:', updatedBooth);
+    //   console.log('Refreshed initiative data for sell page:', updatedBooth);
       setBooth(updatedBooth);
     } catch (error) {
       console.error('Error refreshing initiative data:', error);
@@ -138,7 +138,7 @@ const BoothSell = () => {
         setCustomer({
           id: userData.id,
           name: userData.name,
-          balance: userData.tickets / 100  // Convert cents to dollars
+          balance: userData.tickets
         });
         
         toast.success(`Found customer: ${userData.name}`);
@@ -175,7 +175,7 @@ const BoothSell = () => {
         setCustomer({
           id: userData.id,
           name: userData.name,
-          balance: userData.tickets / 100  // Convert cents to dollars
+          balance: userData.tickets
         });
         toast.success(`Found customer: ${userData.name}`);
       } else {
@@ -239,7 +239,7 @@ const BoothSell = () => {
           setStudentNumber('');
         }, 5000);
         
-        toast.success(`Purchase of $${total.toFixed(2)} completed successfully`);
+        toast.success(`Purchase of $${(total/100).toFixed(2)} completed successfully`);
       }
     } catch (error) {
       console.error(error);
@@ -334,7 +334,7 @@ const BoothSell = () => {
                     
                     <div className="text-right">
                       <div className="text-xs text-muted-foreground">Balance</div>
-                      <div className="text-lg font-semibold text-green-600">${customer.balance.toFixed(2)}</div>
+                      <div className="text-lg font-semibold text-green-600">${(customer.balance/100).toFixed(2)}</div>
                     </div>
                     
                     <Button 
@@ -464,7 +464,7 @@ const BoothSell = () => {
                     
                     <div className="text-right">
                       <div className="text-sm text-muted-foreground">Total Amount</div>
-                      <div className="text-xl font-bold">${totalAmount.toFixed(2)}</div>
+                      <div className="text-xl font-bold">${(totalAmount/100).toFixed(2)}</div>
                     </div>
                   </div>
                   

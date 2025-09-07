@@ -255,7 +255,7 @@ export const addPoints = async (
             type: amount >= 0 ? 'add': 'redeem',
             sac_member: sacMemberId,
             reason: reason,
-            created_ad: new Date().toISOString()
+            created_at: new Date().toISOString()
         };
 
         const transactionRef = await addDoc(transactionsRef, transactionData);

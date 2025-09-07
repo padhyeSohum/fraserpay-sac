@@ -190,7 +190,8 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${transaction.type === 'fund' ? 'text-green-600' : transaction.type === 'refund' ? 'text-red-600' : 'text-slate-900'}`}>
-                      ${formatCurrency(transaction.amount)}
+                      {/* {$}{formatCurrency(transaction.amount)} */}
+                      {transaction.type === 'fund' || transaction.type === 'refund' || transaction.type === 'purchase' ? '$' : ''}{transaction.type === 'fund' || transaction.type === 'refund' || transaction.type === 'purchase' ? formatCurrency(transaction.amount) : transaction.amount}
                     </TableCell>
                   </TableRow>)}
               </TableBody>

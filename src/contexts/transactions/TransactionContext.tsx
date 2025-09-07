@@ -211,7 +211,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     };
     
     initializeData();
-  }, [isInitialized, boothManagement]);
+  }, [isInitialized, boothManagement.fetchAllBooths]);
   
   useEffect(() => {
     if (!isInitialized || !user) return;
@@ -300,7 +300,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         const userData = userSnap.data();
         const currentTickets = userData.tickets || 0;
         const currentPoints = userData.points || 0;
-        const amountInTickets = Math.round(totalAmount * 100);
+        const amountInTickets = Math.round(totalAmount);
         const pointsToEarn = Math.round(amountInTickets/10);
         
         if (currentTickets < amountInTickets) {

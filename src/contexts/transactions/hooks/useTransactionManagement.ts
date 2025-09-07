@@ -71,7 +71,7 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
     // Poll more frequently (reduced from 15000ms to 10000ms)
     const intervalId = setInterval(fetchTransactionsData, 10000);
     return () => clearInterval(intervalId);
-  }, [user, isAuthenticated]);
+  }, [user?.id, isAuthenticated]);
 
   const loadBoothTransactions = (boothId: string) => {
     return transactions.filter(t => t.boothId === boothId);
