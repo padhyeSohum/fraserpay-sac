@@ -57,7 +57,7 @@ const Leaderboard = () => {
           <CardContent className="p-6">
             {isLoading ? <div className="flex justify-center p-6">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8">The leaderboard is not active yet! Check back after day 1 of Charity Week :) </p> : <div className="space-y-4">
+              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8">The leaderboard is not active yet! Check back at the start of Mosaic Lunch! :) </p> : <div className="space-y-4">
                 {leaderboardData.map((booth, index) => <div key={booth.boothId}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">

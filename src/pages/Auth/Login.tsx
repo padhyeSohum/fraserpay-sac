@@ -116,14 +116,14 @@ const Login = () => {
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
+              {/* <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
                   Or continue with
                 </span>
-              </div>
+              </div> */}
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="studentNumber" className="text-sm font-medium">Student Number</Label>
                 <div className="relative">
@@ -143,16 +143,16 @@ const Login = () => {
               <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 h-11" disabled={isLoading}>
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
-            </form>
+            </form> */}
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-2 pt-0">
-            <div className="text-sm text-center text-muted-foreground">
+            {/* <div className="text-sm text-center text-muted-foreground">
               <span>Don't have an account? </span>
               <Link to="/register" className="text-brand-600 hover:underline font-medium">
                 Create one
               </Link>
-            </div>
+            </div> */}
             
             <div className="flex items-center justify-center text-xs text-muted-foreground">
               <AlertCircle className="h-3 w-3 mr-1" />

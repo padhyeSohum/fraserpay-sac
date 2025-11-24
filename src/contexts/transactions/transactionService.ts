@@ -319,12 +319,8 @@ export const processPurchase = async (
   }
   
   try {
-    const totalAmount = cartItems.reduce(
-      (sum, item) => sum + (item.product.price * item.quantity),
-      0
-    );
-    
-    const totalAmountInCents = Math.round(totalAmount * 100);
+    const totalAmountInCents = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    const totalAmount = parseFloat((totalAmountInCents/100).toFixed(2));
     
     console.log('Processing purchase:', {
       boothId,
@@ -347,6 +343,7 @@ export const processPurchase = async (
     
     const userData = userSnap.data();
     console.log('User current balance:', (userData.tickets || 0) / 100);
+    console.log('User current balance in cents:', (userData.tickets || 0));
     
     if ((userData.tickets || 0) < totalAmountInCents) {
       console.error('Insufficient balance:', {

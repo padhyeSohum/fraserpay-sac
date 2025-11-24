@@ -186,7 +186,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                     <TableCell>{transaction.booth_name || 'System'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${transaction.type === 'purchase' ? 'bg-blue-100 text-blue-700' : transaction.type === 'fund' ? 'bg-green-100 text-green-700' : transaction.type === 'refund' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {transaction.type === 'purchase' ? 'Purchase' : transaction.type === 'fund' ? 'Add Funds' : transaction.type === 'refund' ? 'Refund' : transaction.type}
+                        {transaction.type === 'purchase' ? 'Purchase' : transaction.type === 'fund' ? 'Add Funds' : transaction.type === 'refund' ? 'Refund' : transaction.type === 'add' ? "Add Points" : transaction.type === 'redeem' ? 'Redeem points' : transaction.type}
                       </span>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${transaction.type === 'fund' ? 'text-green-600' : transaction.type === 'refund' ? 'text-red-600' : 'text-slate-900'}`}>

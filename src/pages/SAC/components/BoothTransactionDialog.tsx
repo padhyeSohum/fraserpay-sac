@@ -90,7 +90,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
         name: userData.name,
         studentNumber: userData.student_number,
         email: userData.email,
-        balance: (userData.tickets || 0) / 100 // Convert to dollars
+        balance: (userData.tickets || 0)
       });
     } catch (error) {
       console.error('Error finding student:', error);
@@ -121,7 +121,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
   };
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (parseFloat((item.product.price/100).toFixed(2)) * item.quantity), 0);
   };
 
   const handleProcessTransaction = async () => {
@@ -179,7 +179,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
           const userData = userSnap.data();
           setFoundStudent({
             ...foundStudent,
-            balance: (userData.tickets || 0) / 100 // Convert to dollars
+            balance: (userData.tickets || 0)
           });
         }
         
@@ -248,7 +248,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
                       <h3 className="text-lg font-semibold">Student Details</h3>
                       <p>Name: {foundStudent.name}</p>
                       <p>Student Number: {foundStudent.studentNumber}</p>
-                      <p>Balance: ${foundStudent.balance.toFixed(2)}</p>
+                      <p>Balance: ${(foundStudent.balance/100).toFixed(2)}</p>
                     </div>
                   )}
                 </CardContent>
@@ -267,7 +267,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
                       {cart.map((item) => (
                         <div key={item.product.id} className="flex items-center justify-between">
                           <span>{item.product.name} x {item.quantity}</span>
-                          <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                          <span>${(item.product.price * item.quantity / 100).toFixed(2)}</span>
                           <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFromCart(item.product.id)}>
                             Remove
                           </Button>
@@ -303,7 +303,7 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
                     {getBoothById(selectedBooth)?.products?.map((product) => (
                       <div key={product.id} className="border rounded-md p-2">
                         <p className="font-semibold">{product.name}</p>
-                        <p>${product.price.toFixed(2)}</p>
+                        <p>${(product.price/100).toFixed(2)}</p>
                         <Button type="button" size="sm" onClick={() => handleAddToCart(product)}>
                           Add to Cart
                         </Button>
