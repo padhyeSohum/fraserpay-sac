@@ -52,12 +52,12 @@ const Leaderboard = () => {
         <Card className="border shadow-sm">
           <CardHeader className="bg-card-header pb-2">
             <CardTitle className="text-2xl font-bold text-center">Booth Leaderboard</CardTitle>
-            <CardDescription className="text-center">Top performing booths by earnings. Refreshed every 15 mins.</CardDescription>
+            {/* <CardDescription className="text-center">Top performing booths by earnings. Refreshed every 15 mins.</CardDescription> */}
           </CardHeader>
           <CardContent className="p-6">
             {isLoading ? <div className="flex justify-center p-6">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8">The leaderboard is not active yet! Check back at the start of Mosaic Lunch! :) </p> : <div className="space-y-4">
+              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8"><span className="text-4xl">🚧</span> <br/>This page is currently under construction...</p> : <div className="space-y-4">
                 {leaderboardData.map((booth, index) => <div key={booth.boothId}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
