@@ -12,6 +12,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
+  useEffect(() => {
+    navigate('/login', { replace: true });
+  }, [])
   const [studentNumber, setStudentNumber] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

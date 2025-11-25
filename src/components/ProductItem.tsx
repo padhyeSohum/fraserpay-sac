@@ -32,6 +32,7 @@ const ProductItem: React.FC<ProductItemProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [priceValue, setPriceValue] = useState(product.price.toFixed(2));
+  const [wasChanged, setWasChanged] = useState(false);
 
   const handleClick = () => {
     if (onClick) onClick();
@@ -46,6 +47,9 @@ const ProductItem: React.FC<ProductItemProps> = ({
   };
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!wasChanged) {
+        setWasChanged(true);
+    }
     setPriceValue(e.target.value);
   };
 
@@ -78,7 +82,7 @@ const ProductItem: React.FC<ProductItemProps> = ({
                   type="number"
                   min="0.01"
                   step="0.01"
-                  value={priceValue}
+                  value={wasChanged ? priceValue : (parseFloat(priceValue)/100).toFixed(2)}
                   onChange={handlePriceChange}
                   onClick={(e) => e.stopPropagation()}
                   className="w-20 h-8 text-sm p-1"
