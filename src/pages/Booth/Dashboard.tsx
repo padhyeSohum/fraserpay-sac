@@ -93,10 +93,10 @@ const BoothDashboard = () => {
               </Button>
               
               {/* Add Manage Products button here */}
-              <Button variant="outline" className="justify-between h-auto py-4 px-4 bg-white shadow-sm border-border/50" onClick={() => navigate(`/booth/${boothId}/settings`)}>
+              {/* <Button variant="outline" className="justify-between h-auto py-4 px-4 bg-white shadow-sm border-border/50" onClick={() => navigate(`/booth/${boothId}/settings`)}>
                 <span className="font-medium">Manage Products</span>
                 <Package className="h-5 w-5 text-muted-foreground" />
-              </Button>
+              </Button> */}
             </div>
             
             {/* Recent Transactions */}

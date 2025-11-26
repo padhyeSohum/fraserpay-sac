@@ -230,7 +230,7 @@ const BoothSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Initiative Information</CardTitle>
-                <CardDescription>View and manage your initiative details.</CardDescription>
+                <CardDescription>View your initiative details. Contact a SAC member if changes are needed.</CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4">
@@ -252,14 +252,14 @@ const BoothSettings = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Products</CardTitle>
-                  <CardDescription>Manage products for this initiative. Please refresh page after adding or editing a product.</CardDescription>
+                  <CardDescription>View products for this initiative. Contact a SAC member if changes are needed.</CardDescription>
                 </div>
                 <Dialog open={addProductDialogOpen} onOpenChange={setAddProductDialogOpen}>
-                  <DialogTrigger asChild>
+                  {/* <DialogTrigger asChild>
                     <Button size="sm" className="ml-auto">
                       <Plus className="mr-2 h-4 w-4" /> Add Product
                     </Button>
-                  </DialogTrigger>
+                  </DialogTrigger> */}
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Add New Product</DialogTitle>
@@ -318,9 +318,9 @@ const BoothSettings = () => {
                 {products && products.length > 0 ? <div className="space-y-4">
                     {products.map(product => <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                         <ProductItem product={product} editable={true} onPriceChange={newPrice => handleUpdateProductPrice(product.id, newPrice)} />
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} title="Remove product" className="ml-2">
+                        {/* <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} title="Remove product" className="ml-2">
                           <Trash className="h-4 w-4 text-red-500" />
-                        </Button>
+                        </Button> */}
                       </div>)}
                   </div> : <div className="text-center py-6 text-muted-foreground">
                     <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />

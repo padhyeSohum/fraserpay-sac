@@ -129,15 +129,16 @@ const ProductItem: React.FC<ProductItemProps> = ({
               </Button>
             </div>
           ) : editable ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleEditToggle}
-              title={isEditing ? "Cancel" : "Edit price"}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+            // <Button
+            //   variant="ghost"
+            //   size="icon"
+            //   className="h-8 w-8"
+            //   onClick={handleEditToggle}
+            //   title={isEditing ? "Cancel" : "Edit price"}
+            // >
+            //   <Pencil className="h-4 w-4" />
+            // </Button>
+            <></>
           ) : null}
         </div>
       </CardContent>

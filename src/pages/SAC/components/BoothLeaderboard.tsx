@@ -39,7 +39,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboard.slice(0, 5).map((booth, index) => (
+              {leaderboard.map((booth, index) => (
                 <TableRow key={booth.id}>
                   <TableCell className="font-medium">{booth.name}</TableCell>
                   <TableCell>{index + 1}</TableCell>
