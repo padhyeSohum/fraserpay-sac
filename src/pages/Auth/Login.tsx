@@ -34,14 +34,14 @@ const Login = () => {
     console.log("Login page: Setting up PWA install banner");
     return showInstallBanner(setShowPWAPrompt, 2000);
   }, [isMobile]);
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      console.log("Login page: User is authenticated, redirecting", user.role);
-      navigate('/dashboard', {
-        replace: true
-      });
-    }
-  }, [isAuthenticated, user, navigate]);
+//   useEffect(() => {
+//     if (isAuthenticated && user) {
+//       console.log("Login page: User is authenticated, redirecting", user.role);
+//       navigate('/dashboard', {
+//         replace: true
+//       });
+//     }
+//   }, [isAuthenticated, user, navigate]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
@@ -84,6 +84,40 @@ const Login = () => {
       setIsGoogleLoading(false);
     }
   };
+
+  const handleBoothRequestClick = async () => {
+    setIsGoogleLoading(true);
+    try {
+      console.log("Starting Google sign-in process from UI");
+      const userData = await loginWithGoogle();
+      if (userData) {
+        if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || userData.email === "795804@pdsb.net") {
+            console.log("Signed in with", userData.email);
+            navigate('/request-booth', {
+                replace: false
+            });
+        }
+        else {
+            toast({
+                title: "Unsuccessful Login",
+                description: "Please create a booth request with a teacher @pdsb.net account.",
+                variant: "default"
+            })
+        }
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+
+  };
+
+    // const handleBoothRequestClick = () => {
+    //     navigate('/request-booth', {
+    //         replace: false
+    //     })
+    // }
   return <Layout hideHeader={true}>
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/30 animate-fade-in">
         <div className="mb-8">
@@ -94,7 +128,7 @@ const Login = () => {
           <CardHeader className="space-y-2 text-center">
             <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
             <CardDescription>
-              Sign in to access your FraserPay account
+              Sign in to access your FraserPay account.
             </CardDescription>
           </CardHeader>
           
@@ -116,44 +150,22 @@ const Login = () => {
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
               </div>
-              {/* <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div> */}
             </div>
-            
-            {/* <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentNumber" className="text-sm font-medium">Student Number</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="studentNumber" type="text" placeholder="Enter your student number" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} disabled={isLoading} required className="pl-10" />
-                </div>
+
+            <CardDescription className="w-full text-center pt-4">Running a booth? Fill out the form below.</CardDescription>
+            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleBoothRequestClick} disabled={isGoogleLoading}>
+              {isGoogleLoading ? "Signing in..." : <>
+                  <div className="h-full flex place-items-center uppercase rounded-xl bg-gradient-to-r from-purple-500 to-purple-700 p-2 text-white bold">New!</div>Create a booth request
+                </>}
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} required className="pl-10" />
-                </div>
-              </div>
-              
-              <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 h-11" disabled={isLoading}>
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-            </form> */}
+            </div>
           </CardContent>
           
-          <CardFooter className="flex flex-col space-y-2 pt-0">
-            {/* <div className="text-sm text-center text-muted-foreground">
-              <span>Don't have an account? </span>
-              <Link to="/register" className="text-brand-600 hover:underline font-medium">
-                Create one
-              </Link>
-            </div> */}
-            
+          <CardFooter className="flex flex-col space-y-2 pt-0">            
             <div className="flex items-center justify-center text-xs text-muted-foreground">
               <AlertCircle className="h-3 w-3 mr-1" />
               <span className="text-center">Contact SAC if you need help signing in.</span>

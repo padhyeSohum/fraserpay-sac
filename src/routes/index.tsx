@@ -27,6 +27,9 @@ import SACDashboard from "@/pages/SAC/Dashboard";
 import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/NotFound";
 
+// Teacher Pages
+import RequestBooth from '@/pages/RequestBooth';
+
 // Route configuration for the application
 export const routes = [
   // Auth Routes
@@ -94,6 +97,13 @@ export const routes = [
     path: "/transactions", 
     element: <Navigate to="/dashboard" replace />,
     protected: true 
+  },
+
+  // Teacher Routes
+  {
+    path: "/request-booth",
+    element: <RequestBooth />,
+    protected: true,
   },
   
   // Explicit 404 route

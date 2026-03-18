@@ -82,7 +82,7 @@ export const loginUser = async (studentNumber: string, password: string): Promis
       throw new Error('Failed to authenticate user');
     }
     
-    toast.success('Login successful');
+    // toast.success('Login successful');
     
     return await fetchUserData(userCredential.user.uid);
   } catch (error: any) {
@@ -159,7 +159,7 @@ export const loginWithGoogle = async (): Promise<User | null> => {
         });
       });
       
-      toast.success('Login successful');
+    //   toast.success('Login successful');
       
       userData = await fetchUserData(userId);
     } else {
