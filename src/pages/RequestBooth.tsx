@@ -377,7 +377,7 @@ const RequestBooth = () => {
                 <Section title="Section 3 - Booth Information" description="All booth information">
                     <div className="w-full">
                         <div>
-                            <StringInput label="Booth Name (max 30 characters)" type="text" placeholder="Booth Name" value={boothName} onChange={(e) => setBoothName(e.target.value)} minChars={3} maxChars={20} required />
+                            <StringInput label="Booth Name (max 20 characters)" type="text" placeholder="Booth Name" value={boothName} onChange={(e) => setBoothName(e.target.value)} minChars={3} maxChars={20} required />
                             <StringInput label="Booth Description (optional) (max 100 characters)" type="text" placeholder="Booth Description" value={boothDescription} onChange={(e) => setBoothDescription(e.target.value)} maxChars={100} />
                             
                             <div className="flex flex-col place-items-start gap-y-2 my-4 mx-2 relative">
