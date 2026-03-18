@@ -91,7 +91,7 @@ const Login = () => {
       console.log("Starting Google sign-in process from UI");
       const userData = await loginWithGoogle();
       if (userData) {
-        if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || userData.email === "795804@pdsb.net") {
+        if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || userData.email === "795804@pdsb.net" || userData.email === "752470@pdsb.net" || userData.email === "793546@pdsb.net" || userData.email === "843909@pdsb.net") {
             console.log("Signed in with", userData.email);
             navigate('/request-booth', {
                 replace: false
