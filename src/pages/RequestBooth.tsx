@@ -1,11 +1,11 @@
-import React, { ReactNode, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import React, { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { loginWithGoogle } from "@/contexts/auth/authOperations";
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from "react-router-dom";
 import { addDoc, collection } from "firebase/firestore";
 import { firestore } from "@/integrations/firebase/client";
+import { RequestBoothLocalDraft } from "@/components/RequestBoothLocalDraft";
+import { removeStorageItem } from "@/utils/storage";
 interface SectionProps {
     title: string,
     description: string,
@@ -28,7 +28,7 @@ interface StringInputProps {
     type: string,
     placeholder: string,
     value: string,
-    onChange: any,
+    onChange: React.ChangeEventHandler<HTMLInputElement>,
     minChars?: number,
     maxChars?: number,
     required?: boolean,
@@ -64,7 +64,7 @@ interface NumberInputProps {
     label: string,
     placeholder: string,
     value: number,
-    onChange: any,
+    onChange: React.ChangeEventHandler<HTMLInputElement>,
 }
 const NumberInput = ({ label, placeholder, value, onChange }: NumberInputProps) => {
     return (
@@ -86,11 +86,27 @@ const NumberInput = ({ label, placeholder, value, onChange }: NumberInputProps) 
     )
 }
 
+type TeacherDraft = { name: string; email: string };
+type StudentDraft = { name: string; email: string; studentNumber: string };
+type ProductDraft = { name: string; price: number; priceInput: string };
+type RequestBoothDraft = {
+    respondentName: string;
+    respondentEmail: string;
+    teachers: TeacherDraft[];
+    students: StudentDraft[];
+    boothName: string;
+    boothDescription: string;
+    organizationType: "None" | "Club/Council/Student Association" | "Class" | "Independent";
+    organizationInfo: string;
+    products: ProductDraft[];
+};
+
 const RequestBooth = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
 
     const [isSignedIn, setIsSignedIn] = useState(false);
+    const [signedInTeacherEmail, setSignedInTeacherEmail] = useState<string>("");
 
     const [respondentName, setRespondentName] = useState("");
     const [respondentEmail, setRespondentEmail] = useState("");
@@ -150,7 +166,7 @@ const RequestBooth = () => {
         )
     }
 
-    const handleChangeProducts = (idx: number, field: "name" | "price", value: any) => {
+    const handleChangeProducts = (idx: number, field: "name" | "price", value: string) => {
         setProducts(
             (prev) => prev.map((product, i) => {
                 if (i !== idx) return product;
@@ -194,7 +210,10 @@ const RequestBooth = () => {
             if (userData) {
                 if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || userData.email === "795804@pdsb.net" || userData.email === "752470@pdsb.net" || userData.email === "843909@pdsb.net" || userData.email === "793546@pdsb.net") {
                     console.log("Signed in with", userData.email);
+                    setSignedInTeacherEmail(userData.email);
                     setIsSignedIn(true);
+                    setRespondentEmail((prev) => (prev.trim() ? prev : userData.email));
+                    setRespondentName((prev) => (prev.trim() ? prev : (userData.name || "")));
                 }
                 else {
                     toast({
@@ -214,7 +233,76 @@ const RequestBooth = () => {
         }
     };
 
-    const validateForm = () => {
+    const DRAFT_STORAGE_KEY = signedInTeacherEmail
+        ? `fraserpay_requestbooth_draft_v1:${signedInTeacherEmail.toLowerCase()}`
+        : "fraserpay_requestbooth_draft_v1:unknown";
+
+    const handleRestoreDraft = (restored: RequestBoothDraft) => {
+        setRespondentName(restored?.respondentName ?? "");
+        setRespondentEmail(restored?.respondentEmail ?? "");
+
+        setTeachers(Array.isArray(restored?.teachers) ? restored.teachers.map((t) => ({
+            name: t?.name ?? "",
+            email: t?.email ?? "",
+        })) : []);
+
+        setStudents(Array.isArray(restored?.students) ? restored.students.map((s) => ({
+            name: s?.name ?? "",
+            email: s?.email ?? "",
+            studentNumber: s?.studentNumber ?? "",
+        })) : []);
+
+        setBoothName(restored?.boothName ?? "");
+        setBoothDescription(restored?.boothDescription ?? "");
+
+        const restoredOrgType = restored?.organizationType;
+        setOrganizationType(
+            restoredOrgType === "Club/Council/Student Association" ||
+            restoredOrgType === "Class" ||
+            restoredOrgType === "Independent"
+                ? restoredOrgType
+                : "None"
+        );
+        setOrganizationInfo(restored?.organizationInfo ?? "");
+
+        const restoredProducts = Array.isArray(restored?.products) ? restored.products : [];
+        setProducts(
+            restoredProducts.length > 0
+                ? restoredProducts.map((p) => ({
+                    name: p?.name ?? "",
+                    price: typeof p?.price === "number" && !Number.isNaN(p.price) ? p.price : 0,
+                    priceInput: p?.priceInput ?? "",
+                }))
+                : [{ name: "", price: 0, priceInput: "" }]
+        );
+    };
+
+    const draft: RequestBoothDraft = useMemo(
+        () => ({
+            respondentName,
+            respondentEmail,
+            teachers,
+            students,
+            boothName,
+            boothDescription,
+            organizationType,
+            organizationInfo,
+            products,
+        }),
+        [
+            respondentName,
+            respondentEmail,
+            teachers,
+            students,
+            boothName,
+            boothDescription,
+            organizationType,
+            organizationInfo,
+            products,
+        ]
+    );
+
+    const validateForm = useCallback(() => {
         if (!respondentName.trim()) return false;
         if (!respondentEmail.trim()) return false;
 
@@ -241,10 +329,6 @@ const RequestBooth = () => {
         }
 
         return true;
-    }
-
-    useEffect(() => {
-        setIsValid(validateForm());
     }, [
         respondentName,
         respondentEmail,
@@ -254,8 +338,12 @@ const RequestBooth = () => {
         boothDescription,
         organizationType,
         organizationInfo,
-        products
+        products,
     ]);
+
+    useEffect(() => {
+        setIsValid(validateForm());
+    }, [validateForm]);
 
     const handleSubmit = async () => {
         setSubmitStatus("submitting");
@@ -277,6 +365,7 @@ const RequestBooth = () => {
             })
 
             setSubmitStatus("success")
+            removeStorageItem(DRAFT_STORAGE_KEY);
         } catch (err) {
             toast({
                 title: "Unsuccessful Submission",
@@ -297,10 +386,6 @@ const RequestBooth = () => {
 
             {isSignedIn ? 
             <div className="flex flex-col place-items-center gap-y-2 max-w-[700px]">
-                <div className="bg-red-500 text-white p-2 rounded-lg text-pretty">
-                    Warning: This form does <b>not</b> save partially completed responses. If you would like to leave this form and come back to it later, we strongly suggest that you save your responses somewhere else.
-                </div>
-
                 <div className="bg-gray-100 border-[2px] border-gray-200 p-2 rounded-lg text-pretty">
                     Welcome, teacher! We are very excited to have you join us for charity week. <br/><br/> Before you begin filling out this form, ensure you have the following: (you may have to ask your students for some of this information)
                     <ul className="list-disc pl-8">
@@ -420,6 +505,17 @@ const RequestBooth = () => {
                         </div>
                     </div>
                 </Section>
+
+                {submitStatus !== "success" && signedInTeacherEmail && (
+                    <RequestBoothLocalDraft
+                        storageKey={DRAFT_STORAGE_KEY}
+                        draft={draft}
+                        onRestore={handleRestoreDraft}
+                        autoSave={true}
+                        disabled={!isSignedIn || submitStatus !== "idle"}
+                        showControls={true}
+                    />
+                )}
 
                 <button 
                     onClick={() => handleSubmit()}
