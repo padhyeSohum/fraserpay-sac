@@ -192,7 +192,16 @@ const RequestBooth = () => {
             console.log("Starting Google sign-in process from UI");
             const userData = await loginWithGoogle();
             if (userData) {
-                if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || userData.email === "795804@pdsb.net" || userData.email === "752470@pdsb.net" || userData.email === "843909@pdsb.net" || userData.email === "793546@pdsb.net") {
+                let isAuthorizedUser = false;
+                const authorizedEmails = ["795804@pdsb.net", "752470@pdsb.net", "793546@pdsb.net", "843909@pdsb.net", "890323@pdsb.net", "931108@pdsb.net", "1061713@pdsb.net", "845550@pdsb.net"];
+                for (const email of authorizedEmails) {
+                    if (userData.email === email) {
+                        isAuthorizedUser = true;
+                        break;
+                    }
+                }
+
+                if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || isAuthorizedUser) {
                     console.log("Signed in with", userData.email);
                     setIsSignedIn(true);
                 }
@@ -288,9 +297,6 @@ const RequestBooth = () => {
         }
 
     }
-
-
-
 
     return (
         <div className="w-full pt-8 p-2 py-16 flex justify-center place-items-center">
