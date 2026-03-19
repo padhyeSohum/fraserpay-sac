@@ -32,15 +32,16 @@ interface StringInputProps {
     minChars?: number,
     maxChars?: number,
     required?: boolean,
+    customError?: string,
 }
-const StringInput = ({ label, type, placeholder, value, onChange, minChars = 0, maxChars = -1, required }: StringInputProps) => {
+const StringInput = ({ label, type, placeholder, value, onChange, minChars = 0, maxChars = -1, required, customError }: StringInputProps) => {
 
     return (
         <div className="flex flex-col place-items-start gap-y-2 my-4 mx-2">
             <div className="text-gray-600 font-bold text-sm">{label}</div>
             <input 
                 type={type} 
-                placeholder={placeholder} 
+                placeholder={placeholder}
                 value={value} 
                 onChange={onChange} 
                 className="p-2 text-sm rounded-lg border-2 border-gray-200 outline-none placeholder-gray-400 focus:bg-gray-200 hover:border-gray-400 focus:border-gray-400 transition-all duration-200"
@@ -54,6 +55,9 @@ const StringInput = ({ label, type, placeholder, value, onChange, minChars = 0, 
                 }
                 {
                     required && value.length == 0 ? "This information is required." : value.length < minChars ? `Character count must be at least ${minChars}` : ""
+                }
+                {
+                    customError ? customError : ""
                 }
             </div>
         </div>
@@ -277,6 +281,11 @@ const RequestBooth = () => {
         );
     };
 
+    const isPdsbEmail = useCallback((email: string) => {
+        const trimmed = email.trim().toLowerCase();
+        return trimmed.endsWith("@pdsb.net");
+    }, []);
+
     const draft: RequestBoothDraft = useMemo(
         () => ({
             respondentName,
@@ -314,6 +323,7 @@ const RequestBooth = () => {
         for (const student of students) {
             if (!student.name.trim()) return false;
             if (!student.email.trim()) return false;
+            if (!isPdsbEmail(student.email)) return false;
             if (!student.studentNumber.trim()) return false; 
         };
 
@@ -339,6 +349,7 @@ const RequestBooth = () => {
         organizationType,
         organizationInfo,
         products,
+        isPdsbEmail,
     ]);
 
     useEffect(() => {
@@ -444,7 +455,19 @@ const RequestBooth = () => {
                                             <div>
                                                 <StringInput label={`Student #${i+1} - Full Name`} type="text" placeholder="Full Name" value={student.name} onChange={(e) => handleChangeStudents(i, "name", e.target.value)} required />
                                                 <StringInput label={`Student #${i+1} - Student Number`} type="text" placeholder="Student Number" value={student.studentNumber} onChange={(e) => handleChangeStudents(i, "studentNumber", e.target.value)} required />
-                                                <StringInput label={`Student #${i+1} - Email`} type="text" placeholder="Email" value={student.email} onChange={(e) => handleChangeStudents(i, "email", e.target.value)} required />
+                                                <StringInput
+                                                    label={`Student #${i+1} - Email`}
+                                                    type="text"
+                                                    placeholder="Email"
+                                                    value={student.email}
+                                                    onChange={(e) => handleChangeStudents(i, "email", e.target.value)}
+                                                    required
+                                                    customError={
+                                                        student.email.trim().length > 0 && !isPdsbEmail(student.email)
+                                                            ? "Please input a pdsb email address"
+                                                            : ""
+                                                    }
+                                                />
                                             </div>
                                             <div><button onClick={() => handleRemoveStudent(i)} className="px-2 text-center font-bold rounded-sm hover:bg-red-500 hover:text-white" style={{ display: students.length > 3 ? "block" : "none"}}>x</button></div>
                                         </div>
