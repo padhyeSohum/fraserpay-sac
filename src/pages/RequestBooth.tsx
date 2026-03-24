@@ -96,13 +96,15 @@ const RequestBooth = () => {
     const [respondentEmail, setRespondentEmail] = useState("");
     const [teachers, setTeachers] = useState([]);
 
-    const [students, setStudents] = useState([{ name: "", email: "", studentNumber: "" }, { name: "", email: "", studentNumber: "" }, { name: "", email: "", studentNumber: "" }]);
+    const [students, setStudents] = useState([{ name: "", studentNumber: "" }, { name: "", studentNumber: "" }, { name: "", studentNumber: "" }]);
 
     const [boothName, setBoothName] = useState("");
     const [boothDescription, setBoothDescription] = useState("");
     const [organizationType, setOrganizationType] = useState<"None" | "Club/Council/Student Association" | "Class" | "Independent">("None");
     const [organizationInfo, setOrganizationInfo] = useState("");
     const [products, setProducts] = useState([{ name: "", price: 0, priceInput: "" }]);
+
+    const [additionalInformation, setAdditionalInformation] = useState("");
 
     const [isValid, setIsValid] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<"error" | "idle" | "submitting" | "success">("idle");
@@ -132,7 +134,7 @@ const RequestBooth = () => {
         )
     }
 
-    const handleChangeStudents = (idx: number, field: "name" | "email" | "studentNumber", value: string) => {
+    const handleChangeStudents = (idx: number, field: "name" | "studentNumber", value: string) => {
         setStudents(
             (prev) => prev.map((student, i) => i === idx ? { ...student, [field]: value } : student)
         )
@@ -140,7 +142,7 @@ const RequestBooth = () => {
 
     const handleAddStudent = () => {
         setStudents(
-            [...students, { name: "", email: "", studentNumber: "" }]
+            [...students, { name: "", studentNumber: "" }]
         )
     }
 
@@ -234,7 +236,6 @@ const RequestBooth = () => {
 
         for (const student of students) {
             if (!student.name.trim()) return false;
-            if (!student.email.trim()) return false;
             if (!student.studentNumber.trim()) return false; 
         };
 
@@ -269,20 +270,21 @@ const RequestBooth = () => {
     const handleSubmit = async () => {
         setSubmitStatus("submitting");
         const teachersArr = [{ name: respondentName, email: respondentEmail }, ...teachers];
-        const studentsArr = students;
-        // boothName, boothDescription, org type, org info
-        const productsArr = products.map((product, i) => ({ name: product.name, price: product.price }));
+        let studentsArr = students;
+        const productsArr = products.map((product, i) => ({ name: product.name, price: product.price*100 }));
 
         try {
-            const boothsRequestsRef = collection(firestore, "booth_requests");
-            await addDoc(boothsRequestsRef, {
+            const boothRequestsCollection = collection(firestore, "booth_requests");
+            await addDoc(boothRequestsCollection, {
                 teachers: teachersArr,
                 students: studentsArr,
                 boothName: boothName,
                 boothDescription: boothDescription,
                 organizationType: organizationType,
                 organizationInfo: organizationInfo,
-                products: productsArr
+                products: productsArr,
+                status: "pending",
+                additionalInformation: additionalInformation,
             })
 
             setSubmitStatus("success")
@@ -365,7 +367,7 @@ const RequestBooth = () => {
                                             <div>
                                                 <StringInput label={`Student #${i+1} - Full Name`} type="text" placeholder="Full Name" value={student.name} onChange={(e) => handleChangeStudents(i, "name", e.target.value)} required />
                                                 <StringInput label={`Student #${i+1} - Student Number`} type="text" placeholder="Student Number" value={student.studentNumber} onChange={(e) => handleChangeStudents(i, "studentNumber", e.target.value)} required />
-                                                <StringInput label={`Student #${i+1} - Email`} type="text" placeholder="Email" value={student.email} onChange={(e) => handleChangeStudents(i, "email", e.target.value)} required />
+                                                <div className="text-sm mx-2">{`Student #${i+1} - Email: ${student.studentNumber.length > 0 ? student.studentNumber : "Not yet provided (student number needed)"}${student.studentNumber.length > 0 ? "@pdsb.net": ""}`}</div>
                                             </div>
                                             <div><button onClick={() => handleRemoveStudent(i)} className="px-2 text-center font-bold rounded-sm hover:bg-red-500 hover:text-white" style={{ display: students.length > 3 ? "block" : "none"}}>x</button></div>
                                         </div>
@@ -426,6 +428,17 @@ const RequestBooth = () => {
                         </div>
                     </div>
                 </Section>
+                <Section title="Section 4 - Additional Information" description="Any additional information you would like SAC to know about your request">
+                    <div className="flex flex-col place-items-start gap-y-2 my-4 mx-2">
+                        <div className="text-sm">Please do not use this area to ask questions. If you have any questions, you are welcome to use the contact information at the top of the form. If there is any information you feel we should know, please list it below.</div>
+                        <textarea 
+                            placeholder="Additional information"
+                            value={additionalInformation} 
+                            onChange={(e) => setAdditionalInformation(e.target.value)} 
+                            className="p-2 mx-2 w-full text-sm rounded-lg border-2 border-gray-200 outline-none placeholder-gray-400 focus:bg-gray-200 hover:border-gray-400 focus:border-gray-400 transition-colors duration-200"
+                        />
+                    </div>
+                </Section>
 
                 <button 
                     onClick={() => handleSubmit()}
@@ -440,13 +453,13 @@ const RequestBooth = () => {
                 <div className="text-sm text-red-500 text-center text-balance">
                     {
                         !isValid ?
-                        "You cannot submit right now due to information being incorrectly filled. Please recheck the form for any errors with your responses. Please contact SAC if you think this message is a mistake."
+                        "You cannot submit right now due to information being incorrectly or incompletely filled. Please recheck the form for any errors with your responses. Please contact SAC if you think this message is a mistake."
                         :
                         ""
                     }
                 </div>
                 <div className="text-sm text-balance bg-gradient-to-r from-purple-300 to-purple-600 max-w-[500px] p-2 rounded-lg text-center font-bold text-white" style={{ display: submitStatus == "success" ? "block" : "none" }}>
-                    Thank you for submitting your booth to be reviewed! SAC will be in touch with you in the coming weeks.
+                    Thank you for submitting your booth to be reviewed! SAC will be in touch with you in the coming weeks. Do not hesitate to reach out to SAC should any questions arise!
                 </div>
             </div>
             :

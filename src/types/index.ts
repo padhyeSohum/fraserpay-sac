@@ -25,6 +25,19 @@ export interface Booth {
   createdAt?: string; // Adding the optional createdAt property to match the database
 }
 
+export interface BoothRequest {
+    id: string;
+    teachers: Teacher[];
+    students: Student[];
+    products: ProductRequest[];
+    boothName: string;
+    boothDescription: string;
+    organizationType: string;
+    organizationInfo: string;
+    status: string;
+    additionalInformation: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -33,6 +46,21 @@ export interface Product {
   description?: string;
   image?: string;
   salesCount?: number;
+}
+
+export interface Student {
+    name: string;
+    email: string;
+    studentNumber: string;
+}
+export interface Teacher {
+    name: string;
+    email: string;
+}
+
+export interface ProductRequest {
+    name: string;
+    price: number;
 }
 
 export type PaymentMethod = 'cash' | 'card';

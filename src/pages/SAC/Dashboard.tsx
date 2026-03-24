@@ -29,6 +29,7 @@ import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storag
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import BoothRequestsList from './components/BoothRequestsList';
 
 export interface StatsData {
   totalUsers: number;
@@ -44,7 +45,9 @@ const Dashboard = () => {
     addFunds, 
     addPoints,
     booths, 
-    fetchAllBooths, 
+    boothRequests,
+    fetchAllBooths,
+    fetchAllBoothRequests,
     getBoothById, 
     createBooth: createBoothFromContext,
     addProductToBooth: addProductToBoothFromContext,
@@ -995,6 +998,11 @@ const Dashboard = () => {
               onSearchChange={setUserSearchTerm}
               onUserSelect={handleUserSelected}
               onUserDelete={handleDeleteUser}
+            />
+
+            <BoothRequestsList 
+                boothRequests={boothRequests}
+                refresh={fetchAllBoothRequests}
             />
             
             <BoothsList

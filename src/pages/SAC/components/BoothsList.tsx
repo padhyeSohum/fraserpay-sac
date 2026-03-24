@@ -45,7 +45,7 @@ const BoothsList: React.FC<BoothsListProps> = ({
   };
 
   return (
-    <Card className="w-full shadow-sm">
+    <Card className="w-full shadow-sm max-h-[600px] overflow-y-auto">
       <CardHeader>
         <CardTitle>Booths</CardTitle>
         <CardDescription>All active booths with their access PINs</CardDescription>
@@ -75,9 +75,9 @@ const BoothsList: React.FC<BoothsListProps> = ({
                   key={booth.id} 
                   className="flex items-center justify-between p-3 border rounded-md"
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 justify-between w-full">
                     <p className="font-medium">{booth.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{booth.description}</p>
+                    <p className="text-sm text-muted-foreground overflow-hidden">{booth.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 min-w-[100px]">

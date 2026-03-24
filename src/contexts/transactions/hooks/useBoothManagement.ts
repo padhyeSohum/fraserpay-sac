@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
-import { Booth } from '@/types';
+import { Booth, BoothRequest } from '@/types';
 import { uniqueToast } from '@/utils/toastHelpers';
 import { firestore } from '@/integrations/firebase/client';
 import { 
@@ -24,9 +24,11 @@ export interface UseBoothManagementReturn {
   booths: Booth[];
   getBoothById: (id: string) => Booth | undefined;
   loadBooths: () => Promise<Booth[]>;
+  loadBoothRequests: () => Promise<BoothRequest[]>;
   loadStudentBooths: (userId?: string) => Promise<Booth[]>;
   getBoothsByUserId: (userId: string) => Booth[];
   fetchAllBooths: () => Promise<Booth[]>;
+  fetchAllBoothRequests: () => Promise<BoothRequest[]>;
   createBooth: (name: string, description: string, managerId: string, pin: string) => Promise<string | null>;
   deleteBooth: (boothId: string) => Promise<boolean>;
   joinBooth: (pin: string, userId: string) => Promise<boolean>;
@@ -36,6 +38,7 @@ export interface UseBoothManagementReturn {
 export const useBoothManagement = (): UseBoothManagementReturn => {
   const { user, isAuthenticated, updateUserData } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
+  const [boothRequests, setBoothRequests] = useState<BoothRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Load all initiatives
@@ -89,6 +92,37 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       setIsLoading(false);
     }
   }, []);
+
+  const loadBoothRequests = useCallback(async () => {
+    try {
+        const boothRequestsCollection = collection(firestore, 'booth_requests');
+        const boothRequestsQuery = query(boothRequestsCollection);
+        const boothRequestsSnapshot = await getDocs(boothRequestsQuery);
+
+        const boothRequestsData: BoothRequest[] = [];
+
+        for (const boothRequestDoc of boothRequestsSnapshot.docs) {
+            const boothRequestData = boothRequestDoc.data();
+                        
+            boothRequestsData.push({
+                id: boothRequestDoc.id,
+                teachers: boothRequestData.teachers,
+                students: boothRequestData.students,
+                products: boothRequestData.products,
+                boothName: boothRequestData.boothName,
+                boothDescription: boothRequestData.boothDescription || '',
+                organizationType: boothRequestData.organizationType,
+                organizationInfo: boothRequestData.organizationInfo,
+                status: boothRequestData.status,
+                additionalInformation: boothRequestData.additionalInformation,
+            });
+        }
+
+        return boothRequestsData;
+    } catch (error) {
+        return [];
+    }
+  }, [])
   
   // Load initiatives where a user is a member
   const loadStudentBooths = useCallback(async (userId?: string) => {
@@ -280,6 +314,17 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
       fetchAllBooths();
     }
   }, [isAuthenticated, fetchAllBooths]);
+
+  const fetchAllBoothRequests = useCallback(async () => {
+    try {
+        const boothRequestsData = await loadBoothRequests();
+        setBoothRequests(boothRequestsData);
+        return boothRequestsData;
+    } catch (error) {
+        console.error('Error in fetchAllBoothRequests:', error);
+        return [];
+    }
+  }, [loadBoothRequests])
   
   // Create a new initiative
   const createBooth = async (name: string, description: string, managerId: string, pin: string): Promise<string | null> => {
@@ -359,9 +404,11 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
     booths,
     getBoothById,
     loadBooths,
+    loadBoothRequests,
     loadStudentBooths,
     getBoothsByUserId,
     fetchAllBooths,
+    fetchAllBoothRequests,
     createBooth,
     deleteBooth,
     joinBooth,

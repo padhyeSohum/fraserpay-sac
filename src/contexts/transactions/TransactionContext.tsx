@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { 
   Booth, 
+  BoothRequest,
   Product, 
   Transaction,
   CartItem,
@@ -53,8 +54,10 @@ export interface TransactionContextProps {
   getBoothsByUserId: (userId: string) => Booth[];
   joinBooth: (pinCode: string, userId: string) => Promise<boolean>;
   fetchAllBooths: () => Promise<Booth[]>;
+  fetchAllBoothRequests: () => Promise<BoothRequest[]>;
   deleteBooth: (boothId: string) => Promise<boolean>;
   booths: Booth[];
+  boothRequests: BoothRequest[];
   
   addProductToBooth: (boothId: string, product: Partial<Product>) => Promise<boolean>;
   deleteProduct: (boothId: string, productId: string) => Promise<boolean>;
@@ -95,8 +98,10 @@ const defaultContext: TransactionContextProps = {
   getBoothsByUserId: () => [],
   joinBooth: async () => false,
   fetchAllBooths: async () => [],
+  fetchAllBoothRequests: async () => [],
   deleteBooth: async () => false,
   booths: [],
+  boothRequests: [],
   
   addProductToBooth: async () => false,
   deleteProduct: async () => false,
@@ -144,6 +149,7 @@ export const useTransactions = (): TransactionContextProps => {
 export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [booths, setBooths] = useState<Booth[]>([]);
+  const [boothRequests, setBoothRequests] = useState<BoothRequest[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,10 +170,13 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log("Initializing transaction context data...");
         
-        // Check cache first for booths
+        // Check cache first for booths and booth requests
         const cachedBooths = getVersionedStorageItem<Booth[]>('allBooths', []);
+        const cachedBoothRequests = getVersionedStorageItem<BoothRequest[]>('allBoothRequests', []);
         const lastBoothsFetch = getVersionedStorageItem<number>('lastBoothsFetch', 0);
+        const lastBoothRequestsFetch = getVersionedStorageItem<number>('lastBoothRequestsFetch', 0);
         const now = Date.now();
+        console.log(now - lastBoothsFetch < 5 * 60 * 1000);
         
         // Use cache if fresh (less than 5 minutes old)
         if (cachedBooths.length > 0 && now - lastBoothsFetch < 5 * 60 * 1000) {
@@ -181,6 +190,18 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
           // Cache the result
           setVersionedStorageItem('allBooths', fetchedBooths, 5 * 60 * 1000);
           setVersionedStorageItem('lastBoothsFetch', now);
+        }
+
+        if (cachedBoothRequests.length > 0 && now - lastBoothRequestsFetch < 5 * 60 * 1000) {
+            console.log("Using cached booth requests:", cachedBoothRequests.length);
+            setBoothRequests(cachedBoothRequests);
+        } else {
+            const fetchedBoothRequests = await boothManagement.fetchAllBoothRequests();
+            setBoothRequests(fetchedBoothRequests);
+
+            // Cache result
+            setVersionedStorageItem('allBoothRequests', fetchedBoothRequests, 5 * 60 * 1000);
+            setVersionedStorageItem('lastBoothRequestsFetch', now);
         }
         
         // Check cache for transactions
@@ -211,7 +232,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     };
     
     initializeData();
-  }, [isInitialized, boothManagement.fetchAllBooths]);
+  }, [isInitialized, boothManagement.fetchAllBooths, boothManagement.fetchAllBoothRequests]);
   
   useEffect(() => {
     if (!isInitialized || !user) return;
@@ -320,11 +341,25 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         
         if (boothSnap.exists()) {
           const boothData = boothSnap.data();
+          const products = boothData.products || [];
           const currentSales = boothData.sales || 0;
           const newSales = currentSales + amountInTickets;
+
+            for (let i=0; i<cartItems.length; i++) {
+              const productId = cartItems[i].productId;
+              const quantity = cartItems[i].quantity;
+
+              const productIndex = products.findIndex(p => p.id === productId);
+              
+              if (productIndex !== -1) {
+                products[productIndex].salesCount = (products[productIndex].salesCount || 0) + quantity;
+              }
+            }
+
           
           await updateDoc(boothRef, {
             sales: newSales,
+            products: products,
             updated_at: serverTimestamp()
           });
           
@@ -454,8 +489,10 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     getBoothsByUserId: boothManagement.getBoothsByUserId,
     joinBooth,
     fetchAllBooths: boothManagement.fetchAllBooths,
+    fetchAllBoothRequests: boothManagement.fetchAllBoothRequests,
     deleteBooth: boothManagement.deleteBooth,
     booths,
+    boothRequests,
     
     addProductToBooth: productManagement.addProductToBooth,
     removeProductFromBooth: productManagement.removeProductFromBooth,
@@ -495,7 +532,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     recentTransactions,
     isLoading
   }), [
-    booths, 
+    booths,
     recentTransactions,
     boothManagement, 
     productManagement, 
