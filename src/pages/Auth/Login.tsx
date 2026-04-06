@@ -99,7 +99,7 @@ const Login = () => {
                 break;
             }
         }
-        if ((userData.email.startsWith("p0") && userData.email.endsWith("@pdsb.net")) || isAuthorizedUser) {
+        if (userData.email.endsWith("@pdsb.net") || userData.email.endsWith("@peelsb.com") || isAuthorizedUser) {
             console.log("Signed in with", userData.email);
             navigate('/request-booth', {
                 replace: false
