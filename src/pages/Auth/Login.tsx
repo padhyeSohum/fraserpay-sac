@@ -86,46 +86,42 @@ const Login = () => {
   };
 
   const handleBoothRequestClick = async () => {
-    setIsGoogleLoading(true);
-    try {
-      console.log("Starting Google sign-in process from UI");
-      const userData = await loginWithGoogle();
-      if (userData) {
-        let isAuthorizedUser = false;
-        const authorizedEmails = ["795804@pdsb.net", "752470@pdsb.net", "793546@pdsb.net", "843909@pdsb.net", "890323@pdsb.net", "931108@pdsb.net", "1061713@pdsb.net", "845550@pdsb.net"];
-        for (const email of authorizedEmails) {
-            if (userData.email === email) {
-                isAuthorizedUser = true;
-                break;
-            }
-        }
-        if (userData.email.endsWith("@pdsb.net") || userData.email.endsWith("@peelsb.com") || isAuthorizedUser) {
-            console.log("Signed in with", userData.email);
-            navigate('/request-booth', {
-                replace: false
-            });
-        }
-        else {
-            toast({
-                title: "Unsuccessful Login",
-                description: "Please create a booth request with a teacher @pdsb.net account.",
-                variant: "default"
-            })
-        }
-      }
-    } catch (error) {
-      console.error('Google login error:', error);
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    return;
+    // setIsGoogleLoading(true);
+    // try {
+    //   console.log("Starting Google sign-in process from UI");
+    //   const userData = await loginWithGoogle();
+    //   if (userData) {
+    //     let isAuthorizedUser = false;
+    //     const authorizedEmails = ["795804@pdsb.net", "752470@pdsb.net", "793546@pdsb.net", "843909@pdsb.net", "890323@pdsb.net", "931108@pdsb.net", "1061713@pdsb.net", "845550@pdsb.net"];
+    //     for (const email of authorizedEmails) {
+    //         if (userData.email === email) {
+    //             isAuthorizedUser = true;
+    //             break;
+    //         }
+    //     }
+    //     if (userData.email.endsWith("@pdsb.net") || userData.email.endsWith("@peelsb.com") || isAuthorizedUser) {
+    //         console.log("Signed in with", userData.email);
+    //         navigate('/request-booth', {
+    //             replace: false
+    //         });
+    //     }
+    //     else {
+    //         toast({
+    //             title: "Unsuccessful Login",
+    //             description: "Please create a booth request with a teacher @pdsb.net account.",
+    //             variant: "default"
+    //         })
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error('Google login error:', error);
+    // } finally {
+    //   setIsGoogleLoading(false);
+    // }
 
   };
 
-    // const handleBoothRequestClick = () => {
-    //     navigate('/request-booth', {
-    //         replace: false
-    //     })
-    // }
   return <Layout hideHeader={true}>
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/30 animate-fade-in">
         <div className="mb-8">
@@ -161,10 +157,11 @@ const Login = () => {
             </div>
 
             <CardDescription className="w-full text-center pt-4">Running a booth? Fill out the form below.</CardDescription>
-            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleBoothRequestClick} disabled={isGoogleLoading}>
-              {isGoogleLoading ? "Signing in..." : <>
+            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleBoothRequestClick} disabled={true}>
+              {/* {isGoogleLoading ? "Signing in..." : <>
                   <div className="h-full flex place-items-center uppercase rounded-xl bg-gradient-to-r from-purple-500 to-purple-700 p-2 text-white bold">New!</div>Create a booth request
-                </>}
+                </>} */}
+                Booth Requests Opening Soon...
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
