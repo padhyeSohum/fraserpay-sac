@@ -43,7 +43,7 @@ export const extractStudentNumberFromEmail = (email: string): string => {
 
 // Validate if email is from pdsb.net domain
 export const isPdsbEmail = (email: string): boolean => {
-  return email.endsWith('@pdsb.net');
+  return email.endsWith('@pdsb.net') || email.endsWith('@peelsb.com');
 };
 
 // Sign in with Google

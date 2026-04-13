@@ -107,12 +107,12 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
             boothRequestsData.push({
                 id: boothRequestDoc.id,
                 teachers: boothRequestData.teachers,
-                students: boothRequestData.students,
                 products: boothRequestData.products,
                 boothName: boothRequestData.boothName,
                 boothDescription: boothRequestData.boothDescription || '',
                 organizationType: boothRequestData.organizationType,
                 organizationInfo: boothRequestData.organizationInfo,
+                sellingDates: boothRequestData.sellingDates,
                 status: boothRequestData.status,
                 additionalInformation: boothRequestData.additionalInformation,
             });

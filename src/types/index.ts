@@ -28,12 +28,12 @@ export interface Booth {
 export interface BoothRequest {
     id: string;
     teachers: Teacher[];
-    students: Student[];
     products: ProductRequest[];
     boothName: string;
     boothDescription: string;
     organizationType: string;
     organizationInfo: string;
+    sellingDates: boolean[];
     status: string;
     additionalInformation: string;
 }

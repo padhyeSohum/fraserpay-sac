@@ -13,17 +13,25 @@ import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDo
 import { firestore } from '@/integrations/firebase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
-
 interface BoothRequestsListProps {
     boothRequests: BoothRequest[];
     refresh: () => void;
 }
 const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListProps) => {
+    console.log(boothRequests);
 
     const { user } = useAuth();
 
     const [displayApproveConfirmation, setDisplayApproveConfirmation] = useState<boolean[]>(Array(boothRequests.length).fill(false));
     const [approveLoading, setApproveLoading] = useState<boolean[]>(Array(boothRequests.length).fill(false));
+
+    const CHARITY_WEEK_DATES = [
+        "Monday, April 27",
+        "Tuesday, April 28",
+        "Wednesday, April 29",
+        "Thursday, April 30",
+        "Friday, May 1"
+    ];
 
     let approvedArr = [];
     for (const req of boothRequests) {
@@ -87,30 +95,6 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                 // find all members mentioned
                 const usersCollection = collection(firestore, "users");
 
-                let studentsArr = [];
-                setMembersFound(Array(boothRequests[idx].students.length).fill(false));
-                for (const [studentIdx, student] of boothRequests[idx].students.entries()) {
-                    try {
-                        const studentsQuery = query(usersCollection, where('student_number', '==', student.studentNumber));
-                        console.log("STUDENT NUMBER:", student.studentNumber);
-                        const studentSnapshot = await getDocs(studentsQuery);
-
-                        if (!studentSnapshot.empty) {
-                            console.log(student);
-                            studentsArr.push(studentSnapshot.docs[0].id);
-                            setMembersFound((prev) => prev.map((x, i) => i !== studentIdx ? x : true));
-                        } else {
-                            allGood = false;
-                            console.log('STUDENT SNAPSHOT EMPTY');
-                        }
-                        
-                    } catch (error) {
-                        console.log(error);
-                        allGood = false;
-                        console.log('RANDOM ERROR');
-                    }
-                }
-
                 // add all teacher emails
                 let teachersArr = [];
                 for (const teacher of boothRequests[idx].teachers) {
@@ -127,7 +111,6 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                         description: boothRequests[idx].boothDescription,
                         pin: pin,
                         sales: 0,
-                        members: studentsArr,
                         teachers: teachersArr,
                     })
 
@@ -198,6 +181,26 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
         await refresh();
     }
 
+    const sendEmail = async () => {
+        try {
+            const res = await fetch("/api/send-email", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    to: "795804@pdsb.net",
+                    subject: "Automated Email",
+                    text: "Dude please work"
+                }),
+            });
+            const data = await res.text();
+            console.log("Response:", data);
+        } catch (err) {
+            console.error("Error:", err);
+        }
+    }
+
     useEffect(() => {
         setApproved(boothRequests.map((req) => req.status === "approved"));
     }, [boothRequests])
@@ -218,6 +221,7 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                         </div>
                         <button className="rounded-lg hover:bg-gray-300 px-2" onClick={async () => await refreshBoothRequests()}><RefreshCcw /></button>
                     </div>
+                    <button onClick={() => sendEmail()}>Click to send email</button>
                     {
                         boothRequests.length > 0 ?
                             boothRequests
@@ -266,14 +270,6 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                                                 <div><b>Organization Type: </b>{boothRequest.organizationType}</div>
                                                 <div><b>Organization Info: </b>{boothRequest.organizationInfo}</div>
 
-                                                <div className="text-base font-bold">Students</div>
-                                                <ul className="pl-4 list-disc">
-                                                    {
-                                                        boothRequest.students.map((student, i) => (
-                                                            <li key={i}>{student.name} | {student.studentNumber}</li>
-                                                        ))
-                                                    }
-                                                </ul>
                                                 <div className="text-base font-bold">Teachers</div>
                                                 <ul className="pl-4 list-disc">
                                                     {
@@ -282,6 +278,16 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                                                         )) 
                                                     }
                                                 </ul>
+
+                                                <div className="text-base font-bold">Dates Running:</div>
+                                                <ul className="pl-4 list-disc">
+                                                    {
+                                                        boothRequest.sellingDates ? boothRequest.sellingDates.map((isSellingToday, i) => (
+                                                            isSellingToday && <li key={i}>{CHARITY_WEEK_DATES[i]}</li>
+                                                        )) : ""
+                                                    }
+                                                </ul>
+
                                                 <div className="text-base font-bold">Products</div>
                                                 <ul className="pl-4 list-disc">
                                                     {
@@ -330,14 +336,6 @@ const BoothRequestsList = ({ boothRequests = [], refresh }: BoothRequestsListPro
                                                         <div>No unique PIN found ❌.</div>
                                                     }
                                                 </div>
-                                                <div className="text-base font-bold">Students</div>
-                                                <ul className="pl-4 list-disc">
-                                                    {
-                                                        boothRequest.students.map((student, i) => (
-                                                            <li key={i}>{student.name} | {student.studentNumber} | {membersFound[i] ? "✅" : "❌"}</li>
-                                                        ))
-                                                    }
-                                                </ul>
                                                 <div className="text-base font-bold">Teachers</div>
                                                 <ul className="pl-4 list-disc">
                                                     {

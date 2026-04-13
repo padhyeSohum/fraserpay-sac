@@ -64,14 +64,16 @@ const StringInput = ({ label, description = "", type, placeholder, value, onChan
 
 interface NumberInputProps {
     label: string,
+    description? : string,
     placeholder: string,
     value: number,
     onChange: any,
 }
-const NumberInput = ({ label, placeholder, value, onChange }: NumberInputProps) => {
+const NumberInput = ({ label, description, placeholder, value, onChange }: NumberInputProps) => {
     return (
         <div className="flex flex-col place-items-start gap-y-2 my-4 mx-2">
             <div className="text-gray-600 font-bold text-sm">{label}</div>
+            <div className="text-gray-400 text-sm">{description}</div>
             <input 
                 type="number" 
                 placeholder={placeholder} 
@@ -98,11 +100,9 @@ const RequestBooth = () => {
     const [respondentEmail, setRespondentEmail] = useState("");
     const [teachers, setTeachers] = useState([]);
 
-    const [students, setStudents] = useState([{ name: "", studentNumber: "" }, { name: "", studentNumber: "" }, { name: "", studentNumber: "" }]);
-
     const [boothName, setBoothName] = useState("");
     const [boothDescription, setBoothDescription] = useState("");
-    const [groupType, setGroupType] = useState<"None" | "Club/Council/Student Association" | "Class">("None");
+    const [groupType, setGroupType] = useState<"None" | "Club" | "Class">("None");
     const [groupInfo, setGroupInfo] = useState("");
     const [sellingDates, setSellingDates] = useState(Array(5).fill(false));
     const [numSellingDates, setNumSellingDates] = useState(0);
@@ -127,42 +127,6 @@ const RequestBooth = () => {
         "Thursday, April 30",
         "Friday, May 1"
     ];
-
-    const handleChangeTeachers = (idx: number, field: "name" | "email", value: string) => {
-        setTeachers(
-            (prev) => prev.map((teacher, i) => i === idx ? { ...teacher, [field]: value } : teacher)
-        )
-    }
-
-    const handleAddTeacher = () => {
-        setTeachers(
-            [...teachers, { name: "", email: "" }]
-        )
-    }
-
-    const handleRemoveTeacher = (idx: number) => {
-        setTeachers(
-            (prev) => prev.filter((_, i) => i !== idx)
-        )
-    }
-
-    const handleChangeStudents = (idx: number, field: "name" | "studentNumber", value: string) => {
-        setStudents(
-            (prev) => prev.map((student, i) => i === idx ? { ...student, [field]: value } : student)
-        )
-    }
-
-    const handleAddStudent = () => {
-        setStudents(
-            [...students, { name: "", studentNumber: "" }]
-        )
-    }
-
-    const handleRemoveStudent = (idx: number) => {
-        setStudents(
-            (prev) => prev.filter((_, i) => i !== idx)
-        )
-    }
 
     const handleChangeSellingDates = (idx: number) => {
         if (sellingDates[idx] === false) {
@@ -220,7 +184,7 @@ const RequestBooth = () => {
             const userData = await loginWithGoogle();
             if (userData) {
                 let isAuthorizedUser = false;
-                const authorizedEmails = ["795804@pdsb.net", "752470@pdsb.net", "793546@pdsb.net", "843909@pdsb.net", "890323@pdsb.net", "931108@pdsb.net", "1061713@pdsb.net", "845550@pdsb.net"];
+                const authorizedEmails = ["795804@pdsb.net", "752470@pdsb.net", "793546@pdsb.net", "843909@pdsb.net"];
                 for (const email of authorizedEmails) {
                     if (userData.email === email) {
                         isAuthorizedUser = true;
@@ -259,11 +223,6 @@ const RequestBooth = () => {
             if (!teacher.email.trim()) return false;
         };
 
-        for (const student of students) {
-            if (!student.name.trim()) return false;
-            if (!student.studentNumber.trim()) return false; 
-        };
-
         if (!boothName.trim() || boothName.length < 3 || boothName.length > 30) return false;
         if (groupType === "None") return false;
         if (!groupInfo.trim()) return false;
@@ -286,7 +245,6 @@ const RequestBooth = () => {
         respondentName,
         respondentEmail,
         teachers,
-        students,
         boothName,
         boothDescription,
         groupType,
@@ -298,14 +256,12 @@ const RequestBooth = () => {
     const handleSubmit = async () => {
         setSubmitStatus("submitting");
         const teachersArr = [{ name: respondentName, email: respondentEmail }, ...teachers];
-        let studentsArr = students;
         const productsArr = products.map((product, i) => ({ name: product.name, price: product.price*100 }));
 
         try {
             const boothRequestsCollection = collection(firestore, "booth_requests");
             await addDoc(boothRequestsCollection, {
                 teachers: teachersArr,
-                students: studentsArr,
                 boothName: boothName,
                 boothDescription: boothDescription,
                 groupType: groupType,
@@ -341,11 +297,10 @@ const RequestBooth = () => {
                 <div className="bg-gray-100 border-[2px] border-gray-200 p-2 rounded-lg text-pretty">
                     Welcome, teacher! We are very excited to have you join us for charity week. <br/><br/> Before you begin filling out this form, ensure you have the following: (you may have to ask your students for some of this information)
                     <ul className="list-disc pl-8">
-                        <li>Names and emails of all staff members in charge of this booth.</li>
-                        <li>Names, student numbers, and school emails of all (3+) student representatives of this booth.</li>
+                        <li>Your name and email.</li>
                         <li>The booth's name. <span className="text-sm text-gray-500">(3-30 characters)</span></li>
                         <li>The booth's description. <span className="text-sm text-gray-500">(max 100 characters)</span></li>
-                        <li>The club, council, student association, or period and classroom # associated with the booth.</li>
+                        <li>The club or classroom # associated with the booth (if a classroom is running the booth).</li>
                         <li>What dates you expect your booth to run on throughout Charity Week.</li>
                         <li>A list of all products and their respective prices. <span className="text-sm text-gray-500">(product names max 30 characters)</span></li>
                     </ul>
@@ -369,56 +324,14 @@ const RequestBooth = () => {
                     </div>
                 </Section>
 
-                <Section title="Section 1 - Teacher Information" description="Information on all teachers involved">
+                <Section title="Section 1 - Teacher Information" description="We use this information to contact you if we require additional information, or if we need to reach you.">
                     <div className="w-full">
-                        <StringInput label="YOUR Full Name" type="text" placeholder="Full Name" value={respondentName} onChange={(e) => setRespondentName(e.target.value)} required />
-                        <StringInput label="YOUR Email" type="email" placeholder="Email" value={respondentEmail} onChange={(e) => setRespondentEmail(e.target.value)} required />
-                        
-                        <div className="flex place-items-start gap-x-2 justify-between">
-                            <div className="py-1">
-                                <div>Additional teachers</div>
-                                {teachers.map((teacher, i) => 
-                                    <div key={i} className="md:flex md:place-items-center">
-                                        <StringInput label={`Teacher #${i+2} - Full Name`} type="text" placeholder="Full Name" value={teacher.name} onChange={(e) => handleChangeTeachers(i, "name", e.target.value)} required />
-                                        <StringInput label={`Teacher #${i+2} - Email`} type="text" placeholder="Email" value={teacher.email} onChange={(e) => handleChangeTeachers(i, "email", e.target.value)} required />
-                                        <div><button onClick={() => handleRemoveTeacher(i)} className="px-2 text-center font-bold rounded-sm hover:bg-red-500 hover:text-white">x</button></div>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <button onClick={() => handleAddTeacher()} className="font-bold p-1 border-2 border-black rounded-lg text-sm hover:bg-black hover:text-white transition-all duration-200">Add Teacher</button>
-                            </div>
-                        </div>
+                        <StringInput label="Your Full Name" type="text" placeholder="Full Name" value={respondentName} onChange={(e) => setRespondentName(e.target.value)} required />
+                        <StringInput label="Your Email" type="email" placeholder="Email" value={respondentEmail} onChange={(e) => setRespondentEmail(e.target.value)} required />
                     </div>
                 </Section>
 
-                <Section title="Section 2 - Student Information" description="Information on all student representatives involved. These are the students SAC will contact if anything happens or if we need additional information.">
-                    <div className="w-full">                        
-                        <div className="flex place-items-start gap-x-2 justify-between">
-                            <div className="py-1">
-                                <div>Student Representatives</div>
-                                {students.map((student, i) => 
-                                    <div key={i}>
-                                        <div className="my-8 flex place-items-center">
-                                            <div>
-                                                <StringInput label={`Student #${i+1} - Full Name`} type="text" placeholder="Full Name" value={student.name} onChange={(e) => handleChangeStudents(i, "name", e.target.value)} required />
-                                                <StringInput label={`Student #${i+1} - Student Number`} type="text" placeholder="Student Number" value={student.studentNumber} onChange={(e) => handleChangeStudents(i, "studentNumber", e.target.value)} required />
-                                                <div className="text-sm mx-2">{`Student #${i+1} - Email: ${student.studentNumber.length > 0 ? student.studentNumber : "Not yet provided (student number needed)"}${student.studentNumber.length > 0 ? "@pdsb.net": ""}`}</div>
-                                            </div>
-                                            <div><button onClick={() => handleRemoveStudent(i)} className="px-2 text-center font-bold rounded-sm hover:bg-red-500 hover:text-white" style={{ display: students.length > 3 ? "block" : "none"}}>x</button></div>
-                                        </div>
-                                        <hr className="border-[1px]"/>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <button onClick={() => handleAddStudent()} className="font-bold p-1 border-2 border-black rounded-lg text-sm hover:bg-black hover:text-white transition-all duration-200">Add Student</button>
-                            </div>
-                        </div>
-                    </div>
-                </Section>
-
-                <Section title="Section 3 - Booth Information" description="All booth information">
+                <Section title="Section 2 - Booth Information" description="All booth information">
                     <div className="w-full">
                         <div>
                             <StringInput label="Booth Name (max 30 characters)" description="This will be the booth name that shows up on FraserPay." type="text" placeholder="Ex. SAC's Barbeque" value={boothName} onChange={(e) => setBoothName(e.target.value)} minChars={3} maxChars={30} required />
@@ -444,7 +357,7 @@ const RequestBooth = () => {
                             <div className="flex flex-col place-items-start gap-y-2 my-4 mx-2 relative">
                                 <div className="text-gray-600 font-bold text-sm">Group Type</div>
                                 <div className="flex gap-x-2">
-                                    <div className="flex place-items-center p-2 text-sm rounded-lg border-2 border-gray-100 hover:border-black  select-none my-1 hover:cursor-pointer transition-all duration-200" onClick={() => setGroupType("Club/Council/Student Association")} style={{ color: groupType === "Club/Council/Student Association" ? "white" : "black", backgroundColor: groupType === "Club/Council/Student Association" ? "black" : "white" }}>Club/Council/Student Association</div>
+                                    <div className="flex place-items-center p-2 text-sm rounded-lg border-2 border-gray-100 hover:border-black  select-none my-1 hover:cursor-pointer transition-all duration-200" onClick={() => setGroupType("Club")} style={{ color: groupType === "Club" ? "white" : "black", backgroundColor: groupType === "Club" ? "black" : "white" }}>Club</div>
                                     <div className="flex place-items-center p-2 text-sm rounded-lg border-2 border-gray-100 hover:border-black select-none my-1 hover:cursor-pointer transition-all duration-200" onClick={() => setGroupType("Class")} style={{ color: groupType === "Class" ? "white" : "black", backgroundColor: groupType === "Class" ? "black" : "white" }}>Class</div>                                    
                                 </div>
                                 <div className="text-sm text-red-500">
@@ -453,7 +366,7 @@ const RequestBooth = () => {
                                     }
                                 </div>
 
-                                <div className="text-gray-800 text-sm text-pretty">{`Important information for the text box below: If you selected "Club / Council / Student Association", input the name of the group (no abbreviations). If you selected "Class", input the room # and period of the class (on a Day 1).`}</div>
+                                <div className="text-gray-800 text-sm text-pretty">{`Important information for the text box below: If you selected "Club", input the full name of the club (no abbreviations). If you selected "Class", input the room # of the class.`}</div>
                                 <StringInput label="Additional Group Info" type="text" placeholder="Ex. Student Activity Council" value={groupInfo} onChange={(e) => setGroupInfo(e.target.value)} required />
                             </div>
                         </div>
@@ -462,7 +375,7 @@ const RequestBooth = () => {
                             <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                 {
                                     sellingDates.map((_, i) => (
-                                        <div key={i} className="flex place-items-center p-2 text-sm rounded-lg border-2 border-gray-100 hover:border-black  select-none my-1 hover:cursor-pointer transition-all duration-200" style={{ color: sellingDates[i] ? "white": "black", backgroundColor: sellingDates[i] ? "black" : "white" }} onClick={() => handleChangeSellingDates(i)}>{CHARITY_WEEK_DATES[i]}</div>
+                                        <div key={i} className="flex place-items-center p-2 text-xs rounded-lg border-2 border-gray-100 hover:border-black  select-none my-1 hover:cursor-pointer transition-all duration-200" style={{ color: sellingDates[i] ? "white": "black", backgroundColor: sellingDates[i] ? "black" : "white" }} onClick={() => handleChangeSellingDates(i)}>{CHARITY_WEEK_DATES[i]}</div>
                                     ))
                                 }
                             </div>
@@ -480,8 +393,8 @@ const RequestBooth = () => {
                                     <div key={i}>
                                         <div className="my-8 flex place-items-center">
                                             <div>
-                                                <StringInput label={`Product #${i+1} - Name (max 30 characters)`} type="text" placeholder="Product Name" value={product.name} onChange={(e) => handleChangeProducts(i, "name", e.target.value)} required />
-                                                <NumberInput label={`Product #${i+1} - Price ($)`} placeholder="Price" value={product.price} onChange={(e) => handleChangeProducts(i, "price", e.target.value)} />
+                                                <StringInput label={`Product #${i+1} - Name (max 30 characters)`} description="This will be visible on FraserPay." type="text" placeholder="Product Name" value={product.name} onChange={(e) => handleChangeProducts(i, "name", e.target.value)} required />
+                                                <NumberInput label={`Product #${i+1} - Price ($)`} description="This will be visible on FraserPay." placeholder="Price" value={product.price} onChange={(e) => handleChangeProducts(i, "price", e.target.value)} />
                                             </div>
                                             <div><button onClick={() => handleRemoveProduct(i)} className="px-2 text-center font-bold rounded-sm hover:bg-red-500 hover:text-white" style={{ display: products.length > 1 ? "block" : "none"}}>x</button></div>
                                         </div>
@@ -495,7 +408,7 @@ const RequestBooth = () => {
                         </div>
                     </div>
                 </Section>
-                <Section title="Section 4 - Additional Information" description="Any additional information you would like SAC to know about your request">
+                <Section title="Section 3 - Additional Information" description="Any additional information you would like SAC to know about your request">
                     <div className="flex flex-col place-items-center gap-y-2 my-4 mx-2">
                         <div className="text-sm w-full text-left">Please do not use this area to ask questions. If you have any questions, you are welcome to use the contact information at the top of the form. If your booth <b><u>REQUIRES</u></b> any accommodations, let us know here. We do not do spot requests. If there is any other information you feel we should know, you are welcome to write it here.</div>
                         <textarea 
@@ -533,7 +446,7 @@ const RequestBooth = () => {
             <div>
                 <div className="text-lg font-bold text-center">FraserPay Booth Request Form</div>
                 <button onClick={async () => await handleSignIn()} className="border-2 border-gray-400 hover:border-black hover:bg-gray-200 transition-all duration-200 p-2 rounded-lg">
-                    Sign In (teacher @pdsb.net account only)
+                    Sign In (teacher @pdsb.net or @peelsb.com account only)
                 </button>
             </div>
             }
