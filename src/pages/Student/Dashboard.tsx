@@ -307,7 +307,7 @@ const Dashboard = () => {
                                 : "opacity-0 scale-95 translate-y-4"}`}
                 >
                     <div className="flex justify-between items-center">
-                        <div className="font-semibold">What are FraserPoints?</div>
+                        <div className="font-semibold">What are Fraser Points?</div>
                         <button
                             className="hover:text-red-500 transition-all duration-200"
                             onClick={() => setDisplayPointsModal(false)}
@@ -316,12 +316,12 @@ const Dashboard = () => {
                         </button>
                     </div>
                     <div className="text-sm mt-2">
-                        Any time you get involved with SAC, you get FraserPoints. Volunteering, participating in Spirit Week, 
-                        and making purchases at events all help you earn more points!
+                        Any time you make a purchase using Fraser Pay, you earn points! For every $1 spent, you get 10 points.
                     </div>
+                    <br></br>
                     <div className="text-sm"></div>
                     <div className="text-sm">
-                        You can redeem these points at SAC events for awesome prizes!
+                        You can redeem these points during events for awesome prizes @ the SAC booth!
                     </div>
                 </div>
                 </div>
