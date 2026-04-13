@@ -5,6 +5,12 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import {
+  claimToast,
+  getActiveToastId,
+  getToastKey,
+  releaseToast,
+} from "@/utils/toastDeduper"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -72,16 +78,6 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
-// Track toast messages to prevent duplicates
-const activeToastMessages = new Map<string, string>();
-
-// Helper to get a unique key for a toast message
-const getToastKey = (props: { title?: React.ReactNode; description?: React.ReactNode }) => {
-  const title = props.title ? String(props.title) : '';
-  const description = props.description ? String(props.description) : '';
-  return `${title}:${description}`;
-}
-
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -125,8 +121,14 @@ export const reducer = (state: State, action: Action): State => {
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
-        // Clear all tracked messages when removing all toasts
-        activeToastMessages.clear();
+        // Release only the keys owned by the current shadcn toast stack
+        state.toasts.forEach((toast) => {
+          const key = getToastKey({
+            title: toast.title,
+            description: toast.description,
+          });
+          releaseToast(key, toast.id);
+        });
         return {
           ...state,
           toasts: [],
@@ -136,8 +138,11 @@ export const reducer = (state: State, action: Action): State => {
       // Find the toast being removed and clean up its tracked message
       const toastToRemove = state.toasts.find(t => t.id === action.toastId);
       if (toastToRemove) {
-        const key = getToastKey(toastToRemove);
-        activeToastMessages.delete(key);
+        const key = getToastKey({
+          title: toastToRemove.title,
+          description: toastToRemove.description,
+        });
+        releaseToast(key, toastToRemove.id);
       }
       
       return {
@@ -163,19 +168,20 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
   const toastKey = getToastKey(props);
-  
+
   // Check if a toast with the same message is already active
-  if (activeToastMessages.has(toastKey)) {
+  const activeToastId = getActiveToastId(toastKey)
+  if (activeToastId) {
     // Do not add a duplicate toast
     return {
-      id: activeToastMessages.get(toastKey) || id,
-      dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: activeToastMessages.get(toastKey) }),
+      id: activeToastId || id,
+      dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: activeToastId }),
       update: () => {}, // No-op for duplicate toast attempts
     }
   }
   
   // Track this new toast message
-  activeToastMessages.set(toastKey, id);
+  claimToast(toastKey, id);
 
   const update = (props: ToasterToast) =>
     dispatch({

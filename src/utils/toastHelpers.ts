@@ -1,122 +1,67 @@
 
 import { toast as sonnerToast } from 'sonner';
-import React from 'react';
+import type { ReactElement } from 'react';
+import { claimToast, getToastKey, releaseToast } from './toastDeduper';
 
-// Store to track active toast messages
-const activeToasts = new Map<string, string>();
+const showUniqueSonnerToast = (
+  type: 'success' | 'error' | 'info' | 'warning',
+  message: string,
+  options?: any
+) => {
+  const key = getToastKey({ message });
 
-// Helper to get a key for a toast message
-const getToastKey = (message: string) => message.toLowerCase().trim();
+  const id = Math.random().toString(36).substr(2, 9);
+  if (!claimToast(key, id)) {
+    return;
+  }
+
+  return sonnerToast[type](message, {
+    ...options,
+    id,
+    onDismiss: () => {
+      releaseToast(key, id);
+      if (options?.onDismiss) {
+        options.onDismiss();
+      }
+    }
+  });
+};
 
 /**
  * Helper function to ensure no duplicate sonner toasts are displayed
  */
 export const uniqueToast = {
   success: (message: string, options?: any) => {
-    const key = getToastKey(message);
-    
-    if (activeToasts.has(key)) {
-      return; // Don't show duplicate toast
-    }
-    
-    const id = Math.random().toString(36).substr(2, 9);
-    activeToasts.set(key, id);
-    
-    return sonnerToast.success(message, {
-      ...options,
-      id,
-      onDismiss: () => {
-        activeToasts.delete(key);
-        if (options?.onDismiss) {
-          options.onDismiss();
-        }
-      }
-    });
+    return showUniqueSonnerToast('success', message, options);
   },
   
   error: (message: string, options?: any) => {
-    const key = getToastKey(message);
-    
-    if (activeToasts.has(key)) {
-      return; // Don't show duplicate toast
-    }
-    
-    const id = Math.random().toString(36).substr(2, 9);
-    activeToasts.set(key, id);
-    
-    return sonnerToast.error(message, {
-      ...options,
-      id,
-      onDismiss: () => {
-        activeToasts.delete(key);
-        if (options?.onDismiss) {
-          options.onDismiss();
-        }
-      }
-    });
+    return showUniqueSonnerToast('error', message, options);
   },
   
   info: (message: string, options?: any) => {
-    const key = getToastKey(message);
-    
-    if (activeToasts.has(key)) {
-      return; // Don't show duplicate toast
-    }
-    
-    const id = Math.random().toString(36).substr(2, 9);
-    activeToasts.set(key, id);
-    
-    return sonnerToast.info(message, {
-      ...options,
-      id,
-      onDismiss: () => {
-        activeToasts.delete(key);
-        if (options?.onDismiss) {
-          options.onDismiss();
-        }
-      }
-    });
+    return showUniqueSonnerToast('info', message, options);
   },
   
   warning: (message: string, options?: any) => {
-    const key = getToastKey(message);
-    
-    if (activeToasts.has(key)) {
-      return; // Don't show duplicate toast
-    }
-    
-    const id = Math.random().toString(36).substr(2, 9);
-    activeToasts.set(key, id);
-    
-    return sonnerToast.warning(message, {
-      ...options,
-      id,
-      onDismiss: () => {
-        activeToasts.delete(key);
-        if (options?.onDismiss) {
-          options.onDismiss();
-        }
-      }
-    });
+    return showUniqueSonnerToast('warning', message, options);
   },
   
   // For custom toast usage that doesn't fit the above methods
   // Update typing to match what sonner expects
-  custom: (render: (id: string | number) => React.ReactElement, options?: any, message?: string) => {
-    const key = message ? getToastKey(message) : Math.random().toString();
-    
-    if (message && activeToasts.has(key)) {
-      return; // Don't show duplicate toast
-    }
-    
+  custom: (render: (id: string | number) => ReactElement, options?: any, message?: string) => {
+    const key = message ? getToastKey({ message }) : undefined;
+
     const id = Math.random().toString(36).substr(2, 9);
-    if (message) activeToasts.set(key, id);
+    if (key && !claimToast(key, id)) {
+      return;
+    }
     
     return sonnerToast.custom(render, {
       ...options,
       id,
       onDismiss: () => {
-        if (message) activeToasts.delete(key);
+        if (key) releaseToast(key, id);
         if (options?.onDismiss) {
           options.onDismiss();
         }
