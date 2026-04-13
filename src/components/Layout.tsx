@@ -84,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const defaultFooter = (
     <div className="text-center text-xs text-muted-foreground py-2">
-      Made with ❤️ by Akshat Chopra for John Fraser SAC 
+      Made by John Fraser SAC
       {/* <br/>Additional contributors: Sohum Padhye and Yang Xue */}
     </div>
   );
