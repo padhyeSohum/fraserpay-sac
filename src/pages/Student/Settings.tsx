@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 
+const FRASERPAY_HELP_DOC_URL = 'https://docs.google.com/document/d/18PpPSb4bufaqN7lv8mrIsmRPzX9OvPIH3oRbWNCPhCA/edit?usp=sharing';
+
 const Settings = () => {
   const {
     user,
@@ -90,31 +92,7 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>These features are still in development. Check back soon to try them out :)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center">
-                <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Transaction Alerts</span>
-              </div>
-              <Button variant="outline" size="sm">Coming soon</Button>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center">
-                <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Booth Updates</span>
-              </div>
-              <Button variant="outline" size="sm">Coming soon</Button>
-            </div>
-          </CardContent>
-        </Card>
-        
+      
         <Card>
           <CardHeader>
             <CardTitle>Help & Support</CardTitle>
@@ -126,7 +104,11 @@ const Settings = () => {
                 <HelpCircle className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>How to Use FraserPay</span>
               </div>
-              <Button variant="outline" size="sm">View</Button>
+              <Button asChild variant="outline" size="sm">
+                <a href={FRASERPAY_HELP_DOC_URL} target="_blank" rel="noreferrer">
+                  View
+                </a>
+              </Button>
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
