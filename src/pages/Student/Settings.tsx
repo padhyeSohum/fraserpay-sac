@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
 import { useToast } from '@/components/ui/use-toast';
-import { Shield, Bell, HelpCircle, LogOut } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Shield, Bell, HelpCircle, LifeBuoy, LogOut, X } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +28,7 @@ const Settings = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [supportOpen, setSupportOpen] = useState(false);
   
   const handleSACAccess = async () => {
     try {
@@ -113,6 +114,16 @@ const Settings = () => {
             <Separator />
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center">
+                <LifeBuoy className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Support</span>
+              </div>
+              <Button variant="outline" size="sm" type="button" onClick={() => setSupportOpen(true)}>
+                Contact
+              </Button>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center">
                 <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>SAC Admin Access</span>
               </div>
@@ -128,6 +139,40 @@ const Settings = () => {
             </Button>
           </CardFooter>
         </Card>
+
+        <AlertDialog open={supportOpen} onOpenChange={setSupportOpen}>
+          <AlertDialogContent className="sm:max-w-md">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-3 top-3 h-8 w-8"
+              onClick={() => setSupportOpen(false)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Contact Support</AlertDialogTitle>
+              <AlertDialogDescription>
+                Please Find the SAC booth or any SAC Members for Immediate Assistance.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="text-sm text-muted-foreground">
+              Contact us at:
+              <br />
+              johnfraserstudentcouncil@gmail.com
+              <br />
+              795804@pdsb.net
+              <br />
+              752470@pdsb.net
+              <br />
+              843909@pdsb.net
+              <br />
+              793546@pdsb.net
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>;
 };
