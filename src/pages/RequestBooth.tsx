@@ -732,6 +732,16 @@ const RequestBooth = () => {
         </div>
       </Section>
 
+      <Section title="Section 4 - Reimbursments" description="">
+        <div className="text-sm w-full text-left my-4 mx-2">
+          All initiatives may request reimbursement of up to $50. To be reimbursed, teachers must provide a receipt to the office. If your initiative requires more than $50, please reach out to Mrs. Sinclair at{" "}
+          <a href="mailto:heather.sinclair@peelsb.com" className="underline text-blue-600 hover:text-blue-800">
+            heather.sinclair@peelsb.com
+          </a>
+          .
+        </div>
+      </Section>
+
       <button
         onClick={handleSubmit}
         className={`mt-8 w-full max-w-xs self-center bg-gradient-to-r ${statusStyles[submitStatus]} p-2 text-white font-bold rounded-lg transition-all duration-100 outline-none`}
