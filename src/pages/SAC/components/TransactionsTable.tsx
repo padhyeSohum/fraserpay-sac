@@ -6,14 +6,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
 import { downloadCSVTemplate } from '@/utils/csvParser';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 export interface TransactionsTableProps {
   transactions: any[];
+  users?: any[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
   isLoading?: boolean;
 }
 const TransactionsTable: React.FC<TransactionsTableProps> = ({
   transactions = [],
+  users = [],
   searchTerm = "",
   onSearchChange = () => {},
   isLoading = false
@@ -72,46 +76,176 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
   };
 
-  // Export transactions to CSV
-  const exportToCSV = () => {
+  const escapeCSV = (value: unknown): string => {
+    const str = value === null || value === undefined ? '' : String(value);
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
+  const formatAmountForCSV = (transaction: any): string => {
     try {
-      console.log("Exporting transactions to CSV", filteredTransactions.length);
+      if (transaction.amount === undefined || transaction.amount === null) return '0.00';
 
-      // Create headers for CSV
-      const headers = ['Date', 'Student', 'Booth', 'Type', 'Amount'];
+      if (transaction.type === 'purchase' || transaction.type === 'fund' || transaction.type === 'refund') {
+        return formatCurrency(Number(transaction.amount));
+      }
 
-      // Create CSV rows with proper data formatting
-      const csvRows = [headers.join(','), ...filteredTransactions.map(t => {
-        // Format date - handle potential undefined/null values
-        let dateStr = 'N/A';
-        try {
-          if (t.created_at) {
-            dateStr = new Date(t.created_at).toISOString();
-          }
-        } catch (e) {
-          console.error("Error formatting date for CSV:", e);
+      return String(transaction.amount);
+    } catch (error) {
+      console.error("Error formatting amount for CSV:", error);
+      return '0.00';
+    }
+  };
+
+  const loadTransactionProducts = async (transactionIds: string[]) => {
+    const productsByTransactionId: Record<string, any[]> = {};
+    const uniqueIds = [...new Set(transactionIds.filter(Boolean))];
+
+    if (uniqueIds.length === 0) {
+      return productsByTransactionId;
+    }
+
+    const batchSize = 10;
+
+    for (let i = 0; i < uniqueIds.length; i += batchSize) {
+      const batchIds = uniqueIds.slice(i, i + batchSize);
+      const transactionProductsRef = collection(firestore, 'transaction_products');
+      const productsQuery = query(transactionProductsRef, where('transaction_id', 'in', batchIds));
+      const productsSnapshot = await getDocs(productsQuery);
+
+      productsSnapshot.docs.forEach(productDoc => {
+        const productData = productDoc.data();
+        const transactionId = productData.transaction_id;
+        if (!transactionId) return;
+
+        if (!productsByTransactionId[transactionId]) {
+          productsByTransactionId[transactionId] = [];
         }
 
-        // Handle potential undefined values
-        const studentName = t.student_name || 'N/A';
-        const boothName = t.booth_name || 'System';
-        const type = t.type || 'Unknown';
+        productsByTransactionId[transactionId].push(productData);
+      });
+    }
 
-        // Handle amount - ensure it's a number
-        let amountStr = '0.00';
-        try {
-          if (t.amount !== undefined && t.amount !== null) {
-            amountStr = formatCurrency(Number(t.amount));
-          }
-        } catch (e) {
-          console.error("Error formatting amount for CSV:", e);
+    return productsByTransactionId;
+  };
+
+  // Export transactions to CSV
+  const exportToCSV = async () => {
+    try {
+      console.log("Exporting transactions to CSV", sortedTransactions.length);
+
+      const headers = [
+        'Date',
+        'Transaction ID',
+        'Type',
+        'Amount',
+        'Booth ID',
+        'Booth Name',
+        'Booth Processor ID',
+        'Booth Processor Name',
+        'Items (Qty)',
+        'Student ID',
+        'Student Name',
+        'SAC Member ID',
+        'SAC Member Name'
+      ];
+
+      const userNameById = new Map<string, string>();
+      users.forEach(user => {
+        if (user?.id && user?.name) {
+          userNameById.set(String(user.id), String(user.name));
         }
-        return [dateStr, studentName.replace(/,/g, ' '),
-        // Replace commas to avoid CSV format issues
-        boothName.replace(/,/g, ' '), type, amountStr].join(',');
-      })];
+      });
 
-      // Join rows to create CSV content
+      const purchaseTransactionIdsMissingProducts = sortedTransactions
+        .filter(transaction =>
+          transaction.type === 'purchase' &&
+          transaction.id &&
+          (!Array.isArray(transaction.products) || transaction.products.length === 0)
+        )
+        .map(transaction => String(transaction.id));
+
+      const productsByTransactionId = await loadTransactionProducts(purchaseTransactionIdsMissingProducts);
+
+      const csvRows = [
+        headers.map(escapeCSV).join(','),
+        ...sortedTransactions.map(transaction => {
+          let dateStr = 'N/A';
+
+          if (typeof transaction.created_at === 'string' && transaction.created_at.trim().length > 0) {
+            dateStr = transaction.created_at;
+          } else {
+            const normalizedDate = normalizeDate(transaction.created_at);
+            if (normalizedDate && !isNaN(normalizedDate.getTime())) {
+              dateStr = normalizedDate.toISOString();
+            }
+          }
+
+          const transactionId = transaction.id || 'N/A';
+          const type = transaction.type || 'Unknown';
+          const amountStr = formatAmountForCSV(transaction);
+          const boothId = transaction.booth_id || transaction.boothId || 'N/A';
+          const boothName = transaction.booth_name || transaction.boothName || 'System';
+          const isPurchase = type === 'purchase';
+
+          const boothProcessorId = isPurchase
+            ? (transaction.seller_id || transaction.sellerId || transaction.processed_by || 'N/A')
+            : 'N/A';
+
+          const boothProcessorName = isPurchase
+            ? (transaction.seller_name ||
+              transaction.sellerName ||
+              transaction.processed_by_name ||
+              (boothProcessorId !== 'N/A' ? userNameById.get(String(boothProcessorId)) : undefined) ||
+              'N/A')
+            : 'N/A';
+
+          const embeddedProducts = Array.isArray(transaction.products) ? transaction.products : [];
+          const fallbackProducts = transaction.id ? (productsByTransactionId[String(transaction.id)] || []) : [];
+          const products = embeddedProducts.length > 0 ? embeddedProducts : fallbackProducts;
+
+          const itemsWithQuantity = isPurchase && products.length > 0
+            ? products
+              .map((product: any) => {
+                const name = product.productName || product.product_name || 'Unknown item';
+                const quantity = product.quantity ?? 1;
+                return `${name} x${quantity}`;
+              })
+              .join(' | ')
+            : 'N/A';
+
+          const studentId = transaction.student_id || transaction.buyer_id || transaction.buyerId || 'N/A';
+          const studentName = transaction.student_name ||
+            transaction.buyer_name ||
+            transaction.buyerName ||
+            (studentId !== 'N/A' ? userNameById.get(String(studentId)) : undefined) ||
+            'N/A';
+
+          const sacMemberId = transaction.sac_member || transaction.sacMemberId || 'N/A';
+          const sacMemberName = sacMemberId !== 'N/A'
+            ? (transaction.sac_member_name ||
+              transaction.sacMemberName ||
+              userNameById.get(String(sacMemberId)) ||
+              'N/A')
+            : 'N/A';
+
+          return [
+            dateStr,
+            transactionId,
+            type,
+            amountStr,
+            boothId,
+            boothName,
+            boothProcessorId,
+            boothProcessorName,
+            itemsWithQuantity,
+            studentId,
+            studentName,
+            sacMemberId,
+            sacMemberName
+          ].map(escapeCSV).join(',');
+        })
+      ];
+
       const csvContent = csvRows.join('\n');
 
       // Generate filename with current date

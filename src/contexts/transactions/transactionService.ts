@@ -405,9 +405,17 @@ export const processPurchase = async (
       student_name: buyerName,
       booth_id: boothId,
       booth_name: boothName,
+      seller_id: sellerId,
+      seller_name: sellerName,
       amount: totalAmountInCents,
       points_earned: totalAmountInCents/10,
       type: 'purchase',
+      products: cartItems.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })),
       created_at: new Date().toISOString()
     };
     

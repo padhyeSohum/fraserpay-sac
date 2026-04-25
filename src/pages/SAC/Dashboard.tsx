@@ -1021,6 +1021,7 @@ const Dashboard = () => {
         
         <TransactionsTable 
           transactions={transactions} 
+          users={usersList}
           searchTerm={transactionSearchTerm}
           onSearchChange={setTransactionSearchTerm}
           isLoading={isTransactionLoading}
