@@ -361,14 +361,14 @@ const BoothSell = () => {
                     <Scan className="h-4 w-4" />
                     Scan QR Code
                   </Button>
-                  {/* <Button 
+                  <Button 
                     variant={lookupMode === 'manual' ? 'default' : 'outline'} 
                     onClick={() => setLookupMode('manual')}
                     className="gap-2"
                   >
                     <User className="h-4 w-4" />
                     Student Number
-                  </Button> */}
+                  </Button>
                 </div>
                 
                 {lookupMode === 'scan' ? (
