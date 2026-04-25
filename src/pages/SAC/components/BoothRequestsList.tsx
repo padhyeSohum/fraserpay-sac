@@ -219,25 +219,25 @@ const BoothRequestsList = ({
         await refresh();
     };
 
-    const sendEmail = async () => {
-        try {
-            const res = await fetch("/api/send-email", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    to: "795804@pdsb.net",
-                    subject: "Automated Email",
-                    text: "Dude please work",
-                }),
-            });
-            const data = await res.text();
-            console.log("Response:", data);
-        } catch (err) {
-            console.error("Error:", err);
-        }
-    };
+    // const sendEmail = async () => {
+    //     try {
+    //         const res = await fetch("/api/send-email", {
+    //             method: "POST",
+    //             headers: {
+    //                 "Content-Type": "application/json",
+    //             },
+    //             body: JSON.stringify({
+    //                 to: "795804@pdsb.net",
+    //                 subject: "Automated Email",
+    //                 text: "Dude please work",
+    //             }),
+    //         });
+    //         const data = await res.text();
+    //         console.log("Response:", data);
+    //     } catch (err) {
+    //         console.error("Error:", err);
+    //     }
+    // };
 
     useEffect(() => {
         setApproved(boothRequests.map((req) => req.status === "approved"));
@@ -309,9 +309,7 @@ const BoothRequestsList = ({
                             <RefreshCcw />
                         </button>
                     </div>
-                    <button onClick={() => sendEmail()}>
-                        Click to send email
-                    </button>
+                    {/* <button onClick={() => sendEmail()}>Click to send email</button> */}
                     {boothRequests.length > 0
                         ? boothRequests
                               .map((boothRequest, i) => ({ boothRequest, i }))
