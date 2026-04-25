@@ -110,13 +110,13 @@ const Dashboard = () => {
         const now = Date.now();
         const lastCriticalStatsFetch = getVersionedStorageItem<number>('lastCriticalStatsFetch', 0);
         
-        if (now - lastCriticalStatsFetch > 5000) {
+        if (now - lastCriticalStatsFetch > 60000) {
           loadTransactions(true);
           loadBoothLeaderboard(true);
           setVersionedStorageItem('lastCriticalStatsFetch', now);
           setVersionedStorageItem('isUpdatingCriticalStats', true);
         }
-      }, 5000);
+      }, 60000);
       
       const fullDataPollingInterval = setInterval(() => {
         if (dataInitialized) {
@@ -125,7 +125,7 @@ const Dashboard = () => {
           loadTransactions(false);
           loadBoothLeaderboard(false);
         }
-      }, 60000);
+      }, 150000);
       
       return () => {
         clearInterval(criticalStatsPollingInterval);
@@ -250,7 +250,7 @@ const Dashboard = () => {
       const lastTransactionsFetch = getVersionedStorageItem<number>('lastSacTransactionsFetch', 0);
       const now = Date.now();
       
-      const cacheTime = criticalUpdateOnly ? 5000 : 60000;
+      const cacheTime = criticalUpdateOnly ? 60000 : 150000;
       
       if (cachedTransactions.length > 0 && now - lastTransactionsFetch < cacheTime) {
         updateRevenueStats(cachedTransactions);
@@ -332,7 +332,7 @@ const Dashboard = () => {
       const lastBoothsFetch = getVersionedStorageItem<number>('lastSacBoothsFetch', 0);
       const now = Date.now();
       
-      const cacheTime = criticalUpdateOnly ? 10000 : 30000;
+      const cacheTime = criticalUpdateOnly ? 60000 : 150000;
       
       if (cachedBooths.length > 0 && now - lastBoothsFetch < cacheTime) {
         const sortedBooths = [...cachedBooths].sort((a, b) => b.totalEarnings - a.totalEarnings);
