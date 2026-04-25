@@ -101,9 +101,10 @@ const Settings = () => {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between py-2">
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <HelpCircle className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>How to Use FraserPay</span>
+                <span className="text-xs text-muted-foreground">- Press View to View the Google Doc on How to FraserPay!</span>
               </div>
               <Button asChild variant="outline" size="sm">
                 <a href={FRASERPAY_HELP_DOC_URL} target="_blank" rel="noreferrer">
@@ -161,15 +162,15 @@ const Settings = () => {
             <div className="text-sm text-muted-foreground">
               Contact us at:
               <br />
-              johnfraserstudentcouncil@gmail.com
+              johnfraserstudentcouncil@gmail.com - General Contact
               <br />
-              795804@pdsb.net
+              795804@pdsb.net - Sohum Padhye (Tech Liaison)
               <br />
-              752470@pdsb.net
+              752470@pdsb.net - Yang Xue (Tech Liaison)
               <br />
-              843909@pdsb.net
+              843909@pdsb.net - David Chen (Vice President)
               <br />
-              793546@pdsb.net
+              793546@pdsb.net - Hamza Saleh (President)
             </div>
           </AlertDialogContent>
         </AlertDialog>
