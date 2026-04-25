@@ -326,7 +326,7 @@ const Dashboard = () => {
                 </div>
                 </div>
             
-            <p className="mt-4 text-sm text-white/80">Visit the SAC table to add funds to your account</p>
+            <p className="mt-4 text-sm text-white/80">Visit the SAC table to Add Funds to Your Account</p>
           </div>
         </div>
         
