@@ -402,6 +402,10 @@ const BoothSell = () => {
                       <User className="h-10 w-10 text-muted-foreground" />
                     </div>
                     
+                    <p className="font-bold mb-2 text-center">
+                      Ensure Student Provides ID to Prove Identity Before Entering Student Number
+                    </p>
+
                     <p className="text-muted-foreground mb-6 text-center">
                       Enter student number to find customer
                     </p>
