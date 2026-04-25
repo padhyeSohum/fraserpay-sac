@@ -1027,6 +1027,7 @@ const Dashboard = () => {
           isLoading={isTransactionLoading}
         />
         
+        {/*
         <div className="flex justify-end pt-4 border-t">
           <Button 
             variant="outline" 
@@ -1038,6 +1039,7 @@ const Dashboard = () => {
             Reset FraserPay
           </Button>
         </div>
+        */}
         
         <CreateBoothDialog 
           isOpen={isBoothDialogOpen}
