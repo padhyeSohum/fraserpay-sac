@@ -18,7 +18,6 @@ const Settings = () => {
   const {
     user,
     logout,
-    verifySACPin,
     loginWithGoogle
   } = useAuth();
   const {

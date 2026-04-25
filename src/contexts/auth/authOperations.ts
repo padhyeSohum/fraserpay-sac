@@ -9,7 +9,6 @@ import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs, dele
 import { toast } from 'sonner';
 import { User } from '@/types';
 import { fetchUserData } from './authUtils';
-import { SAC_PIN } from './types';
 import { signInWithGoogle, extractStudentNumberFromEmail } from '@/utils/auth';
 
 const MAX_RETRIES = 3;
@@ -287,7 +286,7 @@ export const logoutUser = async (): Promise<boolean> => {
   }
 };
 
-export const verifySACAccess = async (pin: string, userId: string): Promise<boolean> => {
+export const verifySACAccess = async (userId: string): Promise<boolean> => {
   try {
     const userRef = doc(firestore, 'users', userId);
     const userDoc = await getDoc(userRef);
@@ -300,15 +299,6 @@ export const verifySACAccess = async (pin: string, userId: string): Promise<bool
     const userData = userDoc.data();
     
     if (SAC_AUTHORIZED_EMAILS.includes(userData.email)) {
-      await withRetry(async () => {
-        return await updateDoc(userRef, { role: 'sac' });
-      });
-      
-      toast.success('SAC access granted');
-      return true;
-    }
-    
-    if (pin === SAC_PIN) {
       await withRetry(async () => {
         return await updateDoc(userRef, { role: 'sac' });
       });

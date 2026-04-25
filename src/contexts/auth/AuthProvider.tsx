@@ -147,12 +147,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifySACPin = async (pin: string): Promise<boolean> => {
+  const verifySACPin = async (): Promise<boolean> => {
     if (!user) return false;
-    
+
     setIsLoading(true);
     try {
-      const success = await verifySACAccess(pin, user.id);
+      const success = await verifySACAccess(user.id);
       if (success) {
         setUser(prev => prev ? { ...prev, role: 'sac' } : null);
         navigate('/sac/dashboard');
