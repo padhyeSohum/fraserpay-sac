@@ -155,11 +155,11 @@ const Login = () => {
             </div>
 
             <CardDescription className="w-full text-center pt-4">Running a booth? Fill out the form below.</CardDescription>
-            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleBoothRequestClick} disabled={isGoogleLoading}>
-              {isGoogleLoading ? "Signing in..." : <>
+            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 h-11" onClick={handleBoothRequestClick} disabled={true}>
+              {/* {isGoogleLoading ? "Signing in..." : <>
                   <div className="h-full flex place-items-center uppercase rounded-xl bg-gradient-to-r from-purple-500 to-purple-700 p-2 text-white bold">New!</div>Create a Booth Request
-                </>}
-                {/* Booth Requests Opening Soon... */}
+                </>} */}
+                Booth requests are closed. Thank you for signing up!
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
