@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTransactions } from '@/contexts/transactions';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Award, Medal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
+
 const Leaderboard = () => {
   const {
     getLeaderboard
@@ -32,46 +33,58 @@ const Leaderboard = () => {
     };
     fetchLeaderboardData();
   }, [getLeaderboard]);
-  const getIcon = (position: number) => {
+
+  const rankedBooths = [...leaderboardData].sort((a, b) => b.earnings - a.earnings).slice(0, 5);
+
+  const getRankDisplay = (position: number) => {
     switch (position) {
       case 0:
-        return <Trophy className="h-8 w-8 text-amber-500" />;
+        return '🥇';
       case 1:
-        return <Award className="h-8 w-8 text-slate-400" />;
+        return '🥈';
       case 2:
-        return <Medal className="h-8 w-8 text-amber-700" />;
+        return '🥉';
       default:
-        return null;
+        return `${position + 1}`;
     }
   };
+
   const handleBackClick = () => {
     navigate('/dashboard');
   };
+
   return <Layout title="Leaderboard" showBack onBackClick={handleBackClick}>
       <div className="container mx-auto max-w-4xl py-4">
         <Card className="border shadow-sm">
           <CardHeader className="bg-card-header pb-2">
             <CardTitle className="text-2xl font-bold text-center">Booth Leaderboard</CardTitle>
-            {/* <CardDescription className="text-center">Top performing booths by earnings. Refreshed every 15 mins.</CardDescription> */}
+            <CardDescription className="text-center">Top 5 booths ranked by total sales</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             {isLoading ? <div className="flex justify-center p-6">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div> : leaderboardData.length === 0 ? <p className="text-center text-muted-foreground py-8"><span className="text-4xl">🚧</span> <br/>This page is currently under construction...</p> : <div className="space-y-4">
-                {leaderboardData.map((booth, index) => <div key={booth.boothId}>
+              </div> : rankedBooths.length === 0 ? <div className="py-8 text-center text-muted-foreground">
+                <p className="text-4xl">🏁</p>
+                <p className="mt-3 font-medium">No booth sales yet</p>
+                <p className="mt-1 text-sm">Rankings will appear here once booths start making sales.</p>
+              </div> : <div className="space-y-4">
+                {rankedBooths.map((booth, index) => <div key={booth.boothId}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="flex items-center justify-center w-8">
-                          {getIcon(index)}
-                          {index > 2 && <span className="font-semibold text-muted-foreground">{index + 1}</span>}
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-lg font-semibold">
+                          <span aria-label={`Rank ${index + 1}`}>{getRankDisplay(index)}</span>
                         </div>
                         <div>
                           <h3 className="font-medium">{booth.boothName}</h3>
+                          <p className="text-sm text-muted-foreground">Rank #{index + 1}</p>
                         </div>
                       </div>
-                      {/* Removed dollar amount display */}
+                      <div className="text-right">
+                        <p className="font-semibold">{formatCurrency(booth.earnings)}</p>
+                        <p className="text-sm text-muted-foreground">Total sales</p>
+                      </div>
                     </div>
-                    {index < leaderboardData.length - 1 && <Separator className="mt-4" />}
+                    {index < rankedBooths.length - 1 && <Separator className="mt-4" />}
                   </div>)}
               </div>}
           </CardContent>

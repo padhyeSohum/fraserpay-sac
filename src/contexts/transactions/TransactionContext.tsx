@@ -511,7 +511,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     getTransactionsByBooth: transactionHook.getTransactionsByBooth,
     getStudentTransactions: transactionHook.getStudentTransactions,
     getBoothTransactions: transactionHook.getBoothTransactions,
-    getLeaderboard: transactionHook.getLeaderboard,
+    getLeaderboard: transactionManagement.getLeaderboard,
     findUserByStudentNumber: transactionHook.findUserByStudentNumber,
     getBoothProducts: transactionHook.getBoothProducts,
     getUserBooths: transactionHook.getUserBooths,
@@ -537,6 +537,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     boothManagement, 
     productManagement, 
     transactionHook,
+    transactionManagement,
     cartManagement,
     isLoading
   ]);
