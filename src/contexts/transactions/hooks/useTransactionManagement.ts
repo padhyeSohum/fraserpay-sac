@@ -17,7 +17,7 @@ export interface UseTransactionManagementReturn {
   loadUserTransactions: (userId: string) => Transaction[];
   getSACTransactions: () => Transaction[];
   getTransactionStats: (boothId: string, dateRange: DateRange) => TransactionStats;
-  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number }[]>;
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; boothDescription: string; earnings: number }[]>;
 }
 
 export const useTransactionManagement = (booths: Booth[]): UseTransactionManagementReturn => {
@@ -134,29 +134,19 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
 
   const getLeaderboard = useCallback(async () => {
     try {
-      const cachedLeaderboard = getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
-      const lastLeaderboardFetch = getVersionedStorageItem<number>('lastLeaderboardFetch', 0);
-      const now = Date.now();
-      
-      const cacheDuration = 15 * 60 * 1000;
-      
-      if (cachedLeaderboard.length > 0 && now - lastLeaderboardFetch < cacheDuration) {
-        console.log('Using cached leaderboard data');
-        return cachedLeaderboard;
-      }
-      
       console.log('Fetching fresh leaderboard data from Firebase');
       const leaderboard = await getLeaderboardService();
       
-      setVersionedStorageItem('leaderboard', leaderboard, cacheDuration);
-      setVersionedStorageItem('lastLeaderboardFetch', now);
+      // Keep a short-lived cache only as an offline/error fallback.
+      setVersionedStorageItem('leaderboard', leaderboard, 60 * 1000);
+      setVersionedStorageItem('lastLeaderboardFetch', Date.now());
       
       return leaderboard;
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       toast.error('Failed to fetch leaderboard data');
       
-      return getVersionedStorageItem<{ boothId: string; boothName: string; earnings: number; }[]>('leaderboard', []);
+      return getVersionedStorageItem<{ boothId: string; boothName: string; boothDescription: string; earnings: number; }[]>('leaderboard', []);
     }
   }, []);
 

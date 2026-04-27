@@ -71,7 +71,7 @@ export interface TransactionContextProps {
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
   getBoothTransactions: (boothId: string) => Promise<Transaction[]>;
-  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number; }[]>;
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; boothDescription: string; earnings: number; }[]>;
   findUserByStudentNumber: (studentNumber: string) => Promise<User | null>;
   getBoothProducts: (boothId: string) => Promise<Product[]>;
   getUserBooths: (userId: string) => Promise<any[]>;

@@ -11,8 +11,6 @@ import {
   arrayUnion, 
   deleteDoc,
   arrayRemove,
-  orderBy,
-  limit,
   serverTimestamp
 } from 'firebase/firestore';
 import { Booth, Product } from '@/types';
@@ -205,20 +203,22 @@ export const getUserBooths = async (userId: string): Promise<Booth[]> => {
   }
 };
 
-export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
+export const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; boothDescription: string; earnings: number }[]> => {
   try {
     const boothsRef = collection(firestore, 'booths');
-    const leaderboardQuery = query(boothsRef, orderBy('sales', 'desc'), limit(5));
-    const querySnapshot = await getDocs(leaderboardQuery);
+    const querySnapshot = await getDocs(boothsRef);
     
-    const leaderboardData: { boothId: string; boothName: string; earnings: number }[] = [];
+    const leaderboardData: { boothId: string; boothName: string; boothDescription: string; earnings: number }[] = [];
     
     querySnapshot.forEach((doc) => {
       const boothData = doc.data();
+      const salesInCents = typeof boothData.sales === 'number' ? boothData.sales : 0;
+
       leaderboardData.push({
         boothId: doc.id,
         boothName: boothData.name,
-        earnings: typeof boothData.sales === 'number' ? boothData.sales / 100 : 0
+        boothDescription: typeof boothData.description === 'string' ? boothData.description : '',
+        earnings: salesInCents / 100
       });
     });
     

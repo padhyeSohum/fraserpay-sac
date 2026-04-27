@@ -27,7 +27,7 @@ export interface UseTransactionReturn {
   getTransactionsByBooth: (boothId: string) => Promise<Transaction[]>;
   getStudentTransactions: (studentId: string) => Promise<Transaction[]>;
   getBoothTransactions: (boothId: string) => Promise<Transaction[]>;
-  getLeaderboard: () => Promise<{ boothId: string; boothName: string; earnings: number; }[]>;
+  getLeaderboard: () => Promise<{ boothId: string; boothName: string; boothDescription: string; earnings: number; }[]>;
   findUserByStudentNumber: (studentNumber: string) => Promise<User | null>;
   getBoothProducts: (boothId: string) => Promise<Product[]>;
   getUserBooths: (userId: string) => Promise<any[]>;
@@ -161,7 +161,7 @@ export const useTransaction = (): UseTransactionReturn => {
   };
 
   // Get leaderboard data
-  const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; earnings: number }[]> => {
+  const getLeaderboard = async (): Promise<{ boothId: string; boothName: string; boothDescription: string; earnings: number }[]> => {
     // This would calculate leaderboard data in a real app
     return [];
   };

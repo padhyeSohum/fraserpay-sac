@@ -14,6 +14,7 @@ const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState<{
     boothId: string;
     boothName: string;
+    boothDescription: string;
     earnings: number;
   }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +35,10 @@ const Leaderboard = () => {
     fetchLeaderboardData();
   }, [getLeaderboard]);
 
-  const rankedBooths = [...leaderboardData].sort((a, b) => b.earnings - a.earnings).slice(0, 5);
+  const rankedBooths = leaderboardData
+    .filter((booth) => !/\bsac\b/i.test(booth.boothName ?? ''))
+    .sort((a, b) => b.earnings - a.earnings)
+    .slice(0, 5);
 
   const getRankDisplay = (position: number) => {
     switch (position) {
@@ -76,7 +80,7 @@ const Leaderboard = () => {
                         </div>
                         <div>
                           <h3 className="font-medium">{booth.boothName}</h3>
-                          <p className="text-sm text-muted-foreground">Rank #{index + 1}</p>
+                          <p className="text-sm text-muted-foreground">{booth.boothDescription || 'No description available'}</p>
                         </div>
                       </div>
                       <div className="text-right">
