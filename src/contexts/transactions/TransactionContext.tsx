@@ -414,7 +414,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     if (!recentTransactions || !userId) return [];
     
     return recentTransactions.filter(tx => 
-      tx.buyerId === userId || tx.sellerId === userId
+      tx.buyerId === userId && (tx.type === 'purchase' || tx.type === 'fund' || tx.type === 'refund')
     ).sort((a, b) => {
       const dateA = new Date(a.timestamp || 0);
       const dateB = new Date(b.timestamp || 0);

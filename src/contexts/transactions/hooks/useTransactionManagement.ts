@@ -83,7 +83,9 @@ export const useTransactionManagement = (booths: Booth[]): UseTransactionManagem
   };
 
   const loadUserTransactions = (userId: string) => {
-    return transactions.filter(t => t.buyerId === userId);
+    return transactions.filter(t => 
+      t.buyerId === userId && (t.type === 'purchase' || t.type === 'fund' || t.type === 'refund')
+    );
   };
 
   const getSACTransactions = () => {

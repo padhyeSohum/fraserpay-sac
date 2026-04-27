@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [lastBoothJoinedTime, setLastBoothJoinedTime] = useState<number>(0);
   const [displayPointsModal, setDisplayPointsModal] = useState(false);
   const [isRefreshingTransactions, setIsRefreshingTransactions] = useState(false);
+  const [visibleTransactionCount, setVisibleTransactionCount] = useState(3);
   const MAX_RETRIES = 3;
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
@@ -129,7 +130,7 @@ const Dashboard = () => {
       }
       try {
         const userTxs = loadUserTransactions ? loadUserTransactions(user.id) : [];
-        setUserTransactions(userTxs.slice(0, 3));
+        setUserTransactions(userTxs);
       } catch (error) {
         console.error("Error loading transactions:", error);
         setUserTransactions([]);
@@ -248,7 +249,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user && loadUserTransactions) {
       const userTxs = loadUserTransactions(user.id);
-      setUserTransactions(userTxs.slice(0, 3));
+      setUserTransactions(userTxs);
     }
   }, [recentTransactions, user, loadUserTransactions]);
   const handleHideBooth = (boothId: string) => {
@@ -275,8 +276,10 @@ const Dashboard = () => {
     setIsRefreshingTransactions(true);
     try {
       const transactions = await fetchAllTransactions(true);
-      const userTxs = transactions.filter(tx => tx.buyerId === user.id || tx.sellerId === user.id).sort((a, b) => b.timestamp - a.timestamp);
-      setUserTransactions(userTxs.slice(0, 3));
+      const userTxs = transactions
+        .filter(tx => tx.buyerId === user.id && (tx.type === 'purchase' || tx.type === 'fund' || tx.type === 'refund'))
+        .sort((a, b) => b.timestamp - a.timestamp);
+      setUserTransactions(userTxs);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
       toast.error("Failed to refresh transactions");
@@ -284,6 +287,9 @@ const Dashboard = () => {
       setIsRefreshingTransactions(false);
     }
   }, [user]);
+  const handleViewMoreTransactions = () => {
+    setVisibleTransactionCount(prev => prev + 3);
+  };
   const logo = <div className="flex items-center mb-2">
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
@@ -298,6 +304,8 @@ const Dashboard = () => {
       </Layout>;
   }
   const visibleBooths = userBooths.filter(booth => !hiddenBooths.includes(booth.id));
+  const visibleTransactions = userTransactions.slice(0, visibleTransactionCount);
+  const hasMoreTransactions = userTransactions.length > visibleTransactionCount;
   return <Layout logo={logo} showLogout showAddButton onAddClick={handleJoinBooth}>
       <div className="space-y-6">
         <div className="balance-card rounded-xl overflow-hidden">
@@ -390,7 +398,7 @@ const Dashboard = () => {
         
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">Your Recent Purchases</h2>
+            <h2 className="text-lg font-semibold">Your Recent Activity</h2>
             <Button variant="ghost" size="sm" onClick={handleRefreshTransactions} disabled={isRefreshingTransactions}>
               {isRefreshingTransactions ? "Refreshing..." : "Refresh"}
             </Button>
@@ -401,7 +409,12 @@ const Dashboard = () => {
                 <p>Loading transactions...</p>
               </CardContent>
             </Card> : userTransactions.length > 0 ? <div className="space-y-3">
-              {userTransactions.map(transaction => <TransactionItem key={transaction.id} transaction={transaction} showBooth={true} />)}
+              {visibleTransactions.map(transaction => <TransactionItem key={transaction.id} transaction={transaction} showBooth={true} />)}
+              {hasMoreTransactions && <div className="flex justify-center pt-1">
+                  <Button variant="outline" size="sm" onClick={handleViewMoreTransactions}>
+                    View More
+                  </Button>
+                </div>}
             </div> : <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 <p>No transactions yet</p>

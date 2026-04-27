@@ -133,11 +133,12 @@ const BoothTransactions = () => {
             ) : transactions.length > 0 ? (
               <div className="space-y-3">
                 {transactions.map((transaction) => (
-                  <TransactionItem 
-                    key={transaction.id} 
-                    transaction={transaction}
-                    showSupport
-                  />
+                  <React.Fragment key={transaction.id}>
+                    {/* Support button intentionally disabled here because it has no action. */}
+                    <TransactionItem 
+                      transaction={transaction}
+                    />
+                  </React.Fragment>
                 ))}
               </div>
             ) : (

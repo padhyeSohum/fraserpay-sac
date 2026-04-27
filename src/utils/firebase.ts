@@ -89,6 +89,11 @@ export const transformFirebaseTransaction = (
     }
   }
   
+  const embeddedProducts = Array.isArray(dbTransaction.products) ? dbTransaction.products : [];
+  const normalizedProducts = transactionProducts.length > 0
+    ? transactionProducts
+    : embeddedProducts;
+
   return {
     id: dbTransaction.id,
     timestamp: timestamp,
@@ -98,10 +103,10 @@ export const transformFirebaseTransaction = (
     sellerName: undefined,
     boothId: dbTransaction.booth_id || undefined,
     boothName: dbTransaction.booth_name || undefined,
-    products: transactionProducts.map(tp => ({
-      productId: tp.product_id,
-      productName: tp.product_name,
-      quantity: tp.quantity,
+    products: normalizedProducts.map((tp: any) => ({
+      productId: tp.product_id || tp.productId || '',
+      productName: tp.product_name || tp.productName || tp.name || 'Unknown item',
+      quantity: tp.quantity || 1,
       price: tp.price // Don't divide by 100 as requested
     })),
     amount: dbTransaction.amount, // Don't divide by 100 as requested
