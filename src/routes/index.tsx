@@ -80,11 +80,12 @@ export const routes = [
     protected: true 
   },
   
-  // SAC Dashboard - no role restrictions anymore
-  { 
-    path: "/sac/dashboard", 
+  // SAC Dashboard - requires 'sac' role
+  {
+    path: "/sac/dashboard",
     element: <SACDashboard />,
-    protected: true
+    protected: true,
+    requiredRoles: ['sac']
   },
   
   // Shared Routes
@@ -167,20 +168,23 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Simple wrapper for backward compatibility - no longer does role checking
-export const RoleProtectedRoute = ({ 
-  children
-}: { 
-  children: React.ReactNode; 
-  allowedRoles?: string[] 
+export const RoleProtectedRoute = ({
+  children,
+  allowedRoles = []
+}: {
+  children: React.ReactNode;
+  allowedRoles?: string[]
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
-  
+
   if (!isAuthenticated) {
-    console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
-  
+
+  if (allowedRoles.length > 0 && (!user || !allowedRoles.includes(user.role))) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };

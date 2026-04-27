@@ -1,6 +1,6 @@
 
-import { auth, firestore } from '@/integrations/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '@/integrations/firebase/client';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { User, UserRole } from '@/types';
 import { transformFirebaseUser } from '@/utils/firebase';
 
@@ -45,6 +45,32 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
     return transformFirebaseUser(userData);
   } catch (error) {
     console.error('Unexpected error fetching user data:', error);
+    return null;
+  }
+};
+
+// Resolve user profile from Firebase Auth UID, including legacy records where doc ID != uid.
+export const fetchUserDataByAuthUid = async (authUid: string): Promise<User | null> => {
+  try {
+    const directUser = await fetchUserData(authUid);
+    if (directUser) return directUser;
+
+    const usersRef = collection(firestore, 'users');
+    const userQuery = query(usersRef, where('uid', '==', authUid));
+    const querySnapshot = await getDocs(userQuery);
+
+    if (querySnapshot.empty) return null;
+
+    const userDoc = querySnapshot.docs[0];
+    const userData: FirestoreUserData = { id: userDoc.id, ...userDoc.data() };
+
+    if (!userData.booth_access) userData.booth_access = [];
+    if (userData.tickets == null) userData.tickets = 0;
+    if (userData.points == null) userData.points = 0;
+
+    return transformFirebaseUser(userData);
+  } catch (error) {
+    console.error('Unexpected error fetching user data by auth UID:', error);
     return null;
   }
 };

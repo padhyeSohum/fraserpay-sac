@@ -1,11 +1,10 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { User } from '@/types';
 import { auth } from '@/integrations/firebase/client';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { toast } from 'sonner';
 import { AuthContextType } from './types';
-import { fetchUserData } from './authUtils';
+import { fetchUserDataByAuthUid } from './authUtils';
 import { 
   loginUser, 
   loginWithGoogle as loginWithGoogleOperation,
@@ -21,23 +20,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-
-//   useEffect(() => {
-//     console.log('Auth state:', { 
-//       isLoading, 
-//       authUser: authUser?.uid || null, 
-//       user: user?.id || null, 
-//       authInitialized,
-//       isGoogleUser: authUser?.providerData?.[0]?.providerId === 'google.com'
-//     });
-//   }, [isLoading, authUser, user, authInitialized]);
 
   useEffect(() => {
     let mounted = true;
-    let authTimeout: NodeJS.Timeout;
+    let authSettled = false;
+    let authTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const completeAuthInit = () => {
+      if (!mounted || authSettled) return;
+      authSettled = true;
+      if (authTimeout) {
+        clearTimeout(authTimeout);
+      }
+      setIsLoading(false);
+    };
+
+    const isAuthRoute = (path: string) => path === '/login' || path === '/register';
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
     //   console.log("Auth state changed:", firebaseUser?.uid);
@@ -47,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthUser(firebaseUser);
         
         try {
-          const userData = await fetchUserData(user!.id);
+          const userData = await fetchUserDataByAuthUid(firebaseUser.uid);
           
           if (mounted) {
             if (userData) {
@@ -55,27 +54,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(userData);
             } else {
               console.warn("No user data found for authenticated user:", firebaseUser.uid);
+              setUser(null);
             }
-            
-            setIsLoading(false);
-            setAuthInitialized(true);
           }
         } catch (error) {
           console.error('Error in auth state change handler:', error);
-          if (mounted) {
-            setIsLoading(false);
-            setAuthInitialized(true);
-          }
+        } finally {
+          completeAuthInit();
         }
       } else {
         if (mounted) {
           setUser(null);
           setAuthUser(null);
-          setIsLoading(false);
-          setAuthInitialized(true);
         }
+        completeAuthInit();
         
-        if (location.pathname !== '/login' && location.pathname !== '/register') {
+        if (!isAuthRoute(window.location.pathname)) {
           console.log("User signed out, redirecting to login");
           navigate('/login');
         }
@@ -83,19 +77,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     authTimeout = setTimeout(() => {
-      if (mounted && !authInitialized) {
+      if (mounted && !authSettled) {
         console.warn('Auth initialization timeout reached. Force completing auth loading.');
-        setIsLoading(false);
-        setAuthInitialized(true);
+        completeAuthInit();
       }
     }, 3000);
 
     return () => {
       mounted = false;
-      clearTimeout(authTimeout);
+      if (authTimeout) {
+        clearTimeout(authTimeout);
+      }
       unsubscribe();
     };
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 
   const login = async (studentNumber: string, password: string) => {
     setIsLoading(true);
