@@ -9,12 +9,12 @@ import TransactionItem from '@/components/TransactionItem';
 import { toast } from 'sonner';
 import { Transaction } from '@/types';
 import { Loader2 } from 'lucide-react';
-import { fetchAllTransactions } from '@/contexts/transactions/transactionService';
+import { fetchBoothTransactions } from '@/contexts/transactions/transactionService';
 
 const BoothTransactions = () => {
   const { boothId } = useParams<{ boothId: string }>();
   const { user } = useAuth();
-  const { getBoothById, loadBoothTransactions, isLoading } = useTransactions();
+  const { getBoothById, isLoading } = useTransactions();
   const navigate = useNavigate();
   
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
@@ -24,22 +24,12 @@ const BoothTransactions = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadBoothHistory = async (forceRefresh = false) => {
+  const loadBoothHistory = async () => {
     if (!boothId) return;
     setLoadingTransactions(true);
     setError(null);
     try {
-      if (forceRefresh) {
-        const allTransactions = await fetchAllTransactions(true);
-        const boothTransactions = allTransactions
-          .filter((tx) => tx.boothId === boothId)
-          .sort((a, b) => b.timestamp - a.timestamp);
-        setTransactions(boothTransactions);
-        return;
-      }
-
-      const boothTransactions = loadBoothTransactions(boothId);
-      console.log(`Loaded ${boothTransactions.length} transactions for booth ${boothId}`);
+      const boothTransactions = await fetchBoothTransactions(boothId);
       setTransactions(boothTransactions);
     } catch (err) {
       console.error('Error loading booth transactions:', err);
@@ -54,12 +44,12 @@ const BoothTransactions = () => {
     if (boothId) {
       const boothData = getBoothById(boothId);
       setBooth(boothData);
-      
+
       if (boothData) {
         loadBoothHistory();
       }
     }
-  }, [boothId, getBoothById, loadBoothTransactions]);
+  }, [boothId, getBoothById]);
 
   useEffect(() => {
     if (!booth) {
@@ -82,15 +72,19 @@ const BoothTransactions = () => {
 
   const handleRefreshTransactions = async () => {
     setIsRefreshing(true);
-    await loadBoothHistory(true);
+    await loadBoothHistory();
     setIsRefreshing(false);
   };
 
   if (!booth) {
     return (
-      <Layout title="Initiative not found" showBack>
+      <Layout title={isLoading ? "Loading..." : "Initiative not found"} showBack>
         <div className="text-center py-10">
-          <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
+          {isLoading ? (
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          ) : (
+            <p className="text-muted-foreground">The initiative you're looking for could not be found</p>
+          )}
         </div>
       </Layout>
     );

@@ -106,6 +106,59 @@ export const loadUserTransactions = (transactions: Transaction[], userId: string
   return transactions.filter(t => t.buyerId === userId);
 };
 
+export const fetchBoothTransactions = async (boothId: string): Promise<Transaction[]> => {
+  try {
+    const transactionsRef = collection(firestore, 'transactions');
+    const q = query(transactionsRef, where('booth_id', '==', boothId));
+    const snap = await getDocs(q);
+
+    const transactions: Transaction[] = snap.docs.map(docSnap => {
+      const data = { id: docSnap.id, ...docSnap.data() };
+      const tx = transformFirebaseTransaction(data);
+      if (!tx.timestamp || isNaN(tx.timestamp)) tx.timestamp = Date.now();
+      return tx;
+    });
+
+    return transactions.sort((a, b) => b.timestamp - a.timestamp);
+  } catch (error) {
+    console.error('Error fetching booth transactions:', error);
+    return [];
+  }
+};
+
+export const fetchUserTransactions = async (userId: string): Promise<Transaction[]> => {
+  try {
+    const transactionsRef = collection(firestore, 'transactions');
+
+    // Query by student_id (used by fund/refund/purchase flows)
+    const byStudentId = query(transactionsRef, where('student_id', '==', userId));
+    // Query by buyer_id (used by TransactionContext processPurchase)
+    const byBuyerId = query(transactionsRef, where('buyer_id', '==', userId));
+
+    const [studentSnap, buyerSnap] = await Promise.all([
+      getDocs(byStudentId),
+      getDocs(byBuyerId),
+    ]);
+
+    const seenIds = new Set<string>();
+    const transactions: Transaction[] = [];
+
+    for (const docSnap of [...studentSnap.docs, ...buyerSnap.docs]) {
+      if (seenIds.has(docSnap.id)) continue;
+      seenIds.add(docSnap.id);
+      const data = { id: docSnap.id, ...docSnap.data() };
+      const tx = transformFirebaseTransaction(data);
+      if (!tx.timestamp || isNaN(tx.timestamp)) tx.timestamp = Date.now();
+      transactions.push(tx);
+    }
+
+    return transactions.sort((a, b) => b.timestamp - a.timestamp);
+  } catch (error) {
+    console.error('Error fetching user transactions:', error);
+    return [];
+  }
+};
+
 export const addFunds = async (
   userId: string, 
   amount: number, 

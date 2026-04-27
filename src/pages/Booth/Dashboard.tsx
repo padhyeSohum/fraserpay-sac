@@ -7,31 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout';
-import TransactionItem from '@/components/TransactionItem';
-import { ArrowRight, ChevronRight, Package } from 'lucide-react';
-import { toast } from 'sonner';
+import { ChevronRight } from 'lucide-react';
 
 const BoothDashboard = () => {
   const { boothId } = useParams<{ boothId: string; }>();
   const { user } = useAuth();
-  const { getBoothById, loadBoothTransactions } = useTransactions();
+  const { getBoothById } = useTransactions();
   const navigate = useNavigate();
-  
+
   const [booth, setBooth] = useState<ReturnType<typeof getBoothById>>(undefined);
-  const [transactions, setTransactions] = useState<ReturnType<typeof loadBoothTransactions>>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  
+
   useEffect(() => {
     if (boothId) {
       const boothData = getBoothById(boothId);
       setBooth(boothData);
-      if (boothData) {
-        const boothTransactions = loadBoothTransactions(boothId);
-        console.log('Loaded booth transactions:', boothTransactions);
-        setTransactions(boothTransactions);
-      }
     }
-  }, [boothId, getBoothById, loadBoothTransactions]);
+  }, [boothId, getBoothById]);
   
   // Remove role-based restriction, just check if booth exists
   useEffect(() => {
@@ -99,33 +91,6 @@ const BoothDashboard = () => {
               </Button> */}
             </div>
             
-            {/* Recent Transactions */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold">Recent Transactions</h2>
-                <Button variant="ghost" size="sm" onClick={() => navigate(`/booth/${boothId}/transactions`)} className="gap-1">
-                  <span>View All</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {transactions.length > 0 ? (
-                <div className="space-y-3">
-                  {transactions.slice(0, 3).map(transaction => (
-                    <TransactionItem 
-                      key={transaction.id} 
-                      transaction={transaction}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6 text-center text-muted-foreground">
-                    <p>No transactions yet</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </div>
         </TabsContent>
       </Tabs>

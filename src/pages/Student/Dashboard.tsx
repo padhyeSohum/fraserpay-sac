@@ -12,14 +12,13 @@ import { QrCode, ListOrdered, Settings, Plus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
-import { fetchAllTransactions } from '@/contexts/transactions/transactionService';
+import { fetchUserTransactions } from '@/contexts/transactions/transactionService';
 const Dashboard = () => {
   const {
     user,
     updateUserData
   } = useAuth();
   const {
-    loadUserTransactions,
     getBoothsByUserId,
     fetchAllBooths
   } = useTransactions();
@@ -35,6 +34,8 @@ const Dashboard = () => {
   const [displayPointsModal, setDisplayPointsModal] = useState(false);
   const [isRefreshingTransactions, setIsRefreshingTransactions] = useState(false);
   const [visibleTransactionCount, setVisibleTransactionCount] = useState(3);
+  const [transactionsLoaded, setTransactionsLoaded] = useState(false);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const MAX_RETRIES = 3;
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
@@ -127,14 +128,6 @@ const Dashboard = () => {
         setUserBooths([]);
         toast.error("Failed to load your initiatives");
       }
-      try {
-        const userTxs = loadUserTransactions ? loadUserTransactions(user.id) : [];
-        setUserTransactions(userTxs);
-      } catch (error) {
-        console.error("Error loading transactions:", error);
-        setUserTransactions([]);
-        toast.error("Failed to load transactions");
-      }
       setDataInitialized(true);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -148,7 +141,7 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, loadUserTransactions, MAX_RETRIES]);
+  }, [user, dataInitialized, refreshUserData, retryCount, refreshUserBooths, MAX_RETRIES]);
   useEffect(() => {
     let isMounted = true;
     if (isMounted && !dataInitialized && retryCount < MAX_RETRIES) {
@@ -264,22 +257,39 @@ const Dashboard = () => {
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
   };
+  const loadTransactions = useCallback(async (): Promise<void> => {
+    if (!user) return;
+    const txs = await fetchUserTransactions(user.id);
+    const filtered = txs.filter(tx => tx.type === 'purchase' || tx.type === 'fund' || tx.type === 'refund');
+    setUserTransactions(filtered);
+  }, [user]);
+  const handleLoadTransactions = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingTransactions(true);
+    try {
+      await loadTransactions();
+      setTransactionsLoaded(true);
+      setVisibleTransactionCount(3);
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      toast.error("Failed to load transactions");
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  }, [user, loadTransactions]);
   const handleRefreshTransactions = useCallback(async () => {
     if (!user) return;
     setIsRefreshingTransactions(true);
     try {
-      const transactions = await fetchAllTransactions(true);
-      const userTxs = transactions
-        .filter(tx => tx.buyerId === user.id && (tx.type === 'purchase' || tx.type === 'fund' || tx.type === 'refund'))
-        .sort((a, b) => b.timestamp - a.timestamp);
-      setUserTransactions(userTxs);
+      await loadTransactions();
+      setVisibleTransactionCount(3);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
       toast.error("Failed to refresh transactions");
     } finally {
       setIsRefreshingTransactions(false);
     }
-  }, [user]);
+  }, [user, loadTransactions]);
   const handleViewMoreTransactions = () => {
     setVisibleTransactionCount(prev => prev + 3);
   };
@@ -392,27 +402,45 @@ const Dashboard = () => {
         <div>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Your Recent Activity</h2>
-            <Button variant="ghost" size="sm" onClick={handleRefreshTransactions} disabled={isRefreshingTransactions}>
-              {isRefreshingTransactions ? "Refreshing..." : "Refresh"}
-            </Button>
+            {transactionsLoaded && (
+              <Button variant="ghost" size="sm" onClick={handleRefreshTransactions} disabled={isRefreshingTransactions}>
+                {isRefreshingTransactions ? "Refreshing..." : "Refresh"}
+              </Button>
+            )}
           </div>
-          
-          {isLoading ? <Card>
+
+          {!transactionsLoaded ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Button onClick={handleLoadTransactions} disabled={isLoadingTransactions}>
+                  {isLoadingTransactions ? "Loading..." : "View Recent Activity"}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : isLoadingTransactions ? (
+            <Card>
               <CardContent className="p-6 text-center">
                 <p>Loading transactions...</p>
               </CardContent>
-            </Card> : userTransactions.length > 0 ? <div className="space-y-3">
+            </Card>
+          ) : userTransactions.length > 0 ? (
+            <div className="space-y-3">
               {visibleTransactions.map(transaction => <TransactionItem key={transaction.id} transaction={transaction} showBooth={true} />)}
-              {hasMoreTransactions && <div className="flex justify-center pt-1">
+              {hasMoreTransactions && (
+                <div className="flex justify-center pt-1">
                   <Button variant="outline" size="sm" onClick={handleViewMoreTransactions}>
                     View More
                   </Button>
-                </div>}
-            </div> : <Card>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 <p>No transactions yet</p>
               </CardContent>
-            </Card>}
+            </Card>
+          )}
         </div>
       </div>
     </Layout>;
