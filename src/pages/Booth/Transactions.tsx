@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTransactions } from '@/contexts/transactions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import { toast } from 'sonner';
 import { Transaction } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { fetchAllTransactions } from '@/contexts/transactions/transactionService';
 
 const BoothTransactions = () => {
   const { boothId } = useParams<{ boothId: string }>();
@@ -20,6 +22,33 @@ const BoothTransactions = () => {
   const [activeTab, setActiveTab] = useState('transactions');
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadBoothHistory = async (forceRefresh = false) => {
+    if (!boothId) return;
+    setLoadingTransactions(true);
+    setError(null);
+    try {
+      if (forceRefresh) {
+        const allTransactions = await fetchAllTransactions(true);
+        const boothTransactions = allTransactions
+          .filter((tx) => tx.boothId === boothId)
+          .sort((a, b) => b.timestamp - a.timestamp);
+        setTransactions(boothTransactions);
+        return;
+      }
+
+      const boothTransactions = loadBoothTransactions(boothId);
+      console.log(`Loaded ${boothTransactions.length} transactions for booth ${boothId}`);
+      setTransactions(boothTransactions);
+    } catch (err) {
+      console.error('Error loading booth transactions:', err);
+      setError('Failed to load transactions');
+      toast.error('Failed to load transactions');
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
 
   useEffect(() => {
     if (boothId) {
@@ -27,20 +56,7 @@ const BoothTransactions = () => {
       setBooth(boothData);
       
       if (boothData) {
-        setLoadingTransactions(true);
-        setError(null);
-        
-        try {
-          const boothTransactions = loadBoothTransactions(boothId);
-          console.log(`Loaded ${boothTransactions.length} transactions for booth ${boothId}`);
-          setTransactions(boothTransactions);
-        } catch (err) {
-          console.error('Error loading booth transactions:', err);
-          setError('Failed to load transactions');
-          toast.error('Failed to load transactions');
-        } finally {
-          setLoadingTransactions(false);
-        }
+        loadBoothHistory();
       }
     }
   }, [boothId, getBoothById, loadBoothTransactions]);
@@ -62,6 +78,12 @@ const BoothTransactions = () => {
     } else if (value === 'settings') {
       navigate(`/booth/${boothId}/settings`);
     }
+  };
+
+  const handleRefreshTransactions = async () => {
+    setIsRefreshing(true);
+    await loadBoothHistory(true);
+    setIsRefreshing(false);
   };
 
   if (!booth) {
@@ -90,8 +112,13 @@ const BoothTransactions = () => {
         
         <TabsContent value="transactions" className="animate-fade-in mt-6">
           <div className="space-y-6">
-            <div className="text-muted-foreground text-sm mb-2">
-              Showing all transactions for this initiative
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="text-muted-foreground text-sm">
+                Showing all transactions for this initiative
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleRefreshTransactions} disabled={isRefreshing}>
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </Button>
             </div>
             
             {loadingTransactions || isLoading ? (

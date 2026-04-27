@@ -12,6 +12,7 @@ import { QrCode, ListOrdered, Settings, Plus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
+import { fetchAllTransactions } from '@/contexts/transactions/transactionService';
 const Dashboard = () => {
   const {
     user,
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const [hiddenBooths, setHiddenBooths] = useState<string[]>([]);
   const [lastBoothJoinedTime, setLastBoothJoinedTime] = useState<number>(0);
   const [displayPointsModal, setDisplayPointsModal] = useState(false);
+  const [isRefreshingTransactions, setIsRefreshingTransactions] = useState(false);
   const MAX_RETRIES = 3;
   useEffect(() => {
     const storedHiddenBooths = localStorage.getItem('hiddenBooths');
@@ -268,6 +270,20 @@ const Dashboard = () => {
   const handleBoothCardClick = (boothId: string) => {
     navigate(`/booth/${boothId}`);
   };
+  const handleRefreshTransactions = useCallback(async () => {
+    if (!user) return;
+    setIsRefreshingTransactions(true);
+    try {
+      const transactions = await fetchAllTransactions(true);
+      const userTxs = transactions.filter(tx => tx.buyerId === user.id || tx.sellerId === user.id).sort((a, b) => b.timestamp - a.timestamp);
+      setUserTransactions(userTxs.slice(0, 3));
+    } catch (error) {
+      console.error("Error refreshing transactions:", error);
+      toast.error("Failed to refresh transactions");
+    } finally {
+      setIsRefreshingTransactions(false);
+    }
+  }, [user]);
   const logo = <div className="flex items-center mb-2">
       <div>
         <h1 className="text-xl font-bold">FraserPay</h1>
@@ -375,7 +391,9 @@ const Dashboard = () => {
         <div>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Your Recent Purchases</h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/transactions')}>Refresh</Button>
+            <Button variant="ghost" size="sm" onClick={handleRefreshTransactions} disabled={isRefreshingTransactions}>
+              {isRefreshingTransactions ? "Refreshing..." : "Refresh"}
+            </Button>
           </div>
           
           {isLoading ? <Card>

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { transformFirebaseTransaction } from '@/utils/firebase';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 
-export const fetchAllTransactions = async (): Promise<Transaction[]> => {
+export const fetchAllTransactions = async (forceRefresh = false): Promise<Transaction[]> => {
   try {
     // console.log('Fetching all transactions from Firebase');
     
@@ -16,7 +16,7 @@ export const fetchAllTransactions = async (): Promise<Transaction[]> => {
     const cacheStaleTime = 1 * 60 * 1000; // Reduced to 1 minute for more frequent updates
     
     // Use cache if it's fresh enough
-    if (cachedTransactions.length > 0 && now - lastFetchTime < cacheStaleTime) {
+    if (!forceRefresh && cachedTransactions.length > 0 && now - lastFetchTime < cacheStaleTime) {
     //   console.log('Using cached transactions:', cachedTransactions.length, 'records');
       return cachedTransactions;
     }
