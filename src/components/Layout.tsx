@@ -56,7 +56,22 @@ const Layout: React.FC<LayoutProps> = ({
       navigate('/');
       return;
     }
-    
+
+    // Booth management pages should always return to the booth dashboard tab,
+    // and the booth dashboard itself should exit back to the main dashboard.
+    const boothMatch = location.pathname.match(/^\/booth\/([^/]+)(?:\/(sell|transactions|settings))?$/);
+    if (boothMatch && location.pathname !== '/booth/join') {
+      const boothId = boothMatch[1];
+      const boothSection = boothMatch[2];
+
+      if (boothSection) {
+        navigate(`/booth/${boothId}`);
+      } else {
+        navigate('/dashboard');
+      }
+      return;
+    }
+
     // Use navigate instead of window.location to prevent full page reload
     navigate(-1);
   };
