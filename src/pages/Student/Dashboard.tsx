@@ -19,7 +19,6 @@ const Dashboard = () => {
     updateUserData
   } = useAuth();
   const {
-    recentTransactions,
     loadUserTransactions,
     getBoothsByUserId,
     fetchAllBooths
@@ -176,7 +175,7 @@ const Dashboard = () => {
     return () => {
       clearInterval(transactionCheckId);
     };
-  }, [refreshUserBooths, recentTransactions]);
+  }, [refreshUserBooths]);
 
   // Effect to handle when user.booths changes
   useEffect(() => {
@@ -246,12 +245,6 @@ const Dashboard = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refreshUserBooths, refreshUserData]);
   
-  useEffect(() => {
-    if (user && loadUserTransactions) {
-      const userTxs = loadUserTransactions(user.id);
-      setUserTransactions(userTxs);
-    }
-  }, [recentTransactions, user, loadUserTransactions]);
   const handleHideBooth = (boothId: string) => {
     setHiddenBooths(prev => [...prev, boothId]);
     toast.success("Initiative hidden from dashboard");
