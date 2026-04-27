@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { routes, ProtectedRoute, RoleProtectedRoute, LoadingScreen } from './index';
@@ -95,6 +95,11 @@ const AppRoutes: React.FC = () => {
   console.log("App routes rendering, auth status:", isAuthenticated, "user role:", user?.role);
 
   return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    }>
     <Routes>
       {routes.map((route, index) => {
         if (route.protected) {
@@ -127,6 +132,7 @@ const AppRoutes: React.FC = () => {
       {/* Catch-all route for 404 handling */}
       <Route path="*" element={<Navigate to="/not-found" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

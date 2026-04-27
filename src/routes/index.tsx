@@ -23,8 +23,10 @@ import BoothSettings from "@/pages/Booth/Settings";
 // SAC Pages
 import SACDashboard from "@/pages/SAC/Dashboard";
 
+import { lazy } from 'react';
+
 // Shared Pages
-import Leaderboard from "@/pages/Leaderboard";
+const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 import NotFound from "@/pages/NotFound";
 
 // Teacher Pages
