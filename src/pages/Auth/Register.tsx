@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
@@ -33,9 +33,6 @@ const Register = () => {
     user
   } = useAuth();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -48,26 +45,20 @@ const Register = () => {
     e.preventDefault();
     setNetworkError(false);
     if (!studentNumber || !name || !email || !password || !confirmPassword) {
-      toast({
-        title: "Missing information",
+      toast.error("Missing information", {
         description: "Please fill out all fields",
-        variant: "destructive"
       });
       return;
     }
     if (password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
+      toast.error("Passwords don't match", {
         description: "Please make sure your passwords match",
-        variant: "destructive"
       });
       return;
     }
     if (!email.includes('@')) {
-      toast({
-        title: "Invalid email",
+      toast.error("Invalid email", {
         description: "Please enter a valid email address",
-        variant: "destructive"
       });
       return;
     }
@@ -85,10 +76,8 @@ const Register = () => {
       if (error.code === 'auth/network-request-failed') {
         setNetworkError(true);
       } else {
-        toast({
-          title: "Registration failed",
+        toast.error("Registration failed", {
           description: error instanceof Error ? error.message : "There was an error creating your account",
-          variant: "destructive"
         });
       }
     } finally {

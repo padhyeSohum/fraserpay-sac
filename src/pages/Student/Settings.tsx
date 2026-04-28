@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/Layout';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Shield, Bell, HelpCircle, LifeBuoy, LogOut, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
@@ -20,9 +20,6 @@ const Settings = () => {
     logout,
     loginWithGoogle
   } = useAuth();
-  const {
-    toast
-  } = useToast();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -38,30 +35,23 @@ const Settings = () => {
         // If the user has the correct role after sign-in, navigate to SAC dashboard
         if (googleUser.role === 'sac') {
           navigate('/sac/dashboard');
-          toast({
-            title: "SAC Access Granted",
+          toast.success("SAC Access Granted", {
             description: "SAC access granted",
           });
         } else {
-          toast({
-            title: "Access Denied",
+          toast.error("Access Denied", {
             description: "Your email is not authorized for SAC access.",
-            variant: "destructive"
           });
         }
       } else {
-        toast({
-          title: "SAC Access",
+        toast.error("SAC Access", {
           description: "Could not verify SAC access. Please try again.",
-          variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Error during SAC access:", error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
       });
     }
   };

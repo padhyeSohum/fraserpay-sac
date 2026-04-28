@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { loginWithGoogle } from "@/contexts/auth/authOperations";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from 'sonner';
 import { useNavigate } from "react-router-dom";
 import { addDoc, collection } from "firebase/firestore";
 import { firestore } from "@/integrations/firebase/client";
@@ -108,7 +108,6 @@ const autosaveBlockedSessionKey = "requestBoothDraftAutosaveBlockedToastShown";
 
 const RequestBooth = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState("");
@@ -162,10 +161,8 @@ const RequestBooth = () => {
     }
 
     autosaveToastShownRef.current = true;
-    toast({
-      title: "Autosave unavailable",
+    toast.error("Autosave unavailable", {
       description: "Could not autosave this booth request on this browser or device. You can still submit it manually.",
-      variant: "destructive",
     });
   };
 
@@ -332,8 +329,7 @@ const RequestBooth = () => {
 
     if (clearResult.status === "cleared") {
       autosaveBlockedRef.current = false;
-      toast({
-        title: "Draft cleared",
+      toast.success("Draft cleared", {
         description: "The local booth request draft was removed from this device.",
       });
       return;
@@ -350,10 +346,8 @@ const RequestBooth = () => {
       const userData = await loginWithGoogle();
 
       if (!userData?.email) {
-        toast({
-          title: "Unsuccessful Login",
+        toast("Unsuccessful Login", {
           description: "Please create a booth request with a teacher @pdsb.net account.",
-          variant: "default",
         });
         navigate("/login", { replace: true });
         setIsSignedIn(false);
@@ -385,10 +379,8 @@ const RequestBooth = () => {
         return;
       }
 
-      toast({
-        title: "Unsuccessful Login",
+      toast("Unsuccessful Login", {
         description: "Please create a booth request with a teacher @pdsb.net account.",
-        variant: "default",
       });
       navigate("/login", { replace: true });
       setIsSignedIn(false);
@@ -401,10 +393,8 @@ const RequestBooth = () => {
 
   const handleSubmit = async () => {
     if (!isValid) {
-      toast({
-        title: "Unsuccessful Submission",
+      toast.error("Unsuccessful Submission", {
         description: "Please recheck the form for errors before submitting.",
-        variant: "destructive",
       });
       return;
     }
@@ -439,10 +429,8 @@ const RequestBooth = () => {
 
       setSubmitStatus("success");
     } catch (err) {
-      toast({
-        title: "Unsuccessful Submission",
+      toast.error("Unsuccessful Submission", {
         description: "Sorry, something went wrong. Please try again later.",
-        variant: "destructive",
       });
 
       setSubmitStatus("error");

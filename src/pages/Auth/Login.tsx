@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { AlertCircle, Mail, Lock } from 'lucide-react';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
@@ -25,9 +25,6 @@ const Login = () => {
     user
   } = useAuth();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
   const isMobile = useIsMobile();
   useEffect(() => {
     if (!isMobile || isPWA()) return;
@@ -45,10 +42,8 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentNumber || !password) {
-      toast({
-        title: "Missing information",
+      toast.error("Missing information", {
         description: "Please enter both student number and password",
-        variant: "destructive"
       });
       return;
     }
@@ -57,10 +52,8 @@ const Login = () => {
       await login(studentNumber, password);
     } catch (error) {
       console.error('Login error:', error);
-      toast({
-        title: "Login failed",
+      toast.error("Login failed", {
         description: error instanceof Error ? error.message : "Please check your credentials and try again",
-        variant: "destructive"
       });
     } finally {
       setIsLoading(false);

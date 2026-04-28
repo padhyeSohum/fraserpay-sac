@@ -22,7 +22,7 @@ import {
     where,
 } from "firebase/firestore";
 import { firestore } from "@/integrations/firebase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { useAuth } from "@/contexts/auth";
 interface BoothRequestsListProps {
     boothRequests: BoothRequest[];
@@ -66,8 +66,6 @@ const BoothRequestsList = ({
     const [foundUniquePIN, setFoundUniquePIN] = useState(false);
     const [membersFound, setMembersFound] = useState([]);
     const [isAllGood, setAllGood] = useState(false);
-
-    const { toast } = useToast();
 
     const handleClickApprove = async (idx: number) => {
         if (!displayApproveConfirmation[idx]) {
@@ -187,10 +185,8 @@ const BoothRequestsList = ({
                 }
             } catch (error) {
                 console.error(error);
-                toast({
-                    title: "Something went wrong",
+                toast.error("Something went wrong", {
                     description: `That booth could not be approved. Error message: ${error}`,
-                    variant: "destructive",
                 });
             } finally {
                 setApproveLoading((prev) =>
