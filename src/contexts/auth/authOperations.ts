@@ -30,6 +30,35 @@ const SAC_AUTHORIZED_EMAILS = [
   '909957@pdsb.net'
 ];
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const findExistingGoogleUserDoc = async (
+  uid: string,
+  studentNumber: string,
+  email: string
+) => {
+  const usersRef = collection(firestore, 'users');
+  const normalizedEmail = normalizeEmail(email);
+  const emailCandidates = normalizedEmail === email ? [normalizedEmail] : [email, normalizedEmail];
+  const lookupSteps = [
+    query(usersRef, where('uid', '==', uid)),
+    query(usersRef, where('student_number', '==', studentNumber)),
+    ...emailCandidates.map(candidate => query(usersRef, where('email', '==', candidate))),
+  ];
+
+  for (const userQuery of lookupSteps) {
+    const snapshot = await withRetry(async () => {
+      return await getDocs(userQuery);
+    });
+
+    if (!snapshot.empty) {
+      return snapshot.docs[0];
+    }
+  }
+
+  return null;
+};
+
 export const loginUser = async (studentNumber: string, password: string): Promise<User | null> => {
   try {
     // Normalize the student number for case-insensitive 'P' handling
@@ -126,27 +155,14 @@ export const loginWithGoogle = async (): Promise<User | null> => {
     
     console.log('Extracted student number:', studentNumber);
     
-    const usersRef = collection(firestore, 'users');
-    
-    let userQuery = query(usersRef, where('uid', '==', googleUser.uid));
-    let querySnapshot = await withRetry(async () => {
-      return await getDocs(userQuery);
-    });
-    
-    if (querySnapshot.empty) {
-      console.log('User not found by UID, trying student number lookup');
-      userQuery = query(usersRef, where('student_number', '==', studentNumber));
-      querySnapshot = await withRetry(async () => {
-        return await getDocs(userQuery);
-      });
-    }
+    const existingUser = await findExistingGoogleUserDoc(googleUser.uid, studentNumber, email);
     
     let userData: User | null = null;
     
-    if (!querySnapshot.empty) {
+    if (existingUser) {
       console.log('Found existing user record');
-      const userDoc = querySnapshot.docs[0].data();
-      const userId = querySnapshot.docs[0].id;
+      const userDoc = existingUser.data();
+      const userId = existingUser.id;
       
       const userRole = isSACAuthorized ? 'sac' : (userDoc.role || 'student');
       
