@@ -20,10 +20,10 @@ import BoothSell from "@/pages/Booth/Sell";
 import BoothTransactions from "@/pages/Booth/Transactions";
 import BoothSettings from "@/pages/Booth/Settings";
 
-// SAC Pages
-import SACDashboard from "@/pages/SAC/Dashboard";
-
 import { lazy } from 'react';
+
+// SAC Pages
+const SACDashboard = lazy(() => import("@/pages/SAC/Dashboard"));
 
 // Shared Pages
 const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
