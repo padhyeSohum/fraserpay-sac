@@ -65,6 +65,7 @@ const Dashboard = () => {
   
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isBoothLoading, setIsBoothLoading] = useState(false);
+  const [isRefreshingDashboard, setIsRefreshingDashboard] = useState(false);
   const [isBoothDialogOpen, setIsBoothDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -253,6 +254,7 @@ const Dashboard = () => {
       const cacheTime = criticalUpdateOnly ? 60000 : 150000;
       
       if (cachedTransactions.length > 0 && now - lastTransactionsFetch < cacheTime) {
+        setTransactions(cachedTransactions);
         updateRevenueStats(cachedTransactions);
         setIsTransactionLoading(false);
         return;
@@ -289,9 +291,11 @@ const Dashboard = () => {
             setVersionedStorageItem('sacTransactions', allTransactions, cacheTime);
             setVersionedStorageItem('lastSacTransactionsFetch', now);
           } else {
+            setTransactions(cachedTransactions);
             updateRevenueStats(cachedTransactions);
           }
         } else {
+          setTransactions(cachedTransactions);
           updateRevenueStats(cachedTransactions);
         }
         
@@ -347,20 +351,21 @@ const Dashboard = () => {
         return;
       }
       
-      await fetchAllBooths();
+      const freshBooths = await fetchAllBooths();
+      const boothsToUse = freshBooths && freshBooths.length > 0 ? freshBooths : booths;
       
-      if (booths && booths.length > 0) {
-        console.log('SAC Dashboard: Loaded booths', booths.length);
+      if (boothsToUse && boothsToUse.length > 0) {
+        console.log('SAC Dashboard: Loaded booths', boothsToUse.length);
         
-        const sortedBooths = [...booths].sort((a, b) => b.totalEarnings - a.totalEarnings);
+        const sortedBooths = [...boothsToUse].sort((a, b) => b.totalEarnings - a.totalEarnings);
         setLeaderboard(sortedBooths);
         
         setStats(prev => ({
           ...prev,
-          totalBooths: booths.length
+          totalBooths: boothsToUse.length
         }));
         
-        setVersionedStorageItem('sacBooths', booths, cacheTime);
+        setVersionedStorageItem('sacBooths', boothsToUse, cacheTime);
         setVersionedStorageItem('lastSacBoothsFetch', now);
       }
     } catch (error) {
@@ -386,6 +391,30 @@ const Dashboard = () => {
       totalTransactions: txs.length,
       totalRevenue: netRevenue
     }));
+  };
+
+  const refreshAllDashboardData = async () => {
+    setIsRefreshingDashboard(true);
+    try {
+      setVersionedStorageItem('lastSacUsersFetch', 0);
+      setVersionedStorageItem('lastSacTransactionsFetch', 0);
+      setVersionedStorageItem('lastSacBoothsFetch', 0);
+      setVersionedStorageItem('lastBoothRequestsFetch', 0);
+
+      await Promise.all([
+        loadUsers(),
+        loadTransactions(),
+        loadBoothLeaderboard(),
+        fetchAllBoothRequests()
+      ]);
+
+      toast.success('Dashboard data refreshed');
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error);
+      toast.error('Failed to refresh dashboard data');
+    } finally {
+      setIsRefreshingDashboard(false);
+    }
   };
   
   const handleStudentFound = async (student: any, qrUrl: string) => {
@@ -940,7 +969,17 @@ const Dashboard = () => {
           isLoading={isLoading}
         />
         
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 w-full">
+          <Button
+            variant="outline"
+            onClick={refreshAllDashboardData}
+            size="lg"
+            className="w-full"
+            disabled={isRefreshingDashboard}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingDashboard ? 'animate-spin' : ''}`} />
+            {isRefreshingDashboard ? 'Refreshing...' : 'Refresh All Data'}
+          </Button>
           <Button
             onClick={handleNewBoothClick}
             size="lg"

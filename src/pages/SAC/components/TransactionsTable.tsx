@@ -31,7 +31,15 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     if (!value) return null;
     if (value instanceof Date) return value;
     if (value.toDate) return value.toDate();
-    if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    if (typeof value === 'object' && typeof value.seconds === 'number') {
+      const milliseconds = (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1_000_000);
+      const date = new Date(milliseconds);
+      return isNaN(date.getTime()) ? null : date;
+    }
     return null;
   }
 
