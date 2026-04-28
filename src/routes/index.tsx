@@ -121,7 +121,7 @@ export const LoadingScreen = ({ timeout = false }: { timeout?: boolean }) => (
     
     <Alert variant="destructive" className="mb-4 mt-4 max-w-md">
       <AlertCircle className="h-4 w-4 mr-2" />
-      <AlertDescription>FraserPay does not work on the PDSB Media WiFi Network. Please Switch to PDSB WiFi or use mobile data where possible.</AlertDescription>
+      <AlertDescription>FraserPay may load slower than usual during heavy internet traffic. Try to switch between PDSB WiFi/Media and mobile data where possible. Thank you for your patience.</AlertDescription>
     </Alert>
     
     {timeout && (
