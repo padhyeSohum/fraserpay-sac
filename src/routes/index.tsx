@@ -30,7 +30,7 @@ const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 import NotFound from "@/pages/NotFound";
 
 // Teacher Pages
-import RequestBooth from '@/pages/RequestBooth';
+const RequestBooth = lazy(() => import("@/pages/RequestBooth"));
 
 // Route configuration for the application
 export const routes = [
