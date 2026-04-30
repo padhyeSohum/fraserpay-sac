@@ -197,6 +197,11 @@ const BoothSell = () => {
       toast.error('Missing customer or booth information');
       return;
     }
+
+    if (!user.id?.trim() || !user.name?.trim()) {
+      toast.error('Seller ID and seller name are required to complete a booth sale');
+      return;
+    }
     
     if (cart.length === 0) {
       toast.error('Cart is empty');

@@ -129,6 +129,11 @@ const BoothTransactionDialog: React.FC<BoothTransactionDialogProps> = ({
       toast.error('Please find a student first');
       return;
     }
+
+    if (!userId?.trim() || !userName?.trim()) {
+      toast.error('Seller ID and seller name are required to complete a booth sale');
+      return;
+    }
     
     if (!selectedBooth) {
       toast.error('Please select a booth');

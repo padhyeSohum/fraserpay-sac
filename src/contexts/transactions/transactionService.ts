@@ -372,6 +372,14 @@ export const processPurchase = async (
   }
   
   try {
+    const normalizedSellerId = sellerId.trim();
+    const normalizedSellerName = sellerName.trim();
+
+    if (!normalizedSellerId || !normalizedSellerName) {
+      toast.error('Seller ID and seller name are required to complete a booth sale');
+      return { success: false };
+    }
+
     const totalAmountInCents = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
     const totalAmount = parseFloat((totalAmountInCents/100).toFixed(2));
     
@@ -458,8 +466,8 @@ export const processPurchase = async (
       student_name: buyerName,
       booth_id: boothId,
       booth_name: boothName,
-      seller_id: sellerId,
-      seller_name: sellerName,
+      seller_id: normalizedSellerId,
+      seller_name: normalizedSellerName,
       amount: totalAmountInCents,
       points_earned: totalAmountInCents/10,
       type: 'purchase',
@@ -531,8 +539,8 @@ export const processPurchase = async (
       timestamp: new Date().getTime(),
       buyerId,
       buyerName,
-      sellerId,
-      sellerName,
+      sellerId: normalizedSellerId,
+      sellerName: normalizedSellerName,
       boothId,
       boothName,
       products: cartItems.map(item => ({

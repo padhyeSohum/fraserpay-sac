@@ -277,11 +277,18 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     boothName: string
   ): Promise<boolean> => {
     try {
+      const normalizedSellerId = sellerId.trim();
+      const normalizedSellerName = sellerName.trim();
       const totalAmount = cartItems.reduce(
         (sum, item) => sum + (item.product.price * item.quantity), 
         0
       );
       
+      if (!normalizedSellerId || !normalizedSellerName) {
+        toast.error("Seller ID and seller name are required to complete a booth sale");
+        return false;
+      }
+
       if (cartItems.length === 0 || totalAmount <= 0) {
         toast.error("No valid products in cart");
         return false;
@@ -294,8 +301,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         student_name: buyerName,
         buyer_id: buyerId,
         buyer_name: buyerName,
-        seller_id: sellerId,
-        seller_name: sellerName,
+        seller_id: normalizedSellerId,
+        seller_name: normalizedSellerName,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
         boothId,
