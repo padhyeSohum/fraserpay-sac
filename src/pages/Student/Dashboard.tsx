@@ -71,6 +71,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error refreshing user booths:", error);
       setUserBooths([]);
+      // Hi
     }
   }, [user, fetchAllBooths]);
   const fetchDataWithRetry = useCallback(async () => {
