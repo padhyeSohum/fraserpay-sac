@@ -128,14 +128,6 @@ const Dashboard = () => {
     };
   }, [refreshUserBooths]);
 
-  // Effect to handle when user.booths changes
-  useEffect(() => {
-    if (user && user.booths) {
-      console.log("Dashboard: User booths changed, refreshing...", user.booths);
-      refreshUserBooths();
-    }
-  }, [user?.booths, refreshUserBooths]);
-
   // Improved effect to handle localStorage boothJoined event
   useEffect(() => {
     // Handle storage events from other tabs or from this tab
