@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 import {
   Dialog,
@@ -58,50 +57,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
   const isSubmitting = form.formState.isSubmitting;
 
-  const onSubmit = async (values: FormValues) => {
-    try {
-      // First, create the auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            student_number: values.studentNumber,
-            name: values.name
-          }
-        }
-      });
-      
-      if (authError || !authData.user) {
-        throw authError || new Error('Failed to create user account');
-      }
-
-      // Then create the user profile in the users table
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          name: values.name,
-          email: values.email,
-          student_number: values.studentNumber,
-          role: 'student',
-          tickets: 0,
-          points: 0,
-          qr_code: `USER:${authData.user.id}`
-        });
-      
-      if (profileError) {
-        throw profileError;
-      }
-
-      toast.success('User created successfully');
-      form.reset();
-      onOpenChange(false);
-      if (onUserAdded) onUserAdded();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create user');
-    }
+  const onSubmit = async (_values: FormValues) => {
+    toast.error('User creation not available');
   };
 
   return (

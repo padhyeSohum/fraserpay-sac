@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/auth';
 import { CartItem, Transaction } from '@/types';
 import { toast } from 'sonner';
 import { processPurchase, addFunds } from '../transactionService';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface UsePaymentProcessingReturn {
   processPayment: (boothId: string, cart: CartItem[], getBoothById: (id: string) => any, updateTransactions: (tx: Transaction) => void) => Promise<Transaction | null>;
@@ -62,41 +61,15 @@ export const usePaymentProcessing = (): UsePaymentProcessingReturn => {
       );
       
       if (result.success && result.transaction) {
-        // Update user balance after successful payment
         if (user) {
-          console.log("Payment successful, updating user data");
-          // The new balance was already calculated in the backend
-          // We need to fetch the fresh user data to get the correct balance
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('tickets')
-            .eq('id', user.id)
-            .single();
-            
-          if (!error && userData) {
-            console.log("Fresh user data fetched:", userData);
-            const newBalance = userData.tickets / 100; // Convert cents to dollars
-            
-            console.log("Updating user context with new balance:", newBalance);
-            updateUserData({
-              ...user,
-              balance: newBalance
-            });
-          } else {
-            console.error("Error fetching updated user data:", error);
-            // Fallback: calculate locally as before
-            const totalAmount = cart.reduce(
-              (sum, item) => sum + (item.product.price * item.quantity),
-              0
-            );
-            const newBalance = user.balance - totalAmount;
-            
-            console.log("Using fallback calculation for balance:", newBalance);
-            updateUserData({
-              ...user,
-              balance: newBalance
-            });
-          }
+          const totalAmount = cart.reduce(
+            (sum, item) => sum + (item.product.price * item.quantity),
+            0
+          );
+          updateUserData({
+            ...user,
+            balance: user.balance - totalAmount
+          });
         }
         
         // Update transactions list

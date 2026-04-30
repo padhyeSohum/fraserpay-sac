@@ -9,7 +9,6 @@ import Layout from '@/components/Layout';
 import TransactionItem from '@/components/TransactionItem';
 import BoothCard from '@/components/BoothCard';
 import { QrCode, ListOrdered, Settings, Plus, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
 import { fetchUserTransactions } from '@/contexts/transactions/transactionService';
@@ -55,49 +54,8 @@ const Dashboard = () => {
       const shouldForceRefresh = now - lastBoothJoinedTime < 10000;
       
       if (now - lastUserDataFetch < 30000 && !shouldForceRefresh) {
-        const isBalanceOnlyUpdate = now - lastUserDataFetch > 5000;
-        if (isBalanceOnlyUpdate) {
-          const {
-            data: balanceData,
-            error: balanceError
-          } = await supabase.from('users').select('tickets').eq('id', user.id).single();
-          if (balanceError) {
-            console.error("Error refreshing user balance:", balanceError);
-            return;
-          }
-          if (balanceData && user && balanceData.tickets / 100 !== user.balance) {
-            console.log("Dashboard - refreshed user balance:", balanceData.tickets / 100);
-            updateUserData({
-              ...user,
-              balance: balanceData.tickets / 100
-            });
-          }
-          return;
-        }
         return;
       }
-    //   const {
-    //     data: freshUserData,
-    //     error: userError
-    //   } = await supabase.from('users').select('tickets, booth_access').eq('id', user.id).single();
-    //   if (userError) {
-    //     console.error("Error refreshing user data:", userError);
-    //     return;
-    //   }
-    //   if (freshUserData && user) {
-    //     console.log("Dashboard - refreshed user data:", freshUserData);
-    //     const newBalance = freshUserData.tickets / 100;
-    //     const newBooths = freshUserData.booth_access || [];
-    //     if (newBalance !== user.balance || JSON.stringify(newBooths) !== JSON.stringify(user.booths)) {
-    //       console.log("Updating user data with new booths:", newBooths);
-    //       updateUserData({
-    //         ...user,
-    //         balance: newBalance,
-    //         booths: newBooths
-    //       });
-    //     }
-    //     setVersionedStorageItem('lastUserDataFetch', now);
-    //   }
     } catch (error) {
       console.error('Error refreshing user data:', error);
     }

@@ -12,7 +12,6 @@ import {
   DialogTitle, 
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { Loader } from 'lucide-react';
 
 interface FundsDialogProps {
@@ -58,42 +57,7 @@ const FundsDialog: React.FC<FundsDialogProps> = ({
   }, [studentId, isOpen]);
 
   const handleFindByStudentNumber = async () => {
-    if (!studentNumber.trim()) {
-      toast.error('Please enter a student number');
-      return;
-    }
-
-    setIsSearching(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('student_number', studentNumber)
-        .single();
-      
-      if (error) {
-        console.error('Error finding student:', error);
-        toast.error('Error finding student');
-        return;
-      }
-      
-      if (data) {
-        setLocalStudentId(data.id);
-        setFoundStudent({
-          name: data.name,
-          balance: data.tickets / 100
-        });
-        toast.success(`Found student: ${data.name}`);
-      } else {
-        toast.error('No student found with that student number');
-      }
-    } catch (error) {
-      console.error('Error finding student:', error);
-      toast.error('Error finding student');
-    } finally {
-      setIsSearching(false);
-    }
+    toast.error('Student lookup not available');
   };
 
   const handleSubmit = async () => {
