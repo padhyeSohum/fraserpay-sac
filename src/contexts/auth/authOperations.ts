@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { User } from '@/types';
 import { fetchUserData } from './authUtils';
 import { signInWithGoogle, extractStudentNumberFromEmail } from '@/utils/auth';
+import { backend } from '@/utils/backend';
 
 const MAX_RETRIES = 3;
 
@@ -304,27 +305,9 @@ export const logoutUser = async (): Promise<boolean> => {
 
 export const verifySACAccess = async (userId: string): Promise<boolean> => {
   try {
-    const userRef = doc(firestore, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    
-    if (!userDoc.exists()) {
-      toast.error('User not found');
-      return false;
-    }
-
-    const userData = userDoc.data();
-    
-    if (SAC_AUTHORIZED_EMAILS.includes(userData.email)) {
-      await withRetry(async () => {
-        return await updateDoc(userRef, { role: 'sac' });
-      });
-      
-      toast.success('SAC access granted');
-      return true;
-    }
-    
-    toast.error('Unauthorized access');
-    return false;
+    await backend.verifySacAccess();
+    toast.success('SAC access granted');
+    return true;
   } catch (error) {
     console.error('Error verifying SAC access:', error);
     toast.error('Failed to verify SAC access');
@@ -335,52 +318,13 @@ export const verifySACAccess = async (userId: string): Promise<boolean> => {
 export const verifyBoothAccess = async (pin: string, userId: string, userBooths: string[] = []): Promise<{ success: boolean, boothId?: string }> => {
   try {
     console.log("Verifying booth PIN:", pin);
-    
-    const boothsRef = collection(firestore, 'booths');
-    const q = query(boothsRef, where('pin', '==', pin));
-    
-    const querySnapshot = await withRetry(async () => {
-      return await getDocs(q);
-    });
-    
-    if (querySnapshot.empty) {
-      console.error("No booth found with that PIN");
-      throw new Error('Invalid booth PIN');
-    }
-    
-    const boothDoc = querySnapshot.docs[0];
-    const boothData = boothDoc.data();
-    const boothId = boothDoc.id;
-    
-    console.log("Found booth:", boothId);
-    
-    const hasAccess = userBooths.includes(boothId);
-    
-    if (hasAccess) {
-      console.log("User already has access to booth:", boothId);
-      toast.info(`You already have access to ${boothData.name || 'this booth'}`);
-      return { success: true, boothId: boothId };
-    }
-    
-    const updatedBoothAccess = [...(userBooths || []), boothId];
-    
-    const userRef = doc(firestore, 'users', userId);
-    await withRetry(async () => {
-      return await updateDoc(userRef, { booth_access: updatedBoothAccess });
-    });
-    
-    if (boothData.members !== undefined) {
-      const updatedMembers = [...(boothData.members || []), userId];
-      
-      const boothRef = doc(firestore, 'booths', boothId);
-      await withRetry(async () => {
-        return await updateDoc(boothRef, { members: updatedMembers });
-      });
-    }
-    
-    console.log("User successfully joined booth:", boothId);
-    toast.success(`You now have access to ${boothData.name || 'this booth'}`);
-    return { success: true, boothId: boothId };
+
+    const result = await backend.joinBooth(pin);
+    const alreadyHadAccess = userBooths.includes(result.boothId);
+    toast[alreadyHadAccess ? 'info' : 'success'](
+      alreadyHadAccess ? 'You already have access to this booth' : 'You now have access to this booth'
+    );
+    return { success: true, boothId: result.boothId };
     
   } catch (error) {
     console.error('Error verifying booth PIN:', error);

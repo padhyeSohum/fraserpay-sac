@@ -15,23 +15,12 @@ import {
 } from 'firebase/firestore';
 import { Booth, Product } from '@/types';
 import { toast } from 'sonner';
+import { backend } from '@/utils/backend';
 
 // Add the deleteBooth function
 export const deleteBooth = async (boothId: string): Promise<boolean> => {
   try {
-    const boothRef = doc(firestore, 'booths', boothId);
-    
-    // Get the booth data to check if it exists
-    const boothSnap = await getDoc(boothRef);
-    if (!boothSnap.exists()) {
-      console.error('Booth not found:', boothId);
-      return false;
-    }
-    
-    // Delete the booth document
-    await deleteDoc(boothRef);
-    console.log('Booth deleted successfully:', boothId);
-    
+    await backend.deleteBooth(boothId);
     return true;
   } catch (error) {
     console.error('Error deleting booth:', error);
@@ -42,19 +31,7 @@ export const deleteBooth = async (boothId: string): Promise<boolean> => {
 // Add the deleteUser function
 export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
-    const userRef = doc(firestore, 'users', userId);
-    
-    // Get the user data to check if it exists
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
-      console.error('User not found:', userId);
-      return false;
-    }
-    
-    // Delete the user document
-    await deleteDoc(userRef);
-    console.log('User deleted successfully:', userId);
-    
+    await backend.deleteUser(userId);
     return true;
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -69,37 +46,9 @@ export const createBooth = async (
   pin: string
 ): Promise<string | null> => {
   try {
-    const boothsRef = collection(firestore, 'booths');
-    
-    // Check if a booth with the same name already exists
-    const existingBoothQuery = query(boothsRef, where('name', '==', name));
-    const existingBoothSnapshot = await getDocs(existingBoothQuery);
-    
-    if (!existingBoothSnapshot.empty) {
-      toast.error('Booth name already exists. Please choose a different name.');
-      return null;
-    }
-    
-    const boothData = {
-      name,
-      description,
-      managers: [managerId],
-      products: [],
-      totalEarnings: 0,
-      pin: pin,
-      created_at: serverTimestamp()
-    };
-    
-    const docRef = await addDoc(boothsRef, boothData);
-    
-    // Update the user document to include the booth ID in the booth_access array
-    const userRef = doc(firestore, 'users', managerId);
-    await updateDoc(userRef, {
-      booth_access: arrayUnion(docRef.id)
-    });
-    
+    const result = await backend.createBooth(name, description, managerId, pin);
     toast.success('Booth created successfully!');
-    return docRef.id;
+    return result.boothId;
   } catch (error) {
     console.error('Error creating booth:', error);
     toast.error('Failed to create booth');

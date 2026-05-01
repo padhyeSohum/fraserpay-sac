@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BoothRequestsList from './components/BoothRequestsList';
+import { backend } from '@/utils/backend';
 
 export interface StatsData {
   totalUsers: number;
@@ -891,37 +892,18 @@ const Dashboard = () => {
   };
 
   const handleCheckPassword = () => {
-    if (resetPassword === import.meta.env.VITE_FRASERPAY_RESET_PASSWORD) {
+    if (isSuperAdmin) {
       setResetConfirmation(true);
       setResetError('');
     } else {
-      setResetError('Incorrect password');
+      setResetError('Only the super admin can reset FraserPay');
     }
   };
 
   const handleResetFraserPay = async () => {
     setIsResetting(true);
     try {
-      const boothsCollection = collection(firestore, 'booths');
-      const boothsSnapshot = await getDocs(boothsCollection);
-      const boothDeletions = boothsSnapshot.docs.map(async (boothDoc) => {
-        await deleteDoc(doc(firestore, 'booths', boothDoc.id));
-      });
-      await Promise.all(boothDeletions);
-      
-      const transactionsCollection = collection(firestore, 'transactions');
-      const transactionsSnapshot = await getDocs(transactionsCollection);
-      const transactionDeletions = transactionsSnapshot.docs.map(async (transactionDoc) => {
-        await deleteDoc(doc(firestore, 'transactions', transactionDoc.id));
-      });
-      await Promise.all(transactionDeletions);
-
-      const transactionProductsCollection = collection(firestore, 'transaction_products');
-      const transactionProductsSnapshot = await getDocs(transactionProductsCollection);
-      const transactionProductDeletions = transactionProductsSnapshot.docs.map(async (productDoc) => {
-        await deleteDoc(doc(firestore, 'transaction_products', productDoc.id));
-      });
-      await Promise.all(transactionProductDeletions);
+      await backend.resetFraserPay();
 
       setUsersList([]);
       setFilteredUsers([]);

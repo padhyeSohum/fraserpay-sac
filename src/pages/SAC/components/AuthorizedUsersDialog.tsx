@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { firestore } from '@/integrations/firebase/client';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
+import { backend } from '@/utils/backend';
 import {
   Dialog,
   DialogContent,
@@ -71,10 +72,7 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
         return;
       }
 
-      await addDoc(authUsersRef, {
-        email: email.toLowerCase(),
-        added_at: new Date().toISOString()
-      });
+      await backend.addAuthorizedSacUser(email.toLowerCase());
 
       toast.success('User authorized successfully');
       setEmail('');
@@ -90,36 +88,9 @@ const AuthorizedUsersDialog: React.FC<AuthorizedUsersDialogProps> = ({
   const handleRemoveUser = async (userId: string, userEmail: string) => {
     setRemoveLoading(userId);
     try {
-      // Remove user from the sac_authorized_users collection
-      await deleteDoc(doc(firestore, 'sac_authorized_users', userId));
-      
-      // Verify the user was actually deleted
-      const q = query(collection(firestore, 'sac_authorized_users'), where('email', '==', userEmail));
-      const verifySnapshot = await getDocs(q);
-      
-      if (verifySnapshot.empty) {
-        // Find and update the user's role in the users collection
-        const usersRef = collection(firestore, 'users');
-        const userQuery = query(usersRef, where('email', '==', userEmail));
-        const userSnapshot = await getDocs(userQuery);
-        
-        if (!userSnapshot.empty) {
-          const userDoc = userSnapshot.docs[0];
-          await updateDoc(doc(firestore, 'users', userDoc.id), {
-            role: 'student'
-          });
-        }
-
-        // User was successfully removed
-        toast.success('Access for user has been revoked');
-        
-        // Update local state to reflect the change
-        setAuthorizedUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-      } else {
-        // Something went wrong, try again
-        toast.error('Failed to revoke access, please try again');
-        console.error('User still exists after deletion attempt');
-      }
+      await backend.removeAuthorizedSacUser(userId, userEmail);
+      toast.success('Access for user has been revoked');
+      setAuthorizedUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
     } catch (error) {
       console.error('Error removing authorized user:', error);
       toast.error('Failed to revoke access');

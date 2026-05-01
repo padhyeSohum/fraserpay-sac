@@ -45,8 +45,9 @@ import {
   limit
 } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { fetchAllTransactions } from './transactionService';
+import { fetchAllTransactions, processPurchase as processPurchaseService } from './transactionService';
 import { getVersionedStorageItem, setVersionedStorageItem } from '@/utils/storageManager';
+import { backend } from '@/utils/backend';
 
 export interface TransactionContextProps {
   createBooth: (name: string, description: string, managerId: string, pinCode: string) => Promise<string>;
@@ -294,101 +295,27 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       
-      const transactionData = {
-        booth_id: boothId,
-        booth_name: boothName,
-        student_id: buyerId,
-        student_name: buyerName,
-        buyer_id: buyerId,
-        buyer_name: buyerName,
-        seller_id: normalizedSellerId,
-        seller_name: normalizedSellerName,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
+      const result = await processPurchaseService(
         boothId,
-        boothName,
-        amount: totalAmount,
-        type: 'purchase',
-        paymentMethod: 'cash',
-        products: cartItems.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          quantity: item.quantity,
-          price: item.product.price
-        }))
-      };
-      
-      const transactionsRef = collection(firestore, 'transactions');
-      await addDoc(transactionsRef, transactionData);
-      
-      const userRef = doc(firestore, 'users', buyerId);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const currentTickets = userData.tickets || 0;
-        const currentPoints = userData.points || 0;
-        const amountInTickets = Math.round(totalAmount);
-        const pointsToEarn = Math.round(amountInTickets/10);
-        
-        if (currentTickets < amountInTickets) {
-          toast.error('User has insufficient balance');
-          return false;
-        }
-        
-        // paying with balance
-        await updateDoc(userRef, {
-          tickets: currentTickets - amountInTickets,
-          points: currentPoints + pointsToEarn,
-          updated_at: serverTimestamp()
-        });
-        
-        const boothRef = doc(firestore, 'booths', boothId);
-        const boothSnap = await getDoc(boothRef);
-        
-        if (boothSnap.exists()) {
-          const boothData = boothSnap.data();
-          const products = boothData.products || [];
-          const currentSales = boothData.sales || 0;
-          const newSales = currentSales + amountInTickets;
+        buyerId,
+        buyerName,
+        normalizedSellerId,
+        normalizedSellerName,
+        cartItems,
+        boothName
+      );
 
-            for (let i=0; i<cartItems.length; i++) {
-              const productId = cartItems[i].productId;
-              const quantity = cartItems[i].quantity;
+      if (!result.success) return false;
 
-              const productIndex = products.findIndex(p => p.id === productId);
-              
-              if (productIndex !== -1) {
-                products[productIndex].salesCount = (products[productIndex].salesCount || 0) + quantity;
-              }
-            }
+      cartManagement.clearCart();
 
-          
-          await updateDoc(boothRef, {
-            sales: newSales,
-            products: products,
-            updated_at: serverTimestamp()
-          });
-          
-          console.log('Booth sales updated in TransactionContext:', {
-            previousSales: currentSales / 100,
-            newSales: newSales / 100
-          });
-        }
-        
-        cartManagement.clearCart();
-        
-        await boothManagement.fetchAllBooths().then(updatedBooths => {
-          console.log('Booths refreshed after transaction:', updatedBooths.length);
-          setBooths(updatedBooths);
-        });
-        
-        toast.success(`Purchase complete: $${totalAmount.toFixed(2)}`);
-        return true;
-      } else {
-        toast.error('User not found');
-        return false;
-      }
+      await boothManagement.fetchAllBooths().then(updatedBooths => {
+        console.log('Booths refreshed after transaction:', updatedBooths.length);
+        setBooths(updatedBooths);
+      });
+
+      toast.success(`Purchase complete: $${(totalAmount / 100).toFixed(2)}`);
+      return true;
     } catch (error) {
       console.error('Error processing purchase:', error);
       toast.error('Failed to process purchase');
@@ -398,15 +325,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   
   const deleteUser = async (userId: string): Promise<boolean> => {
     try {
-      const userRef = doc(firestore, 'users', userId);
-      const userSnap = await getDoc(userRef);
-      
-      if (!userSnap.exists()) {
-        toast.error('User not found');
-        return false;
-      }
-      
-      await deleteDoc(userRef);
+      await backend.deleteUser(userId);
       toast.success('User deleted successfully');
       
       return true;
@@ -443,35 +362,17 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   
   const joinBooth = async (pinCode: string, userId: string): Promise<boolean> => {
     try {
-      const boothsCollection = collection(firestore, 'booths');
-      const q = query(boothsCollection, where('pin', '==', pinCode));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        toast.error('Invalid PIN code');
-        return false;
-      }
-      
-      const boothId = querySnapshot.docs[0].id;
-      const boothRef = doc(firestore, 'booths', boothId);
-      const boothDoc = await getDoc(boothRef);
-      
-      if (!boothDoc.exists()) {
-        toast.error('Booth not found');
-        return false;
-      }
-      
+      const result = await backend.joinBooth(pinCode);
+      const boothId = result.boothId;
       console.log(`Joining booth ${boothId} for user ${userId}`);
-      
-      await updateDoc(boothRef, {
-        managers: arrayUnion(userId),
-        members: arrayUnion(userId)
-      });
-      
-      const userRef = doc(firestore, 'users', userId);
-      await updateDoc(userRef, {
-        booth_access: arrayUnion(boothId)
-      });
+
+      if (user && user.id === userId) {
+        const currentBooths = user.booths || [];
+        if (!currentBooths.includes(boothId)) {
+          // The backend has already persisted access; this keeps local UI in sync.
+          user.booths = [...currentBooths, boothId];
+        }
+      }
       
       await boothManagement.fetchAllBooths().then(updatedBooths => {
         console.log('Booths refreshed after joining:', updatedBooths.length);

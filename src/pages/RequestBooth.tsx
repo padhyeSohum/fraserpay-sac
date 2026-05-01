@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNavigate } from "react-router-dom";
 import { addDoc, collection } from "firebase/firestore";
 import { firestore } from "@/integrations/firebase/client";
+import { backend } from "@/utils/backend";
 import {
   canUseRequestBoothDraftStorage,
   clearRequestBoothDraft,
@@ -404,8 +405,7 @@ const RequestBooth = () => {
     const productsArr = draft.products.map((product) => ({ name: product.name, price: product.price * 100 }));
 
     try {
-      const boothRequestsCollection = collection(firestore, "booth_requests");
-      await addDoc(boothRequestsCollection, {
+      await backend.submitBoothRequest({
         teachers: teachersArr,
         boothName: draft.boothName,
         boothDescription: draft.boothDescription,

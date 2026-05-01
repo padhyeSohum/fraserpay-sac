@@ -18,6 +18,7 @@ import {
     arrayUnion,
 } from "firebase/firestore";
 import { deleteBooth as deleteBoothService } from "@/contexts/transactions/boothService";
+import { backend } from "@/utils/backend";
 
 export interface UseBoothManagementReturn {
     booths: Booth[];
@@ -216,97 +217,17 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
         setIsLoading(true);
 
         try {
-            // Find the initiative with the matching PIN
-            const boothsCollection = collection(firestore, "booths");
-            const boothsQuery = query(
-                boothsCollection,
-                where("pin", "==", pin),
-            );
-            const boothsSnapshot = await getDocs(boothsQuery);
+            const result = await backend.joinBooth(pin);
+            const boothId = result.boothId;
 
-            if (boothsSnapshot.empty) {
-                console.log("No initiative found with the provided PIN");
-                return false;
-            }
-
-            // Get the initiative document
-            const boothDoc = boothsSnapshot.docs[0];
-            const boothId = boothDoc.id;
-            const boothData = boothDoc.data();
-
-            console.log("Found initiative with matching PIN:", boothId);
-
-            // Check if user is already a member
-            const members = boothData.members || [];
-            if (members.includes(userId)) {
-                console.log("User is already a member of this initiative");
-
-                // Even if already a member, ensure the user object is updated
-                // This helps sync Firebase and local state
-                if (user && user.id === userId) {
-                    const currentBooths = user.booths || [];
-                    if (!currentBooths.includes(boothId)) {
-                        console.log(
-                            "Syncing user state with Firebase - adding missing booth access",
-                        );
-                        updateUserData({
-                            ...user,
-                            booths: [...currentBooths, boothId],
-                        });
-
-                        // Dispatch an event to notify the dashboard
-                        const eventData = JSON.stringify({
-                            timestamp: Date.now(),
-                            boothId: boothId,
-                            action: "joined",
-                        });
-                        localStorage.setItem("boothJoined", eventData);
-
-                        // Also dispatch a storage event to notify other tabs
-                        window.dispatchEvent(
-                            new StorageEvent("storage", {
-                                key: "boothJoined",
-                                newValue: eventData,
-                            }),
-                        );
-                    }
+            if (user && user.id === userId) {
+                const currentBooths = user.booths || [];
+                if (!currentBooths.includes(boothId)) {
+                    updateUserData({
+                        ...user,
+                        booths: [...currentBooths, boothId],
+                    });
                 }
-
-                return true; // Return true since the user is already connected to the initiative
-            }
-
-            // Update the initiative document to add the user as a member
-            await updateDoc(doc(firestore, "booths", boothId), {
-                members: arrayUnion(userId),
-            });
-
-            console.log("Added user to initiative members list");
-
-            // Also update the user's booth_access array in Firebase
-            const userRef = doc(firestore, "users", userId);
-            const userSnap = await getDoc(userRef);
-
-            if (userSnap.exists()) {
-                await updateDoc(userRef, {
-                    booth_access: arrayUnion(boothId),
-                });
-                console.log("Updated user booth_access list in Firebase");
-
-                // Update the user context with the new initiative access
-                if (user && user.id === userId) {
-                    const currentBooths = user.booths || [];
-                    if (!currentBooths.includes(boothId)) {
-                        console.log(
-                            "Updating user state with new initiative access",
-                        );
-                        updateUserData({
-                            ...user,
-                            booths: [...currentBooths, boothId],
-                        });
-                    }
-                }
-            } else {
-                console.warn("User document not found:", userId);
             }
 
             // Refresh the initiatives list after joining
@@ -382,24 +303,15 @@ export const useBoothManagement = (): UseBoothManagementReturn => {
                 created_by: managerId,
             };
 
-            const boothRef = await addDoc(
-                collection(firestore, "booths"),
-                boothData,
-            );
-
-            // Also update the user's booth_access array
-            const userRef = doc(firestore, "users", managerId);
-            await updateDoc(userRef, {
-                booth_access: arrayUnion(boothRef.id),
-            });
+            const result = await backend.createBooth(name, description, managerId, pin);
 
             // Update initiative list
             await fetchAllBooths();
 
-            console.log("Initiative created with ID:", boothRef.id);
+            console.log("Initiative created with ID:", result.boothId);
             uniqueToast.success("Initiative created successfully");
 
-            return boothRef.id;
+            return result.boothId;
         } catch (error) {
             console.error("Error creating initiative:", error);
             uniqueToast.error(
