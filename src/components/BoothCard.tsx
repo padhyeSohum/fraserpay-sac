@@ -64,7 +64,7 @@ const BoothCard: React.FC<BoothCardProps> = ({
         )}
         
         <div className="flex justify-between items-center mt-2">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
             {showProductCount ? `${products.length} products` : `$${earnings.toFixed(2)} earned`}
           </div>
           

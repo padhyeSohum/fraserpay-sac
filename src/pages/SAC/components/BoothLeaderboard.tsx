@@ -35,7 +35,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
               <TableRow>
                 <TableHead>Booth</TableHead>
                 <TableHead>Rank</TableHead>
-                <TableHead className="text-right">Earnings</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Earnings</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -43,7 +43,7 @@ const BoothLeaderboard: React.FC<BoothLeaderboardProps> = ({
                 <TableRow key={booth.id}>
                   <TableCell className="font-medium">{booth.name}</TableCell>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(booth.totalEarnings)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">{formatCurrency(booth.totalEarnings)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

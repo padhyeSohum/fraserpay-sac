@@ -84,7 +84,7 @@ const Leaderboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(booth.earnings)}</p>
+                        <p className="font-semibold whitespace-nowrap tabular-nums">{formatCurrency(booth.earnings)}</p>
                         <p className="text-sm text-muted-foreground">Total sales</p>
                       </div>
                     </div>

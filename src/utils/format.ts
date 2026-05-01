@@ -1,15 +1,13 @@
 
 // Format currency values (e.g. $10.00)
+// Callers should pass dollar values, not cents.
 export const formatCurrency = (amount: number): string => {
-  // Check if the amount is likely already in dollars (less than 1000)
-  // This helps handle the mix of cents and dollars in the system
-  const valueInDollars = amount > 1000 ? amount / 100 : amount;
-  
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(valueInDollars);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
 };
 
 // Format dates (e.g. Mar 15, 2024)
